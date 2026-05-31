@@ -1,0 +1,1 @@
+ALTER TABLE `job_applications` ADD `application_text` text;

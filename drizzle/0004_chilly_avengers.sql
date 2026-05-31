@@ -1,0 +1,31 @@
+CREATE TABLE `sleep_entries` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer NOT NULL,
+	`date` text NOT NULL,
+	`source` text DEFAULT 'garmin' NOT NULL,
+	`duration_min` integer,
+	`score` integer,
+	`quality_label` text,
+	`deep_min` integer,
+	`light_min` integer,
+	`rem_min` integer,
+	`awake_min` integer,
+	`avg_stress` integer,
+	`breathing_variation` text,
+	`restless_moments` integer,
+	`avg_heart_rate` integer,
+	`resting_heart_rate` integer,
+	`body_battery_change` integer,
+	`avg_spo2` integer,
+	`lowest_spo2` integer,
+	`avg_breathing_x10` integer,
+	`lowest_breathing_x10` integer,
+	`hrv_ms` integer,
+	`hrv_7d_status` text,
+	`raw_source` text,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `sleep_entries_user_date` ON `sleep_entries` (`user_id`,`date`);
