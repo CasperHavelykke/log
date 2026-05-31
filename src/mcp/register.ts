@@ -1,0 +1,25 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerDayEntryTools } from "./tools/day-entries";
+import { registerWeekGoalTools } from "./tools/week-goals";
+import { registerProjectTools } from "./tools/projects";
+import { registerTimeEntryTools } from "./tools/time-entries";
+import { registerJobApplicationTools } from "./tools/job-applications";
+import { registerSleepTools } from "./tools/sleep";
+import { registerSupplementTools } from "./tools/supplements";
+import { registerFastTools } from "./tools/fasts";
+
+export const MCP_SERVER_INFO = {
+  name: "dagbog",
+  version: "0.3.0",
+} as const;
+
+export function registerAllTools(server: McpServer): void {
+  registerDayEntryTools(server);
+  registerWeekGoalTools(server);
+  registerProjectTools(server);
+  registerTimeEntryTools(server);
+  registerJobApplicationTools(server);
+  registerSleepTools(server);
+  registerSupplementTools(server);
+  registerFastTools(server);
+}
