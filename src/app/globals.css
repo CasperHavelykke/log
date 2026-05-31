@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0f1a;
+  --page: #111827;
+  --card: #1a2436;
+  --border: #2a3654;
+  --border-light: #1f2a3f;
+  --ink: #e8ecf3;
+  --mid: #a0aec0;
+  --light: #6b7a92;
+  --dim: #4a5568;
+  --accent: #4a90e2;
+  --accent-bright: #5fa3f0;
+  --accent-dim: #2a5a9e;
+  --accent-bg: rgba(74, 144, 226, 0.1);
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-page: var(--page);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-ink: var(--ink);
+  --color-mid: var(--mid);
+  --color-light: var(--light);
+  --color-dim: var(--dim);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-bg: var(--accent-bg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  /* Kompatibilitet med tidligere komponenter */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-muted: var(--mid);
+  --color-accent-foreground: #ffffff;
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+.font-serif {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+textarea,
+select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  border-radius: 3px;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
 }
