@@ -1,35 +1,39 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { MCP_SERVER_INFO, registerAllTools } from "@/mcp/register";
+import { baseUrl, validateAccessToken } from "@/lib/oauth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function unauthorized(): Response {
+function unauthorized(req: Request, reason: string): Response {
+  const resourceMetadata = `${baseUrl(req)}/.well-known/oauth-protected-resource`;
+  const challenge = [
+    'Bearer realm="dagbog"',
+    `error="${reason}"`,
+    `resource_metadata="${resourceMetadata}"`,
+  ].join(", ");
   return new Response("Unauthorized", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Bearer realm="dagbog"' },
+    headers: { "WWW-Authenticate": challenge },
   });
 }
 
-function constantTimeEquals(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-function authenticate(req: Request): boolean {
-  const expected = process.env.MCP_HTTP_TOKEN;
-  if (!expected) return false;
+async function authenticate(
+  req: Request,
+): Promise<{ userId: number } | null> {
   const header = req.headers.get("authorization") ?? "";
-  return constantTimeEquals(header, `Bearer ${expected}`);
+  if (!header.startsWith("Bearer ")) return null;
+  const token = header.slice("Bearer ".length).trim();
+  if (!token) return null;
+  const session = await validateAccessToken(token);
+  if (!session) return null;
+  return { userId: session.userId };
 }
 
 async function handle(req: Request): Promise<Response> {
-  if (!authenticate(req)) return unauthorized();
+  const auth = await authenticate(req);
+  if (!auth) return unauthorized(req, "invalid_token");
 
   const server = new McpServer(MCP_SERVER_INFO);
   registerAllTools(server);

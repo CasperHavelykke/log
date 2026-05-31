@@ -6,12 +6,13 @@ import { loginAction, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
 
-export function LoginForm() {
+export function LoginForm({ returnTo = "/" }: { returnTo?: string }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
     <Card>
       <form action={formAction} className="space-y-4">
+        <input type="hidden" name="return_to" value={returnTo} />
         <div className="space-y-1.5">
           <Label htmlFor="username">Brugernavn</Label>
           <Input

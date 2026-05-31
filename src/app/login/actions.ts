@@ -56,7 +56,15 @@ export async function loginAction(
 
   resetRateLimit(key);
   await createSession(user.id);
-  redirect("/");
+
+  const rawReturn = formData.get("return_to");
+  const returnTo =
+    typeof rawReturn === "string" &&
+    rawReturn.startsWith("/") &&
+    !rawReturn.startsWith("//")
+      ? rawReturn
+      : "/";
+  redirect(returnTo);
 }
 
 export async function logoutAction() {

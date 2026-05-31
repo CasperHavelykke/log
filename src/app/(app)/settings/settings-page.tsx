@@ -2,8 +2,27 @@
 
 import { useRef, useState, useTransition } from "react";
 import { changePassword, importData } from "./actions";
+import {
+  createOAuthClient,
+  deleteOAuthClient,
+  type CreateResult,
+} from "./oauth-actions";
 
-export function SettingsPage({ username }: { username: string }) {
+type OAuthClientRow = {
+  id: number;
+  clientId: string;
+  name: string;
+  redirectUris: string;
+  createdAt: string;
+};
+
+export function SettingsPage({
+  username,
+  initialClients,
+}: {
+  username: string;
+  initialClients: OAuthClientRow[];
+}) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
       <header className="mb-6 border-b border-border pb-5">
@@ -17,6 +36,7 @@ export function SettingsPage({ username }: { username: string }) {
 
       <div className="space-y-4">
         <PasswordCard />
+        <OAuthClientsCard initial={initialClients} />
         <ExportCard />
         <ImportCard />
         <InfoCard />
@@ -227,14 +247,233 @@ function InfoCard() {
     <Card title="Om dine data">
       <div className="space-y-2 text-[13px] text-mid">
         <p>
-          Alt gemmes lokalt i <code className="text-accent-bright">data/app.db</code>{" "}
-          på din egen PC. Intet sendes til skyen.
+          Dataen ligger i Turso (libSQL), hosted i Frankfurt-regionen. Appen
+          deployes til Vercel. Begge er kommercielle hostere — drifts-personale
+          har teknisk adgang. Det er ikke E2E-krypteret.
         </p>
         <p>
-          En enkel rutine: tag en eksport en gang om ugen og læg filen et andet
-          sted end på samme drev.
+          En god rutine: tag en eksport en gang om måneden og læg filen lokalt
+          på din egen disk som ekstra sikkerhed.
         </p>
       </div>
     </Card>
+  );
+}
+
+const CLAUDE_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback";
+
+function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
+  const [clients, setClients] = useState(initial);
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("Claude");
+  const [redirectInput, setRedirectInput] = useState(CLAUDE_REDIRECT_URI);
+  const [created, setCreated] = useState<{
+    clientId: string;
+    clientSecret: string;
+    name: string;
+  } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function submit() {
+    setErr(null);
+    const redirects = redirectInput
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (redirects.length === 0) {
+      setErr("Mindst én redirect URI er påkrævet.");
+      return;
+    }
+    start(async () => {
+      const res: CreateResult = await createOAuthClient({
+        name: name.trim(),
+        redirectUris: redirects,
+      });
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      setCreated({
+        clientId: res.clientId,
+        clientSecret: res.clientSecret,
+        name: res.name,
+      });
+      // Append to list — without secret
+      setClients((prev) => [
+        ...prev,
+        {
+          id: Math.max(0, ...prev.map((c) => c.id)) + 1,
+          clientId: res.clientId,
+          name: res.name,
+          redirectUris: JSON.stringify(redirects),
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setShowForm(false);
+      setName("Claude");
+      setRedirectInput(CLAUDE_REDIRECT_URI);
+    });
+  }
+
+  function remove(id: number) {
+    if (!confirm("Slet denne OAuth-client? Eksisterende access tokens udløber straks.")) {
+      return;
+    }
+    start(async () => {
+      await deleteOAuthClient(id);
+      setClients((prev) => prev.filter((c) => c.id !== id));
+    });
+  }
+
+  return (
+    <Card title="OAuth-clients (Claude-integration)">
+      <p className="mb-4 text-[13px] text-mid">
+        Hver client har et Client ID og Client Secret. Indtast dem i Claude's
+        Custom Connector-dialog — så kan Claude læse og redigere din log via MCP.
+      </p>
+
+      {created && (
+        <div className="mb-4 rounded-[3px] border border-success bg-[rgba(74,222,128,0.08)] p-4">
+          <p className="mb-3 text-[13px] font-medium text-success">
+            ✓ Client &quot;{created.name}&quot; oprettet
+          </p>
+          <p className="mb-3 text-[12px] italic text-warning">
+            Client Secret vises kun nu. Kopier det med det samme — det kan ikke
+            hentes igen.
+          </p>
+          <CredentialLine label="Client ID" value={created.clientId} />
+          <CredentialLine label="Client Secret" value={created.clientSecret} />
+          <button
+            type="button"
+            onClick={() => setCreated(null)}
+            className="mt-3 cursor-pointer text-[12px] text-mid hover:text-ink"
+          >
+            Jeg har kopieret begge — luk
+          </button>
+        </div>
+      )}
+
+      {clients.length === 0 ? (
+        <p className="text-[13px] italic text-light">Ingen clients endnu.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {clients.map((c) => {
+            const uris = (() => {
+              try {
+                const arr = JSON.parse(c.redirectUris);
+                return Array.isArray(arr) ? arr : [];
+              } catch {
+                return [];
+              }
+            })();
+            return (
+              <div
+                key={c.id}
+                className="rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[12px]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-ink">{c.name}</span>
+                  <code className="text-mid">{c.clientId}</code>
+                  <button
+                    type="button"
+                    onClick={() => remove(c.id)}
+                    disabled={pending}
+                    className="ml-auto cursor-pointer text-dim hover:text-danger"
+                  >
+                    Slet
+                  </button>
+                </div>
+                {uris.length > 0 && (
+                  <div className="mt-1 text-[11px] text-light">
+                    Redirects: {uris.join(", ")}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showForm ? (
+        <div className="mt-4 space-y-3 rounded-[3px] border border-border-light bg-bg p-3">
+          <div>
+            <Label>Navn</Label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Claude"
+            />
+          </div>
+          <div>
+            <Label>Redirect URIs (én per linje)</Label>
+            <textarea
+              value={redirectInput}
+              onChange={(e) => setRedirectInput(e.target.value)}
+              rows={3}
+              placeholder={CLAUDE_REDIRECT_URI}
+              className="!w-full font-mono text-[12px]"
+            />
+            <p className="mt-1 text-[11px] text-light">
+              For claude.ai web: {CLAUDE_REDIRECT_URI}
+            </p>
+          </div>
+          {err && <p className="text-[13px] text-danger">{err}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={submit}
+              disabled={pending || !name.trim()}
+              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+            >
+              {pending ? "Opretter..." : "Opret"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowForm(false);
+                setErr(null);
+              }}
+              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+            >
+              Annullér
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="mt-4 cursor-pointer rounded-[3px] border border-dashed border-border bg-transparent px-3 py-2 text-[13px] text-light hover:border-accent hover:text-accent-bright"
+        >
+          + Opret OAuth-client
+        </button>
+      )}
+    </Card>
+  );
+}
+
+function CredentialLine({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+  return (
+    <div className="mb-2 flex items-center gap-2 rounded-[3px] border border-border-light bg-bg px-2 py-1.5">
+      <span className="w-24 shrink-0 text-[11px] uppercase tracking-[0.5px] text-light">
+        {label}
+      </span>
+      <code className="flex-1 truncate text-[12px] text-ink">{value}</code>
+      <button
+        type="button"
+        onClick={copy}
+        className="shrink-0 cursor-pointer rounded-[2px] border border-border px-2 py-0.5 text-[11px] text-mid hover:border-accent hover:text-accent-bright"
+      >
+        {copied ? "✓" : "Kopiér"}
+      </button>
+    </div>
   );
 }

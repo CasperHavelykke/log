@@ -28,6 +28,53 @@ export const sessions = sqliteTable("sessions", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+export const oauthClients = sqliteTable("oauth_clients", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  clientId: text("client_id").notNull().unique(),
+  clientSecretHash: text("client_secret_hash").notNull(),
+  name: text("name").notNull(),
+  redirectUris: text("redirect_uris").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const oauthAuthCodes = sqliteTable("oauth_auth_codes", {
+  code: text("code").primaryKey(),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  scope: text("scope"),
+  codeChallenge: text("code_challenge"),
+  codeChallengeMethod: text("code_challenge_method"),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const oauthAccessTokens = sqliteTable("oauth_access_tokens", {
+  tokenHash: text("token_hash").primaryKey(),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  scope: text("scope"),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+});
+
 export const projects = sqliteTable("projects", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")
@@ -296,6 +343,12 @@ export const dayEntries = sqliteTable(
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type OAuthClient = typeof oauthClients.$inferSelect;
+export type NewOAuthClient = typeof oauthClients.$inferInsert;
+export type OAuthAuthCode = typeof oauthAuthCodes.$inferSelect;
+export type NewOAuthAuthCode = typeof oauthAuthCodes.$inferInsert;
+export type OAuthAccessToken = typeof oauthAccessTokens.$inferSelect;
+export type NewOAuthAccessToken = typeof oauthAccessTokens.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;

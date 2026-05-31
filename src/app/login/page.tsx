@@ -4,9 +4,33 @@ import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Log ind | Log" };
 
-export default async function LoginPage() {
+type Params = Promise<{ [key: string]: string | string[] | undefined }>;
+
+function sanitizeReturnTo(raw: unknown): string {
+  if (typeof raw !== "string" || !raw) return "/";
+  try {
+    const decoded = decodeURIComponent(raw);
+    // Tillader kun absolute paths på samme origin (start med "/" men ikke "//")
+    if (decoded.startsWith("/") && !decoded.startsWith("//")) return decoded;
+    return "/";
+  } catch {
+    return "/";
+  }
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Params;
+}) {
+  const params = await searchParams;
+  const returnToRaw = Array.isArray(params.return_to)
+    ? params.return_to[0]
+    : params.return_to;
+  const returnTo = sanitizeReturnTo(returnToRaw);
+
   const user = await getCurrentUser();
-  if (user) redirect("/");
+  if (user) redirect(returnTo);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -15,7 +39,7 @@ export default async function LoginPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Log</h1>
           <p className="mt-1 text-sm text-muted">Log ind for at fortsætte</p>
         </div>
-        <LoginForm />
+        <LoginForm returnTo={returnTo} />
       </div>
     </main>
   );
