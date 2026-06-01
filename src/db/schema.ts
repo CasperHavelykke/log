@@ -341,6 +341,24 @@ export const dayEntries = sqliteTable(
   (t) => [uniqueIndex("day_entries_user_date").on(t.userId, t.date)],
 );
 
+export const trackers = sqliteTable(
+  "trackers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    notes: text("notes"),
+    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("trackers_user_archived").on(t.userId, t.archived)],
+);
+
 export const photos = sqliteTable(
   "photos",
   {
@@ -348,6 +366,10 @@ export const photos = sqliteTable(
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    trackerId: integer("tracker_id").references(() => trackers.id, {
+      onDelete: "set null",
+    }),
+    // Legacy felter — bevares for backward compat. Nye uploads bruger trackerId.
     category: text("category").notNull(),
     bodyArea: text("body_area"),
     caption: text("caption"),
@@ -360,8 +382,24 @@ export const photos = sqliteTable(
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
-  (t) => [index("photos_user_taken").on(t.userId, t.takenAt)],
+  (t) => [
+    index("photos_user_taken").on(t.userId, t.takenAt),
+    index("photos_tracker").on(t.trackerId),
+  ],
 );
+
+export const TRACKER_KINDS = [
+  "skin_spot",
+  "dermatitis",
+  "staph",
+  "weight",
+  "waist",
+  "other",
+] as const;
+export type TrackerKind = (typeof TRACKER_KINDS)[number];
+
+export type Tracker = typeof trackers.$inferSelect;
+export type NewTracker = typeof trackers.$inferInsert;
 
 export const documents = sqliteTable(
   "documents",

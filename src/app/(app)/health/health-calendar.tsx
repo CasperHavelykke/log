@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
+import { TrackerPhotoAdd } from "@/components/tracker-photo-add";
 import { formatDanishDate, todayIsoDate } from "@/lib/date";
 import { garminScoreToQuality } from "@/lib/sleep";
 import { SleepQualityScale } from "@/components/sleep-quality-scale";
@@ -117,9 +118,11 @@ function fmtMinutes(m: number | null): string {
 export function HealthCalendar({
   entries: initial,
   sleepEntries: initialSleep,
+  trackers,
 }: {
   entries: Entry[];
   sleepEntries: Sleep[];
+  trackers: { id: number; name: string; kind: string }[];
 }) {
   const today = todayIsoDate();
   const [entries, setEntries] = useState<Map<string, Entry>>(
@@ -173,10 +176,10 @@ export function HealthCalendar({
             Helbred
           </h1>
           <a
-            href="/health/photos"
+            href="/health/trackere"
             className="text-[13px] text-accent-bright hover:underline"
           >
-            Billeder →
+            Trackere →
           </a>
         </div>
         <div className="flex items-center gap-2">
@@ -309,6 +312,7 @@ export function HealthCalendar({
           date={selected}
           entry={entries.get(selected) ?? null}
           sleep={sleeps.get(selected) ?? null}
+          trackers={trackers}
           onClose={() => setSelected(null)}
           onSaved={(saved) => {
             setEntries((m) => {
@@ -352,6 +356,7 @@ function DayEditor({
   date,
   entry,
   sleep,
+  trackers,
   onClose,
   onSaved,
   onSleepDeleted,
@@ -359,6 +364,7 @@ function DayEditor({
   date: string;
   entry: Entry | null;
   sleep: Sleep | null;
+  trackers: { id: number; name: string; kind: string }[];
   onClose: () => void;
   onSaved: (saved: Entry) => void;
   onSleepDeleted: () => void;
@@ -850,6 +856,8 @@ function DayEditor({
             placeholder="Symptomer, medicin, observationer..."
           />
         </div>
+
+        <TrackerPhotoAdd date={date} trackers={trackers} />
       </div>
 
       <div className="mt-4 flex items-center gap-3">

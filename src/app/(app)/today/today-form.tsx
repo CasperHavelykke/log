@@ -24,6 +24,10 @@ import {
   type DocSummary,
 } from "@/components/application-documents";
 import {
+  TrackerPhotoAdd,
+  type TrackerRef,
+} from "@/components/tracker-photo-add";
+import {
   Check,
   Circle,
   Hourglass,
@@ -206,6 +210,7 @@ export function TodayPage(props: {
   initialTimeEntries: TimeEntry[];
   initialApplications: AppItem[];
   unattachedDocuments: AppDoc[];
+  trackers: TrackerRef[];
   initialDay: DayState;
   garminSleep: GarminSleepSummary | null;
   yesterdayNextStep: string;
@@ -347,6 +352,8 @@ export function TodayPage(props: {
             sleepInput={sleepInput}
             setSleepInput={setSleepInput}
             garminSleep={props.garminSleep}
+            date={props.date}
+            trackers={props.trackers}
           />
         </Card>
       </div>
@@ -1365,6 +1372,8 @@ function HealthBody({
   sleepInput,
   setSleepInput,
   garminSleep,
+  date,
+  trackers,
 }: {
   day: DayState;
   setDay: (d: DayState) => void;
@@ -1375,6 +1384,8 @@ function HealthBody({
     score: number | null;
     qualityLabel: string | null;
   } | null;
+  date: string;
+  trackers: TrackerRef[];
 }) {
   const hasGarminDuration =
     garminSleep !== null && garminSleep.durationMin !== null;
@@ -1739,6 +1750,8 @@ function HealthBody({
           placeholder="Symptomer, medicin, observationer..."
         />
       </div>
+
+      <TrackerPhotoAdd date={date} trackers={trackers} />
     </div>
   );
 }
