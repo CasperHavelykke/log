@@ -33,7 +33,7 @@ export async function uploadBlob(params: {
   const safeName = sanitizeFilename(params.filename);
   const path = `${params.prefix}/${safeName}`;
   const result = await put(path, params.data, {
-    access: "public",
+    access: "private",
     contentType: params.contentType,
     addRandomSuffix: true,
   });

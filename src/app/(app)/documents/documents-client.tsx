@@ -184,7 +184,7 @@ function DocumentRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
           <a
-            href={doc.blobUrl}
+            href={`/api/files/document/${doc.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-ink hover:text-accent-bright"

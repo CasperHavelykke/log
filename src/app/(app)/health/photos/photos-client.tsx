@@ -200,7 +200,7 @@ function PhotoCard({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={photo.blobUrl}
+          src={`/api/files/photo/${photo.id}`}
           alt={photo.caption ?? fmtDate(photo.takenAt)}
           className="aspect-square w-full object-cover"
         />
@@ -243,7 +243,7 @@ function PhotoViewer({
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={photo.blobUrl}
+        src={`/api/files/photo/${photo.id}`}
         alt={photo.caption ?? ""}
         className="max-h-[90vh] max-w-full object-contain"
         onClick={(e) => e.stopPropagation()}
