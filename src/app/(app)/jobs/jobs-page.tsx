@@ -387,7 +387,7 @@ export function JobsPage({
 // --- statistics -------------------------------------------------------------
 
 function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<Period>("90d");
 
   const range = useMemo(() => {
     const today = new Date();
@@ -877,7 +877,6 @@ function AddForm({
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState<Status>("sent");
-  const [files, setFiles] = useState("");
   const [url, setUrl] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [notes, setNotes] = useState("");
@@ -897,7 +896,7 @@ function AddForm({
       const res = await createJobApplication({
         company,
         role: role || null,
-        files: files || null,
+        files: null,
         applicationText: applicationText || null,
         status,
         sentAt: sentAt || undefined,
@@ -971,14 +970,6 @@ function AddForm({
             onChange={(e) => setSentAt(e.target.value)}
           />
         </Field>
-        <Field label="Filer" full>
-          <input
-            type="text"
-            value={files}
-            onChange={(e) => setFiles(e.target.value)}
-            placeholder="Fx CV_Ravnit.pdf"
-          />
-        </Field>
         <Field label="URL" full>
           <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
         </Field>
@@ -1005,7 +996,11 @@ function AddForm({
           />
         </Field>
       </div>
-      <div className="mt-4 flex gap-2">
+      <p className="mt-3 text-[11px] italic text-dim">
+        Tilknyt CV / ansøgning / job-opslag efter du har oprettet ansøgningen
+        — via 📎-knappen på rækken eller redigér-modalen.
+      </p>
+      <div className="mt-3 flex gap-2">
         <button
           type="button"
           onClick={submit}
