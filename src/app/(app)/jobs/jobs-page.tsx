@@ -9,6 +9,7 @@ import {
 } from "../today/actions";
 import { danishLongDate } from "@/lib/date";
 import { ExternalLink, FileLinks } from "@/components/file-links";
+import { ApplicationDocuments } from "@/components/application-documents";
 
 type Status =
   | "sent"
@@ -18,6 +19,14 @@ type Status =
   | "offer"
   | "rejected"
   | "withdrawn";
+
+type AppDoc = {
+  id: number;
+  title: string;
+  kind: string;
+  filename: string;
+  mimeType: string;
+};
 
 type App = {
   id: number;
@@ -31,6 +40,7 @@ type App = {
   applicationText: string;
   sentAt: string;
   updatedAt: string;
+  documents: AppDoc[];
 };
 
 type Event = {
@@ -144,12 +154,15 @@ function isoWeekNumber(date: Date): number {
 export function JobsPage({
   initial,
   events: initialEvents,
+  unattached: initialUnattached,
 }: {
   initial: App[];
   events: Event[];
+  unattached: AppDoc[];
 }) {
   const [apps, setApps] = useState<App[]>(initial);
   const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [unattached, setUnattached] = useState<AppDoc[]>(initialUnattached);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [adding, setAdding] = useState(false);
@@ -331,6 +344,26 @@ export function JobsPage({
               <EditCard
                 key={a.id}
                 app={a}
+                unattached={unattached}
+                onDocumentsChange={(next) => {
+                  const added = next.filter(
+                    (d) => !a.documents.some((x) => x.id === d.id),
+                  );
+                  const removed = a.documents.filter(
+                    (d) => !next.some((x) => x.id === d.id),
+                  );
+                  setApps((xs) =>
+                    xs.map((x) =>
+                      x.id === a.id ? { ...x, documents: next } : x,
+                    ),
+                  );
+                  setUnattached((prev) => {
+                    const filtered = prev.filter(
+                      (d) => !added.some((x) => x.id === d.id),
+                    );
+                    return [...filtered, ...removed];
+                  });
+                }}
                 onSave={(updated) => handleSaveEdit(updated, a.status)}
                 onCancel={() => setEditingId(null)}
               />
@@ -625,6 +658,22 @@ function RowCard({
             {app.company}
             {app.role && <span className="text-mid"> · {app.role}</span>}
           </div>
+          {app.documents.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {app.documents.map((d) => (
+                <a
+                  key={d.id}
+                  href={`/api/files/document/${d.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full border border-border-light bg-bg px-2 py-0.5 text-[11px] text-ink hover:text-accent-bright"
+                  title={d.filename}
+                >
+                  📎 {d.title}
+                </a>
+              ))}
+            </div>
+          )}
           {app.files && (
             <div className="mt-1">
               <FileLinks value={app.files} />
@@ -689,10 +738,14 @@ function RowCard({
 
 function EditCard({
   app,
+  unattached,
+  onDocumentsChange,
   onSave,
   onCancel,
 }: {
   app: App;
+  unattached: AppDoc[];
+  onDocumentsChange: (next: AppDoc[]) => void;
   onSave: (updated: App) => void;
   onCancel: () => void;
 }) {
@@ -739,13 +792,21 @@ function EditCard({
             onChange={(e) => setDraft({ ...draft, sentAt: e.target.value })}
           />
         </Field>
-        <Field label="Filer" full>
-          <input
-            type="text"
-            value={draft.files}
-            onChange={(e) => setDraft({ ...draft, files: e.target.value })}
-            placeholder="Fx CV_Ravnit.pdf, Ansøgning_Ravnit.pdf"
+        <Field label="Dokumenter" full>
+          <ApplicationDocuments
+            applicationId={app.id}
+            attached={app.documents}
+            availableForAttach={unattached}
+            onChange={onDocumentsChange}
           />
+          {draft.files && (
+            <div className="mt-2 rounded-[3px] border border-border-light bg-bg px-2 py-1">
+              <p className="mb-1 text-[10px] uppercase tracking-[0.4px] text-dim">
+                Legacy filnavne (kun visning)
+              </p>
+              <FileLinks value={draft.files} />
+            </div>
+          )}
         </Field>
         <Field label="URL" full>
           <input
@@ -867,6 +928,7 @@ function AddForm({
           applicationText,
           sentAt: res.application.sentAt ?? "",
           updatedAt: res.application.updatedAt,
+          documents: [],
         });
       }
     });

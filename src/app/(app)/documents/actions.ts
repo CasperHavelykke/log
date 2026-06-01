@@ -133,6 +133,66 @@ export async function listDocuments() {
     .orderBy(desc(schema.documents.createdAt));
 }
 
+export async function attachDocument(input: {
+  documentId: number;
+  jobApplicationId: number;
+}) {
+  const user = await requireUser();
+  const docRows = await db
+    .select()
+    .from(schema.documents)
+    .where(
+      and(
+        eq(schema.documents.id, input.documentId),
+        eq(schema.documents.userId, user.id),
+      ),
+    )
+    .limit(1);
+  if (!docRows[0]) return { ok: false as const, error: "Dokument findes ikke" };
+
+  const appRows = await db
+    .select({ id: schema.jobApplications.id })
+    .from(schema.jobApplications)
+    .where(
+      and(
+        eq(schema.jobApplications.id, input.jobApplicationId),
+        eq(schema.jobApplications.userId, user.id),
+      ),
+    )
+    .limit(1);
+  if (!appRows[0]) {
+    return { ok: false as const, error: "Ansøgning findes ikke" };
+  }
+
+  await db
+    .update(schema.documents)
+    .set({ jobApplicationId: input.jobApplicationId })
+    .where(eq(schema.documents.id, input.documentId));
+
+  revalidatePath("/jobs");
+  revalidatePath("/today");
+  revalidatePath("/documents");
+  return { ok: true as const };
+}
+
+export async function detachDocument(documentId: number) {
+  const user = await requireUser();
+  await db
+    .update(schema.documents)
+    .set({ jobApplicationId: null })
+    .where(
+      and(
+        eq(schema.documents.id, documentId),
+        eq(schema.documents.userId, user.id),
+      ),
+    );
+
+  revalidatePath("/jobs");
+  revalidatePath("/today");
+  revalidatePath("/documents");
+  return { ok: true as const };
+}
+
 export async function searchDocuments(query: string) {
   const user = await requireUser();
   if (!query.trim()) return [];

@@ -2,6 +2,7 @@ import { and, eq, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import { getAllApplicationEvents, getAllJobApplications } from "@/lib/queries";
+import { listDocuments } from "../documents/actions";
 import { JobsPage } from "./jobs-page";
 import type { JobStatus } from "@/db/schema";
 
@@ -51,10 +52,30 @@ async function flagStaleSentApplications(userId: number) {
 export default async function Jobs() {
   const user = await requireUser();
   await flagStaleSentApplications(user.id);
-  const [apps, events] = await Promise.all([
+  const [apps, events, docs] = await Promise.all([
     getAllJobApplications(user.id),
     getAllApplicationEvents(user.id),
+    listDocuments(),
   ]);
+
+  const docsByApp = new Map<number, typeof docs>();
+  for (const d of docs) {
+    if (d.jobApplicationId !== null) {
+      const list = docsByApp.get(d.jobApplicationId) ?? [];
+      list.push(d);
+      docsByApp.set(d.jobApplicationId, list);
+    }
+  }
+  const unattached = docs
+    .filter((d) => d.jobApplicationId === null)
+    .map((d) => ({
+      id: d.id,
+      title: d.title,
+      kind: d.kind,
+      filename: d.filename,
+      mimeType: d.mimeType,
+    }));
+
   return (
     <JobsPage
       initial={apps.map((a) => ({
@@ -69,6 +90,13 @@ export default async function Jobs() {
         applicationText: a.applicationText ?? "",
         sentAt: a.sentAt ?? "",
         updatedAt: a.updatedAt,
+        documents: (docsByApp.get(a.id) ?? []).map((d) => ({
+          id: d.id,
+          title: d.title,
+          kind: d.kind,
+          filename: d.filename,
+          mimeType: d.mimeType,
+        })),
       }))}
       events={events.map((e) => ({
         id: e.id,
@@ -76,6 +104,7 @@ export default async function Jobs() {
         status: e.status as JobStatus,
         occurredAt: e.occurredAt,
       }))}
+      unattached={unattached}
     />
   );
 }

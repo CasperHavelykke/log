@@ -14,6 +14,7 @@ import {
   getWeekGoal,
 } from "@/lib/queries";
 import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
+import { listDocuments } from "../documents/actions";
 import { TodayPage } from "./today-form";
 
 export const metadata = { title: "Log" };
@@ -61,12 +62,32 @@ export default async function Today() {
     getDayEntry(user.id, yesterdayDate),
   ]);
 
-  const [supplements, todaysIntakes, activeFast, recentFasts] = await Promise.all([
-    getActiveSupplements(user.id),
-    getSupplementIntakesOnDate(user.id, date),
-    getActiveFast(user.id),
-    getRecentFasts(user.id, 5),
-  ]);
+  const [supplements, todaysIntakes, activeFast, recentFasts, allDocs] =
+    await Promise.all([
+      getActiveSupplements(user.id),
+      getSupplementIntakesOnDate(user.id, date),
+      getActiveFast(user.id),
+      getRecentFasts(user.id, 5),
+      listDocuments(),
+    ]);
+
+  const docsByApp = new Map<number, typeof allDocs>();
+  for (const d of allDocs) {
+    if (d.jobApplicationId !== null) {
+      const list = docsByApp.get(d.jobApplicationId) ?? [];
+      list.push(d);
+      docsByApp.set(d.jobApplicationId, list);
+    }
+  }
+  const unattachedDocs = allDocs
+    .filter((d) => d.jobApplicationId === null)
+    .map((d) => ({
+      id: d.id,
+      title: d.title,
+      kind: d.kind,
+      filename: d.filename,
+      mimeType: d.mimeType,
+    }));
 
   const yesterdayNextStep = yesterdayEntry?.nextStep?.trim() || "";
 
@@ -173,7 +194,15 @@ export default async function Today() {
           | "offer"
           | "rejected"
           | "withdrawn",
+        documents: (docsByApp.get(a.id) ?? []).map((d) => ({
+          id: d.id,
+          title: d.title,
+          kind: d.kind,
+          filename: d.filename,
+          mimeType: d.mimeType,
+        })),
       }))}
+      unattachedDocuments={unattachedDocs}
       initialDay={{
         mood: entry?.mood ?? null,
         energy: entry?.energy ?? null,

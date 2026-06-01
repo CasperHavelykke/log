@@ -20,6 +20,10 @@ import {
 } from "./supplement-actions";
 import { deleteFast, endFast, startFast, updateFast } from "./fast-actions";
 import {
+  ApplicationDocuments,
+  type DocSummary,
+} from "@/components/application-documents";
+import {
   Check,
   Circle,
   Hourglass,
@@ -49,12 +53,21 @@ type Status =
   | "rejected"
   | "withdrawn";
 
+type AppDoc = {
+  id: number;
+  title: string;
+  kind: string;
+  filename: string;
+  mimeType: string;
+};
+
 type AppItem = {
   id: number;
   company: string;
   role: string;
   files: string;
   status: Status;
+  documents: AppDoc[];
 };
 
 type DayState = {
@@ -192,6 +205,7 @@ export function TodayPage(props: {
   initialFocusProjectId: number | null;
   initialTimeEntries: TimeEntry[];
   initialApplications: AppItem[];
+  unattachedDocuments: AppDoc[];
   initialDay: DayState;
   garminSleep: GarminSleepSummary | null;
   yesterdayNextStep: string;
@@ -208,6 +222,9 @@ export function TodayPage(props: {
     props.initialSupplementIntakes,
   );
   const [apps, setApps] = useState<AppItem[]>(props.initialApplications);
+  const [unattached, setUnattached] = useState<AppDoc[]>(
+    props.unattachedDocuments,
+  );
   const [projects, setProjects] = useState<ProjectRef[]>(props.projects);
   const [focusProjectId, setFocusProjectIdState] = useState<number | null>(
     props.initialFocusProjectId,
@@ -293,6 +310,8 @@ export function TodayPage(props: {
             apps={apps}
             onChange={setApps}
             date={props.date}
+            unattachedDocs={unattached}
+            setUnattachedDocs={setUnattached}
             onError={setError}
           />
         </Card>
@@ -1108,24 +1127,29 @@ function ApplicationsList({
   apps,
   onChange,
   date,
+  unattachedDocs,
+  setUnattachedDocs,
   onError,
 }: {
   apps: AppItem[];
   onChange: (apps: AppItem[]) => void;
   date: string;
+  unattachedDocs: AppDoc[];
+  setUnattachedDocs: (
+    next: AppDoc[] | ((prev: AppDoc[]) => AppDoc[]),
+  ) => void;
   onError: (msg: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [expandedDocsFor, setExpandedDocsFor] = useState<number | null>(null);
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
-  const [files, setFiles] = useState("");
   const [status, setStatus] = useState<Status>("sent");
   const [, startAdd] = useTransition();
 
   function reset() {
     setCompany("");
     setRole("");
-    setFiles("");
     setStatus("sent");
   }
 
@@ -1135,7 +1159,7 @@ function ApplicationsList({
       const res = await createJobApplication({
         company,
         role: role || null,
-        files: files || null,
+        files: null,
         status,
         sentAt: date,
       });
@@ -1152,6 +1176,7 @@ function ApplicationsList({
             role: res.application.role ?? "",
             files: res.application.files ?? "",
             status: res.application.status as Status,
+            documents: [],
           },
         ]);
       }
@@ -1176,43 +1201,89 @@ function ApplicationsList({
         <div className="py-2 text-sm italic text-dim">Ingen ansøgninger endnu</div>
       ) : (
         <div className="space-y-2">
-          {apps.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-2.5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-ink">
-                  {a.company}
-                  {a.role && <span className="text-mid"> · {a.role}</span>}
+          {apps.map((a) => {
+            const expanded = expandedDocsFor === a.id;
+            return (
+              <div
+                key={a.id}
+                className="rounded-[3px] border border-border-light bg-bg px-3 py-2.5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-ink">
+                      {a.company}
+                      {a.role && <span className="text-mid"> · {a.role}</span>}
+                    </div>
+                    {a.files && (
+                      <div className="mt-0.5">
+                        <FileLinks value={a.files} />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedDocsFor(expanded ? null : a.id)
+                    }
+                    className="cursor-pointer text-[11px] text-light hover:text-accent-bright"
+                    title="Dokumenter"
+                  >
+                    📎 {a.documents.length}
+                  </button>
+                  <select
+                    value={a.status}
+                    onChange={(e) =>
+                      changeStatus(a.id, e.target.value as Status)
+                    }
+                    className={`!w-auto !border-0 !p-1 !text-[11px] uppercase tracking-[0.3px] !rounded-full ${STATUS_CLASSES[a.status]}`}
+                  >
+                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                      <option key={k} value={k} className="bg-card text-ink">
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => remove(a.id)}
+                    className="cursor-pointer border-none bg-transparent px-1 text-[18px] leading-none text-dim hover:text-danger"
+                    title="Fjern"
+                  >
+                    ×
+                  </button>
                 </div>
-                {a.files && (
-                  <div className="mt-0.5">
-                    <FileLinks value={a.files} />
+                {expanded && (
+                  <div className="mt-2 border-t border-border-light pt-2">
+                    <ApplicationDocuments
+                      applicationId={a.id}
+                      attached={a.documents}
+                      availableForAttach={unattachedDocs}
+                      compact
+                      onChange={(next) => {
+                        const added = next.filter(
+                          (d) => !a.documents.some((x) => x.id === d.id),
+                        );
+                        const removed = a.documents.filter(
+                          (d) => !next.some((x) => x.id === d.id),
+                        );
+                        onChange(
+                          apps.map((x) =>
+                            x.id === a.id ? { ...x, documents: next } : x,
+                          ),
+                        );
+                        setUnattachedDocs((prev) => {
+                          const filtered = prev.filter(
+                            (d) => !added.some((x) => x.id === d.id),
+                          );
+                          return [...filtered, ...removed];
+                        });
+                      }}
+                    />
                   </div>
                 )}
               </div>
-              <select
-                value={a.status}
-                onChange={(e) => changeStatus(a.id, e.target.value as Status)}
-                className={`!w-auto !border-0 !p-1 !text-[11px] uppercase tracking-[0.3px] !rounded-full ${STATUS_CLASSES[a.status]}`}
-              >
-                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                  <option key={k} value={k} className="bg-card text-ink">
-                    {v}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => remove(a.id)}
-                className="cursor-pointer border-none bg-transparent px-1 text-[18px] leading-none text-dim hover:text-danger"
-                title="Fjern"
-              >
-                ×
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1257,17 +1328,10 @@ function ApplicationsList({
               </select>
             </div>
           </div>
-          <div className="mb-3">
-            <Label>
-              Filer <span className="ml-1 italic text-dim">— sti eller filnavne</span>
-            </Label>
-            <input
-              type="text"
-              value={files}
-              onChange={(e) => setFiles(e.target.value)}
-              placeholder="Fx CV_Ravnit.pdf, Ansøgning_Ravnit.pdf"
-            />
-          </div>
+          <p className="mb-3 text-[11px] italic text-dim">
+            Tilknyt CV/ansøgning/job-opslag efter du har oprettet ansøgningen
+            — tryk på 📎-ikonet på rækken.
+          </p>
           <div className="flex gap-2">
             <button
               type="button"
