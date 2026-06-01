@@ -2,7 +2,7 @@ import "server-only";
 
 import mammoth from "mammoth";
 import { convert as htmlToText } from "html-to-text";
-import { PDFParse } from "pdf-parse";
+import { extractText as unpdfExtract, getDocumentProxy } from "unpdf";
 
 export const EXTRACTABLE_MIME_TYPES = new Set([
   "application/pdf",
@@ -23,13 +23,9 @@ export async function extractText(
   if (!canExtractText(mimeType)) return null;
   try {
     if (mimeType === "application/pdf") {
-      const parser = new PDFParse({ data: new Uint8Array(buffer) });
-      try {
-        const result = await parser.getText();
-        return normalize(result.text);
-      } finally {
-        await parser.destroy();
-      }
+      const pdf = await getDocumentProxy(new Uint8Array(buffer));
+      const { text } = await unpdfExtract(pdf, { mergePages: true });
+      return normalize(text);
     }
     if (
       mimeType ===
