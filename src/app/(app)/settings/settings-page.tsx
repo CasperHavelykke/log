@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { LogOut } from "lucide-react";
+import { logoutAction } from "@/app/login/actions";
 import { changePassword, importData } from "./actions";
 import {
   createOAuthClient,
@@ -25,13 +27,24 @@ export function SettingsPage({
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
-      <header className="mb-6 border-b border-border pb-5">
-        <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
-          Indstillinger
-        </h1>
-        <p className="mt-1 font-serif text-sm italic text-mid">
-          Logget ind som {username}
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
+        <div>
+          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
+            Indstillinger
+          </h1>
+          <p className="mt-1 font-serif text-sm italic text-mid">
+            Logget ind som {username}
+          </p>
+        </div>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-border bg-transparent px-3 py-2 text-[13px] text-mid hover:border-danger hover:text-danger"
+          >
+            <LogOut className="size-4" />
+            Log ud
+          </button>
+        </form>
       </header>
 
       <div className="space-y-4">
