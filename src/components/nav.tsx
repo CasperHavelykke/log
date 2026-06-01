@@ -30,24 +30,27 @@ export function Nav({ username }: { username: string }) {
   const pathname = usePathname();
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
-        <Link href="/" className="text-base font-semibold tracking-tight">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+        <Link
+          href="/"
+          className="touch-manipulation rounded-md px-2 py-2 text-base font-semibold tracking-tight active:bg-border/60"
+        >
           Log
         </Link>
-        <nav className="flex flex-1 flex-wrap items-center gap-0.5 sm:gap-1">
+        <nav className="flex flex-1 flex-wrap items-center gap-1 sm:gap-1">
           {items.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 key={href}
                 href={href}
-                className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-sm transition sm:px-2.5 ${
+                className={`inline-flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-md px-2.5 py-2 text-sm transition active:bg-border/60 sm:min-h-0 sm:min-w-0 ${
                   active
                     ? "bg-accent/15 text-accent"
                     : "text-muted hover:bg-border/40 hover:text-foreground"
                 }`}
               >
-                <Icon className="size-4" />
+                <Icon className="size-5 sm:size-4" />
                 <span className="hidden sm:inline">{label}</span>
               </Link>
             );
@@ -56,10 +59,10 @@ export function Nav({ username }: { username: string }) {
         <form action={logoutAction}>
           <button
             type="submit"
-            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-sm text-muted transition hover:bg-border/40 hover:text-foreground sm:px-2.5"
+            className="inline-flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-muted transition active:bg-border/60 hover:bg-border/40 hover:text-foreground sm:min-h-0 sm:min-w-0"
             title={`Logget ind som ${username}`}
           >
-            <LogOut className="size-4" />
+            <LogOut className="size-5 sm:size-4" />
             <span className="hidden sm:inline">Log ud</span>
           </button>
         </form>
