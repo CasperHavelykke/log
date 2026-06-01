@@ -46,7 +46,14 @@ export async function compressImage(
       customQuality ?? DEFAULT_QUALITY,
     );
     closeBitmap(bitmap);
-    return { ...result, attempts: 1 };
+    return {
+      blob: result.blob,
+      width: result.width,
+      height: result.height,
+      bytes: result.blob.size,
+      mimeType: "image/jpeg",
+      attempts: 1,
+    };
   }
 
   // Ellers iterer gennem fallback-trin indtil targetBytes nås
