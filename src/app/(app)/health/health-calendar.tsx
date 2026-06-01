@@ -656,10 +656,8 @@ function DayEditor({
               Vægt <span className="ml-1 italic text-dim">— kg</span>
             </FieldLabel>
             <input
-              type="number"
-              min={0}
-              max={500}
-              step={0.1}
+              type="text"
+              inputMode="decimal"
               value={weightInput}
               onChange={(e) => setWeightInput(e.target.value)}
               placeholder="Fx 78,5"
@@ -671,10 +669,8 @@ function DayEditor({
               Livvidde <span className="ml-1 italic text-dim">— cm</span>
             </FieldLabel>
             <input
-              type="number"
-              min={0}
-              max={300}
-              step={0.5}
+              type="text"
+              inputMode="decimal"
               value={waistInput}
               onChange={(e) => setWaistInput(e.target.value)}
               placeholder="Fx 89,5"

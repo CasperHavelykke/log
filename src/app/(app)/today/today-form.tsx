@@ -1397,6 +1397,19 @@ function HealthBody({
     ? garminScoreToQuality(garminSleep!.score)
     : null;
 
+  // Lokal tekst-state for decimaler — så "78," ikke forsvinder mens du
+  // taster det næste ciffer (numerisk state mister komma-tilstanden).
+  const [weightInput, setWeightInput] = useState(
+    day.weightX10 === null
+      ? ""
+      : (day.weightX10 / 10).toString().replace(".", ","),
+  );
+  const [waistInput, setWaistInput] = useState(
+    day.waistX10 === null
+      ? ""
+      : (day.waistX10 / 10).toString().replace(".", ","),
+  );
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1536,17 +1549,13 @@ function HealthBody({
         <div>
           <Label>Vægt <span className="ml-1 italic text-dim">— kg</span></Label>
           <input
-            type="number"
-            min={0}
-            max={500}
-            step={0.1}
-            value={
-              day.weightX10 === null
-                ? ""
-                : (day.weightX10 / 10).toString().replace(".", ",")
-            }
+            type="text"
+            inputMode="decimal"
+            value={weightInput}
             onChange={(e) => {
-              const t = e.target.value.trim().replace(",", ".");
+              const raw = e.target.value;
+              setWeightInput(raw);
+              const t = raw.trim().replace(",", ".");
               if (t === "") {
                 setDay({ ...day, weightX10: null });
                 return;
@@ -1563,17 +1572,13 @@ function HealthBody({
         <div>
           <Label>Livvidde <span className="ml-1 italic text-dim">— cm</span></Label>
           <input
-            type="number"
-            min={0}
-            max={300}
-            step={0.5}
-            value={
-              day.waistX10 === null
-                ? ""
-                : (day.waistX10 / 10).toString().replace(".", ",")
-            }
+            type="text"
+            inputMode="decimal"
+            value={waistInput}
             onChange={(e) => {
-              const t = e.target.value.trim().replace(",", ".");
+              const raw = e.target.value;
+              setWaistInput(raw);
+              const t = raw.trim().replace(",", ".");
               if (t === "") {
                 setDay({ ...day, waistX10: null });
                 return;
