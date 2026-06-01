@@ -341,6 +341,74 @@ export const dayEntries = sqliteTable(
   (t) => [uniqueIndex("day_entries_user_date").on(t.userId, t.date)],
 );
 
+export const photos = sqliteTable(
+  "photos",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    bodyArea: text("body_area"),
+    caption: text("caption"),
+    blobUrl: text("blob_url").notNull(),
+    blobPathname: text("blob_pathname").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    takenAt: text("taken_at").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("photos_user_taken").on(t.userId, t.takenAt)],
+);
+
+export const documents = sqliteTable(
+  "documents",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    filename: text("filename").notNull(),
+    blobUrl: text("blob_url").notNull(),
+    blobPathname: text("blob_pathname").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    extractedText: text("extracted_text"),
+    jobApplicationId: integer("job_application_id").references(
+      () => jobApplications.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [
+    index("documents_user_kind").on(t.userId, t.kind),
+    index("documents_job_app").on(t.jobApplicationId),
+  ],
+);
+
+export const PHOTO_CATEGORIES = ["skin_spot", "body_progress", "other"] as const;
+export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
+
+export const DOCUMENT_KINDS = [
+  "application",
+  "cv",
+  "job_posting",
+  "reference",
+  "other",
+] as const;
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
+
+export type Photo = typeof photos.$inferSelect;
+export type NewPhoto = typeof photos.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type OAuthClient = typeof oauthClients.$inferSelect;

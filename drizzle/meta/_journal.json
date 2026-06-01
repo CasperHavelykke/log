@@ -141,6 +141,13 @@
       "when": 1780253758936,
       "tag": "0019_colossal_the_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1780298949899,
+      "tag": "0020_fresh_nekra",
+      "breakpoints": true
     }
   ]
 }

@@ -168,9 +168,17 @@ export function HealthCalendar({
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-        <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
-          Helbred
-        </h1>
+        <div className="flex flex-wrap items-baseline gap-4">
+          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
+            Helbred
+          </h1>
+          <a
+            href="/health/photos"
+            className="text-[13px] text-accent-bright hover:underline"
+          >
+            Billeder →
+          </a>
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"

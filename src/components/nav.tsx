@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Briefcase,
   CalendarDays,
+  FileText,
   FolderKanban,
   HeartPulse,
   LineChart,
@@ -20,6 +21,7 @@ const items = [
   { href: "/projects", label: "Projekter", icon: FolderKanban },
   { href: "/health", label: "Helbred", icon: HeartPulse },
   { href: "/statistik", label: "Statistik", icon: LineChart },
+  { href: "/documents", label: "Dokumenter", icon: FileText },
   { href: "/journal", label: "Journal", icon: NotebookPen },
   { href: "/settings", label: "Indstillinger", icon: Settings },
 ];
