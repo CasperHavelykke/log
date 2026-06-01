@@ -8,25 +8,34 @@ export const metadata = { title: "Statistik | Log" };
 export default async function StatistikPage() {
   const user = await requireUser();
 
-  const [dayEntries, sleepEntries, completedFasts] = await Promise.all([
-    db
-      .select()
-      .from(schema.dayEntries)
-      .where(eq(schema.dayEntries.userId, user.id))
-      .orderBy(asc(schema.dayEntries.date)),
-    db
-      .select()
-      .from(schema.sleepEntries)
-      .where(eq(schema.sleepEntries.userId, user.id))
-      .orderBy(asc(schema.sleepEntries.date)),
-    db
-      .select()
-      .from(schema.fasts)
-      .where(
-        and(eq(schema.fasts.userId, user.id), isNotNull(schema.fasts.endedAt)),
-      )
-      .orderBy(asc(schema.fasts.startedAt)),
-  ]);
+  const [dayEntries, sleepEntries, completedFasts, supplementIntakes] =
+    await Promise.all([
+      db
+        .select()
+        .from(schema.dayEntries)
+        .where(eq(schema.dayEntries.userId, user.id))
+        .orderBy(asc(schema.dayEntries.date)),
+      db
+        .select()
+        .from(schema.sleepEntries)
+        .where(eq(schema.sleepEntries.userId, user.id))
+        .orderBy(asc(schema.sleepEntries.date)),
+      db
+        .select()
+        .from(schema.fasts)
+        .where(
+          and(
+            eq(schema.fasts.userId, user.id),
+            isNotNull(schema.fasts.endedAt),
+          ),
+        )
+        .orderBy(asc(schema.fasts.startedAt)),
+      db
+        .select()
+        .from(schema.supplementIntakes)
+        .where(eq(schema.supplementIntakes.userId, user.id))
+        .orderBy(asc(schema.supplementIntakes.date)),
+    ]);
 
   const byDate = new Map<string, DataPoint>();
   const ensure = (date: string): DataPoint => {
@@ -89,9 +98,63 @@ export default async function StatistikPage() {
     row.fastHours = Math.max(prev, hours);
   }
 
+  // Aggregér tilskud per (name+unit) per dato. Hver unik kombination
+  // bliver til en dynamisk metric.
+  type SuppGroup = {
+    key: string;
+    displayName: string;
+    unit: string | null;
+    perDate: Map<string, number>;
+  };
+  const suppGroups = new Map<string, SuppGroup>();
+  for (const i of supplementIntakes) {
+    const trimmedName = (i.name ?? "").trim();
+    if (!trimmedName) continue;
+    const unit = (i.doseUnit ?? "").trim() || null;
+    const groupKey = `${trimmedName.toLowerCase()}|${unit ?? ""}`;
+    let group = suppGroups.get(groupKey);
+    if (!group) {
+      group = {
+        key: groupKey,
+        displayName: trimmedName,
+        unit,
+        perDate: new Map(),
+      };
+      suppGroups.set(groupKey, group);
+    }
+    // doseAmountX100 er dose × 100 (heltal). Hvis ingen dose, regn som 1 (tæller intake).
+    const dose =
+      i.doseAmountX100 !== null && i.doseAmountX100 !== undefined
+        ? i.doseAmountX100 / 100
+        : 1;
+    const prev = group.perDate.get(i.date) ?? 0;
+    group.perDate.set(i.date, prev + dose);
+  }
+
+  // Stabil mapping fra groupKey → metric-key (kort, sikker som JS-identifier)
+  const supplementMetrics: {
+    metricKey: string;
+    label: string;
+    unit: string;
+  }[] = [];
+  let suppIdx = 0;
+  for (const g of suppGroups.values()) {
+    const metricKey = `supp_${suppIdx++}`;
+    supplementMetrics.push({
+      metricKey,
+      label: g.unit ? `${g.displayName} (${g.unit})` : g.displayName,
+      unit: g.unit ? ` ${g.unit}` : "",
+    });
+    for (const [date, total] of g.perDate) {
+      const row = ensure(date);
+      row[metricKey] = total;
+    }
+  }
+  supplementMetrics.sort((a, b) => a.label.localeCompare(b.label, "da"));
+
   const data = [...byDate.values()].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
 
-  return <StatistikClient data={data} />;
+  return <StatistikClient data={data} supplementMetrics={supplementMetrics} />;
 }

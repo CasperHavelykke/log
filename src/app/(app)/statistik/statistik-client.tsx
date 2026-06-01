@@ -59,7 +59,14 @@ type MetricKey =
   | "alcohol"
   | "fastHours";
 
-type Category = "body" | "health" | "symptoms" | "sleep" | "garmin" | "other";
+type Category =
+  | "body"
+  | "health"
+  | "symptoms"
+  | "sleep"
+  | "garmin"
+  | "supplements"
+  | "other";
 
 type Metric = {
   key: MetricKey;
@@ -78,7 +85,19 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "sleep", label: "Søvn" },
   { id: "garmin", label: "Garmin biometri" },
   { id: "symptoms", label: "Symptomer" },
+  { id: "supplements", label: "Kosttilskud" },
   { id: "other", label: "Andet" },
+];
+
+const SUPPLEMENT_COLORS = [
+  "#4ade80",
+  "#a78bfa",
+  "#fb923c",
+  "#22d3ee",
+  "#ec4899",
+  "#eab308",
+  "#5fa3f0",
+  "#f87171",
 ];
 
 const METRICS: Metric[] = [
@@ -103,7 +122,6 @@ const METRICS: Metric[] = [
   { key: "fastHours", label: "Faste-varighed", short: "Faste", category: "other", unit: "t", color: "#a78bfa", decimals: 1 },
 ];
 
-const METRIC_BY_KEY = new Map(METRICS.map((m) => [m.key, m]));
 
 const RANGES = [
   { id: "30d", label: "30 dage", days: 30 },
@@ -202,7 +220,25 @@ function fromIsoNDaysAgo(days: number): string {
   return toIsoDate(from);
 }
 
-export function StatistikClient({ data }: { data: DataPoint[] }) {
+export function StatistikClient({
+  data,
+  supplementMetrics,
+}: {
+  data: DataPoint[];
+  supplementMetrics: { metricKey: string; label: string; unit: string }[];
+}) {
+  const dynamicMetrics: Metric[] = supplementMetrics.map((s, i) => ({
+    key: s.metricKey as MetricKey,
+    label: s.label,
+    short: s.label.length > 16 ? s.label.slice(0, 14) + "…" : s.label,
+    category: "supplements",
+    unit: s.unit,
+    color: SUPPLEMENT_COLORS[i % SUPPLEMENT_COLORS.length],
+    decimals: 1,
+  }));
+
+  const ALL_METRICS = [...METRICS, ...dynamicMetrics];
+  const METRIC_BY_KEY = new Map(ALL_METRICS.map((m) => [m.key, m]));
   const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>("90d");
   const [mode, setMode] = useState<"stacked" | "overlay">("stacked");
   const [showMA, setShowMA] = useState(true);
@@ -274,6 +310,7 @@ export function StatistikClient({ data }: { data: DataPoint[] }) {
           selected={selected}
           onToggle={toggle}
           data={filteredData}
+          allMetrics={ALL_METRICS}
         />
 
         <div className="space-y-3">
@@ -365,27 +402,30 @@ function MetricPicker({
   selected,
   onToggle,
   data,
+  allMetrics,
 }: {
   selected: Set<MetricKey>;
   onToggle: (k: MetricKey) => void;
   data: DataPoint[];
+  allMetrics: Metric[];
 }) {
   const counts = useMemo(() => {
     const m = new Map<MetricKey, number>();
     for (const row of data) {
-      for (const metric of METRICS) {
+      for (const metric of allMetrics) {
         if (typeof row[metric.key] === "number") {
           m.set(metric.key, (m.get(metric.key) ?? 0) + 1);
         }
       }
     }
     return m;
-  }, [data]);
+  }, [data, allMetrics]);
 
   return (
     <aside className="space-y-3 self-start rounded-md border border-border bg-card p-3">
       {CATEGORIES.map((cat) => {
-        const metrics = METRICS.filter((m) => m.category === cat.id);
+        const metrics = allMetrics.filter((m) => m.category === cat.id);
+        if (metrics.length === 0) return null;
         return (
           <div key={cat.id}>
             <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.6px] text-light">
