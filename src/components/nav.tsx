@@ -28,18 +28,8 @@ export function Nav({ username: _username }: { username: string }) {
   const pathname = usePathname();
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto max-w-5xl px-3 sm:px-4">
-        <div className="flex justify-center py-2 sm:py-3">
-          <Link
-            href="/"
-            className="touch-manipulation rounded-md active:bg-border/60"
-            aria-label="Forside"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-mark.svg" alt="Log" className="h-10 w-auto sm:h-9" />
-          </Link>
-        </div>
-        <nav className="flex flex-wrap items-center justify-center gap-0.5 pb-2 sm:gap-1 sm:pb-3">
+      <div className="mx-auto max-w-5xl px-3 py-2 sm:px-4 sm:py-3">
+        <nav className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
           {items.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
