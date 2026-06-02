@@ -478,8 +478,21 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
       }
       return ids.size;
     };
+    const finalIds = new Set<number>();
+    for (const e of events) {
+      if (!cohortIds.has(e.applicationId)) continue;
+      if (
+        e.status === "interview" ||
+        e.status === "offer" ||
+        e.status === "rejected" ||
+        e.status === "withdrawn"
+      ) {
+        finalIds.add(e.applicationId);
+      }
+    }
     return {
       sent: cohort.length,
+      waiting: cohort.length - finalIds.size,
       replied: reached(REPLY_STATUSES),
       interview: reached(INTERVIEW_STATUSES),
       offer: reached(OFFER_STATUSES),
@@ -552,18 +565,26 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
       </div>
 
       {/* Funnel */}
-      <div className="space-y-1.5">
+      <div className="space-y-3 sm:space-y-1.5">
         {[
           { label: "Sendt", value: funnel.sent, color: "var(--accent)" },
-          { label: "Svar modtaget", value: funnel.replied, color: "var(--warning)" },
+          { label: "Afventer svar", value: funnel.waiting, color: "var(--warning)" },
           { label: "Til samtale", value: funnel.interview, color: "var(--success)" },
           { label: "Tilbud", value: funnel.offer, color: "var(--success)" },
           { label: "Afvist", value: funnel.rejected, color: "var(--danger)" },
         ].map((stage) => {
           const pct = funnel.sent > 0 ? (stage.value / funnel.sent) * 100 : 0;
           return (
-            <div key={stage.label} className="flex items-center gap-3">
-              <div className="w-28 shrink-0 text-[12px] text-mid">{stage.label}</div>
+            <div
+              key={stage.label}
+              className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
+            >
+              <div className="flex items-baseline justify-between gap-2 sm:w-28 sm:shrink-0 sm:justify-start">
+                <span className="text-[12px] text-mid">{stage.label}</span>
+                <span className="text-[11px] text-light sm:hidden">
+                  {stage.value} · {Math.round(pct)}%
+                </span>
+              </div>
               <div className="relative h-6 flex-1 overflow-hidden rounded-[3px] bg-bg">
                 <div
                   className="flex h-full items-center rounded-[3px] px-2 text-[11px] font-medium text-white transition-all"
@@ -575,7 +596,7 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
                   {stage.value > 0 && stage.value}
                 </div>
               </div>
-              <div className="w-12 shrink-0 text-right text-[12px] text-light">
+              <div className="hidden w-12 shrink-0 text-right text-[12px] text-light sm:block">
                 {Math.round(pct)}%
               </div>
             </div>
