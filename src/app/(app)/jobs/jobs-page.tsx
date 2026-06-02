@@ -10,6 +10,7 @@ import {
 import { danishLongDate } from "@/lib/date";
 import { ExternalLink, FileLinks } from "@/components/file-links";
 import { ApplicationDocuments } from "@/components/application-documents";
+import { Paperclip, Pencil, X } from "lucide-react";
 
 type Status =
   | "sent"
@@ -672,85 +673,89 @@ function RowCard({
   onDelete: () => void;
 }) {
   return (
-    <div className="rounded-md border border-border bg-card px-5 py-4 transition-colors hover:border-accent-dim">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-medium text-ink">
-            {app.company}
-            {app.role && <span className="text-mid"> · {app.role}</span>}
+    <div className="rounded-md border border-border bg-card px-4 py-3 transition-colors hover:border-accent-dim sm:px-5 sm:py-4">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-ink text-[15px] leading-tight break-words">
+                {app.company}
+                {app.role && (
+                  <span className="text-mid"> · {app.role}</span>
+                )}
+              </div>
+            </div>
+            <select
+              value={app.status}
+              onChange={(e) => onStatusChange(e.target.value as Status)}
+              className={`!w-auto shrink-0 !border-0 !p-1.5 !text-[10px] uppercase tracking-[0.3px] !rounded-full ${STATUS_CLASSES[app.status]}`}
+            >
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s} className="bg-card text-ink">
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
           </div>
+
           {app.documents.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {app.documents.map((d) => (
                 <a
                   key={d.id}
                   href={`/api/files/document/${d.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full border border-border-light bg-bg px-2 py-0.5 text-[11px] text-ink hover:text-accent-bright"
+                  className="inline-flex max-w-full items-center gap-1 rounded-[3px] border border-border-light bg-bg px-2 py-0.5 text-[12px] text-ink hover:border-accent-dim hover:text-accent-bright"
                   title={d.filename}
                 >
-                  📎 {d.title}
+                  <Paperclip className="size-3 shrink-0" />
+                  <span className="truncate">{d.title}</span>
                 </a>
               ))}
             </div>
           )}
-          {app.files && (
-            <div className="mt-1">
-              <FileLinks value={app.files} />
-            </div>
-          )}
-          {app.url && (
-            <div className="mt-0.5">
-              <ExternalLink href={app.url} />
-            </div>
-          )}
+          {app.files && <FileLinks value={app.files} />}
+          {app.url && <ExternalLink href={app.url} />}
+
           {timeline.length > 1 ? (
             <Timeline events={timeline} />
           ) : (
-            <div className="mt-2 flex flex-wrap gap-3 text-[11px] uppercase tracking-[0.3px] text-light">
+            <div className="flex flex-wrap gap-x-3 text-[11px] uppercase tracking-[0.3px] text-light">
               {app.sentAt && <span>Sendt {danishLongDate(app.sentAt)}</span>}
             </div>
           )}
           {app.contactPerson && (
-            <div className="mt-1 text-[11px] uppercase tracking-[0.3px] text-light">
+            <div className="text-[11px] uppercase tracking-[0.3px] text-light">
               {app.contactPerson}
             </div>
           )}
           {app.notes && (
-            <div className="mt-2 line-clamp-2 whitespace-pre-wrap text-[13px] text-mid">
+            <div className="line-clamp-2 whitespace-pre-wrap text-[13px] text-mid">
               {app.notes}
             </div>
           )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <select
-            value={app.status}
-            onChange={(e) => onStatusChange(e.target.value as Status)}
-            className={`!w-auto !border-0 !p-1.5 !text-[11px] uppercase tracking-[0.3px] !rounded-full ${STATUS_CLASSES[app.status]}`}
-          >
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s} className="bg-card text-ink">
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="cursor-pointer rounded border border-transparent px-2 py-1 text-mid hover:border-border hover:bg-bg hover:text-ink"
-            title="Redigér"
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="cursor-pointer rounded border border-transparent px-2 py-1 text-dim hover:border-border hover:bg-bg hover:text-danger"
-            title="Slet"
-          >
-            ×
-          </button>
+
+          <div className="flex items-center justify-end gap-1 pt-1">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-md border border-transparent text-mid hover:border-border hover:bg-bg hover:text-ink"
+              title="Redigér"
+              aria-label="Redigér"
+            >
+              <Pencil className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-md border border-transparent text-dim hover:border-border hover:bg-bg hover:text-danger"
+              title="Slet"
+              aria-label="Slet"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

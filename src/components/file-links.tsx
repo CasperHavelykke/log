@@ -1,19 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import {
+  ExternalLink as ExternalLinkIcon,
+  File,
+  Folder,
+  Paperclip,
+} from "lucide-react";
 
 function isAbsolutePath(s: string): boolean {
   return (
-    /^[a-zA-Z]:[\\/]/.test(s) || // Windows: C:\ or C:/
-    s.startsWith("\\\\") || // UNC \\server\share
-    s.startsWith("//") || // POSIX network
-    s.startsWith("/") // POSIX absolute
+    /^[a-zA-Z]:[\\/]/.test(s) ||
+    s.startsWith("\\\\") ||
+    s.startsWith("//") ||
+    s.startsWith("/")
   );
 }
 
 function looksLikeFolder(path: string): boolean {
   if (path.endsWith("\\") || path.endsWith("/")) return true;
-  // No extension on last segment → probably folder
   const last = path.split(/[\\/]/).pop() ?? "";
   return !last.includes(".");
 }
@@ -45,35 +50,42 @@ export function FileLinks({ value }: { value: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
-      <span className="text-dim">📎</span>
       {parts.map((part, i) => {
         const clickable = isAbsolutePath(part);
         const folder = clickable && looksLikeFolder(part);
         const displayName = part.split(/[\\/]/).filter(Boolean).pop() ?? part;
-        return (
-          <span key={i} className="flex items-center gap-1">
-            {clickable ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  setError(null);
-                  const res = await openPath(part);
-                  if (!res.ok) setError(res.error ?? "Kunne ikke åbne");
-                }}
-                title={part}
-                className="cursor-pointer rounded border border-transparent px-1 py-0.5 text-accent-bright underline-offset-2 hover:bg-accent-bg hover:underline"
-              >
-                {folder ? "📁" : "📄"} {displayName}
-              </button>
+        return clickable ? (
+          <button
+            key={i}
+            type="button"
+            onClick={async () => {
+              setError(null);
+              const res = await openPath(part);
+              if (!res.ok) setError(res.error ?? "Kunne ikke åbne");
+            }}
+            title={part}
+            className="inline-flex max-w-full cursor-pointer items-center gap-1 rounded-[3px] border border-border-light bg-bg px-2 py-0.5 text-accent-bright hover:border-accent-dim hover:bg-accent-bg"
+          >
+            {folder ? (
+              <Folder className="size-3 shrink-0" />
             ) : (
-              <span className="text-dim">{part}</span>
+              <File className="size-3 shrink-0" />
             )}
-            {i < parts.length - 1 && <span className="text-dim">,</span>}
+            <span className="truncate">{displayName}</span>
+          </button>
+        ) : (
+          <span
+            key={i}
+            className="inline-flex max-w-full items-center gap-1 rounded-[3px] border border-border-light bg-bg px-2 py-0.5 text-dim"
+            title={part}
+          >
+            <Paperclip className="size-3 shrink-0" />
+            <span className="truncate">{part}</span>
           </span>
         );
       })}
       {error && (
-        <span className="ml-2 text-danger" title={error}>
+        <span className="ml-1 text-[11px] text-danger" title={error}>
           ⚠ {error}
         </span>
       )}
@@ -81,18 +93,27 @@ export function FileLinks({ value }: { value: string }) {
   );
 }
 
+function hostnameOf(href: string): string {
+  try {
+    const u = new URL(href);
+    return u.hostname.replace(/^www\./, "");
+  } catch {
+    return href;
+  }
+}
+
 export function ExternalLink({ href }: { href: string }) {
   if (!href) return null;
-  const display = href.length > 60 ? href.slice(0, 57) + "..." : href;
   return (
     <a
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      className="text-[12px] text-accent-bright underline-offset-2 hover:underline"
+      className="inline-flex max-w-full items-center gap-1 text-[12px] text-accent-bright hover:underline"
       title={href}
     >
-      🔗 {display}
+      <ExternalLinkIcon className="size-3 shrink-0" />
+      <span className="truncate">{hostnameOf(href)}</span>
     </a>
   );
 }
