@@ -159,6 +159,12 @@ export function HealthCalendar({
     () => ({
       logged: monthEntries.length,
       headache: monthEntries.filter((e) => e.headache).length,
+      training: monthEntries.filter((e) => e.didExercise).length,
+      alcohol: monthEntries.filter(
+        (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
+      ).length,
+      constipation: monthEntries.filter((e) => e.constipation).length,
+      foamy: monthEntries.filter((e) => e.foamyUrine).length,
       sleep: avg(
         monthEntries.filter((e) => e.sleepHoursX10 !== null).map((e) => e.sleepHoursX10! / 10),
       ),
@@ -167,6 +173,87 @@ export function HealthCalendar({
     }),
     [monthEntries],
   );
+
+  // Beregn streaks fra de seneste 90 dage. For "negative" hændelser
+  // (forstoppelse, hovedpine) viser vi nuværende serie og sidste forekomst.
+  // For "positive" (træning) viser vi count i seneste 30 dage og current streak.
+  const streaks = useMemo(() => {
+    const all = [...entries.values()].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+    const byDate = new Map(all.map((e) => [e.date, e]));
+    const lastDate = all.length > 0 ? all[all.length - 1].date : null;
+
+    const todayD = new Date(today + "T00:00:00");
+    function daysAgo(iso: string): number {
+      const d = new Date(iso + "T00:00:00");
+      return Math.round((todayD.getTime() - d.getTime()) / 86_400_000);
+    }
+    function countLast(predicate: (e: Entry) => boolean, days: number): number {
+      let c = 0;
+      for (const e of all) {
+        if (daysAgo(e.date) < days && predicate(e)) c++;
+      }
+      return c;
+    }
+    function lastOccurrence(
+      predicate: (e: Entry) => boolean,
+    ): string | null {
+      for (let i = all.length - 1; i >= 0; i--) {
+        if (predicate(all[i])) return all[i].date;
+      }
+      return null;
+    }
+    function currentRunFromLatest(predicate: (e: Entry) => boolean): number {
+      // Tæller dage i træk der opfylder predikat, sluttende på seneste log-dato.
+      let count = 0;
+      for (let i = all.length - 1; i >= 0; i--) {
+        if (predicate(all[i])) count++;
+        else break;
+      }
+      return count;
+    }
+    function daysSince(iso: string | null): number | null {
+      if (iso === null) return null;
+      return daysAgo(iso);
+    }
+
+    return {
+      lastDate,
+      byDate,
+      training: {
+        last30: countLast((e) => e.didExercise, 30),
+        currentRun: currentRunFromLatest((e) => e.didExercise),
+        lastOccurrence: lastOccurrence((e) => e.didExercise),
+      },
+      headache: {
+        last30: countLast((e) => e.headache, 30),
+        currentRun: currentRunFromLatest((e) => e.headache),
+        daysSinceLast: daysSince(lastOccurrence((e) => e.headache)),
+      },
+      alcohol: {
+        last30: countLast(
+          (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
+          30,
+        ),
+        daysSinceLast: daysSince(
+          lastOccurrence(
+            (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
+          ),
+        ),
+      },
+      constipation: {
+        last30: countLast((e) => e.constipation, 30),
+        currentRun: currentRunFromLatest((e) => e.constipation),
+        daysSinceLast: daysSince(lastOccurrence((e) => e.constipation)),
+      },
+      foamy: {
+        last30: countLast((e) => e.foamyUrine, 30),
+        currentRun: currentRunFromLatest((e) => e.foamyUrine),
+        daysSinceLast: daysSince(lastOccurrence((e) => e.foamyUrine)),
+      },
+    };
+  }, [entries, today]);
 
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
@@ -213,6 +300,8 @@ export function HealthCalendar({
         }
       />
 
+      <Streaks data={streaks} />
+
       <div className="mb-5 flex flex-wrap gap-x-6 gap-y-2 rounded-md border border-border bg-card px-5 py-3 text-[13px]">
         <Stat label="Logget" value={`${summary.logged} dage`} />
         <Stat
@@ -223,6 +312,18 @@ export function HealthCalendar({
         <Stat label="Søvn Ø" value={summary.sleep !== null ? `${fmtHours(summary.sleep * 10)} t` : "–"} />
         <Stat label="Humør Ø" value={summary.mood !== null ? String(summary.mood) : "–"} />
         <Stat label="Energi Ø" value={summary.energy !== null ? String(summary.energy) : "–"} />
+        {summary.training > 0 && (
+          <Stat label="Træning" value={`${summary.training} dage`} tone="text-success" />
+        )}
+        {summary.alcohol > 0 && (
+          <Stat label="Alkohol" value={`${summary.alcohol} dage`} tone="text-warning" />
+        )}
+        {summary.constipation > 0 && (
+          <Stat label="Forstoppelse" value={`${summary.constipation} dage`} />
+        )}
+        {summary.foamy > 0 && (
+          <Stat label="Skummende urin" value={`${summary.foamy} dage`} />
+        )}
       </div>
 
       <div className="mb-2 grid grid-cols-7 gap-1.5">
@@ -252,13 +353,37 @@ export function HealthCalendar({
                     : "border-border bg-card hover:border-accent-dim"
               }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-0.5">
                 <span
                   className={`text-[12px] ${isToday ? "font-semibold text-accent-bright" : "text-mid"}`}
                 >
                   {day}
                 </span>
-                {e?.headache && <span className="size-2 rounded-full bg-danger" title="Hovedpine" />}
+                {e && (
+                  <div className="flex flex-wrap items-center justify-end gap-0.5">
+                    {e.didExercise && (
+                      <span className="size-1.5 rounded-full bg-success" title="Træning" />
+                    )}
+                    {e.alcoholUnits !== null && e.alcoholUnits > 0 && (
+                      <span className="size-1.5 rounded-full bg-warning" title="Alkohol" />
+                    )}
+                    {e.constipation && (
+                      <span
+                        className="size-1.5 rounded-full bg-[#a67c52]"
+                        title="Forstoppelse"
+                      />
+                    )}
+                    {e.foamyUrine && (
+                      <span
+                        className="size-1.5 rounded-full bg-[#facc15]"
+                        title="Skummende urin"
+                      />
+                    )}
+                    {e.headache && (
+                      <span className="size-2 rounded-full bg-danger" title="Hovedpine" />
+                    )}
+                  </div>
+                )}
               </div>
               <div className="mt-auto space-y-1">
                 {(() => {
@@ -300,9 +425,11 @@ export function HealthCalendar({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-dim">
-        <Legend className="bg-success" label="Godt humør" />
-        <Legend className="bg-warning" label="Neutralt" />
+        <Legend className="bg-success" label="Godt humør / træning" />
+        <Legend className="bg-warning" label="Neutralt / alkohol" />
         <Legend className="bg-danger" label="Lavt / hovedpine" />
+        <Legend className="bg-[#a67c52]" label="Forstoppelse" />
+        <Legend className="bg-[#facc15]" label="Skummende urin" />
         <Legend className="bg-border" label="Ikke logget" />
       </div>
 
@@ -332,6 +459,134 @@ export function HealthCalendar({
       )}
     </div>
   );
+}
+
+type StreakData = {
+  lastDate: string | null;
+  training: {
+    last30: number;
+    currentRun: number;
+    lastOccurrence: string | null;
+  };
+  headache: {
+    last30: number;
+    currentRun: number;
+    daysSinceLast: number | null;
+  };
+  alcohol: { last30: number; daysSinceLast: number | null };
+  constipation: {
+    last30: number;
+    currentRun: number;
+    daysSinceLast: number | null;
+  };
+  foamy: {
+    last30: number;
+    currentRun: number;
+    daysSinceLast: number | null;
+  };
+};
+
+function Streaks({ data }: { data: StreakData }) {
+  if (data.lastDate === null) return null;
+
+  const cards: { label: string; value: string; sub?: string; tone?: string }[] = [];
+
+  if (data.training.last30 > 0 || data.training.currentRun > 0) {
+    cards.push({
+      label: "Træning",
+      value: `${data.training.last30}/30`,
+      sub:
+        data.training.currentRun >= 2
+          ? `${data.training.currentRun} dage i træk`
+          : data.training.lastOccurrence
+            ? `sidst ${shortDate(data.training.lastOccurrence)}`
+            : undefined,
+      tone: "text-success",
+    });
+  }
+  if (data.constipation.currentRun >= 1) {
+    cards.push({
+      label: "Forstoppelse",
+      value:
+        data.constipation.currentRun === 1
+          ? "i dag"
+          : `${data.constipation.currentRun} dage i træk`,
+      sub: `${data.constipation.last30}/30 dage`,
+      tone: "text-warning",
+    });
+  } else if (data.constipation.daysSinceLast !== null) {
+    cards.push({
+      label: "Forstoppelse",
+      value: `${data.constipation.daysSinceLast} dage siden`,
+      sub: `${data.constipation.last30}/30 dage`,
+    });
+  }
+  if (data.alcohol.daysSinceLast !== null) {
+    cards.push({
+      label: "Ingen alkohol",
+      value: `${data.alcohol.daysSinceLast} dage`,
+      sub: `${data.alcohol.last30}/30 dage med`,
+      tone: data.alcohol.daysSinceLast > 7 ? "text-success" : undefined,
+    });
+  }
+  if (data.headache.currentRun >= 1) {
+    cards.push({
+      label: "Hovedpine",
+      value:
+        data.headache.currentRun === 1
+          ? "i dag"
+          : `${data.headache.currentRun} dage i træk`,
+      sub: `${data.headache.last30}/30 dage`,
+      tone: "text-danger",
+    });
+  } else if (data.headache.daysSinceLast !== null) {
+    cards.push({
+      label: "Ingen hovedpine",
+      value: `${data.headache.daysSinceLast} dage`,
+      sub: `${data.headache.last30}/30 dage med`,
+    });
+  }
+  if (data.foamy.currentRun >= 1) {
+    cards.push({
+      label: "Skummende urin",
+      value:
+        data.foamy.currentRun === 1
+          ? "i dag"
+          : `${data.foamy.currentRun} dage i træk`,
+      sub: `${data.foamy.last30}/30 dage`,
+      tone: "text-warning",
+    });
+  }
+
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="mb-5 rounded-md border border-border bg-card px-4 py-3">
+      <div className="mb-2 text-[11px] uppercase tracking-[0.5px] text-light">
+        Aktive serier
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 md:grid-cols-4">
+        {cards.map((c) => (
+          <div key={c.label}>
+            <div className="text-[11px] text-light">{c.label}</div>
+            <div className={`text-[14px] font-medium ${c.tone ?? "text-ink"}`}>
+              {c.value}
+            </div>
+            {c.sub && <div className="text-[10px] text-dim">{c.sub}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function shortDate(iso: string): string {
+  const months = [
+    "jan", "feb", "mar", "apr", "maj", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec",
+  ];
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d}. ${months[m - 1]}`;
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
