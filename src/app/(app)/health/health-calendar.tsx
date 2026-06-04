@@ -1173,14 +1173,23 @@ function MacrosBlock({
   setProteinG: (n: number | null) => void;
   setFatG: (n: number | null) => void;
 }) {
-  const kcal = (carbsG ?? 0) * 4 + (proteinG ?? 0) * 4 + (fatG ?? 0) * 9;
-  const hasAny = carbsG !== null || proteinG !== null || fatG !== null;
+  const hasAll = carbsG !== null && proteinG !== null && fatG !== null;
+  const hasPartial =
+    !hasAll && (carbsG !== null || proteinG !== null || fatG !== null);
+  const kcal = hasAll
+    ? (carbsG ?? 0) * 4 + (proteinG ?? 0) * 4 + (fatG ?? 0) * 9
+    : null;
   return (
     <div className="rounded-[3px] border border-border-light bg-bg p-3">
       <div className="mb-2 flex items-baseline justify-between">
         <span className="text-[13px] font-medium text-mid">Makronæring</span>
-        {hasAny && (
+        {kcal !== null && (
           <span className="text-[12px] text-accent-bright">{kcal} kcal</span>
+        )}
+        {hasPartial && (
+          <span className="text-[11px] italic text-dim">
+            Udfyld alle tre for kcal
+          </span>
         )}
       </div>
       <div className="grid grid-cols-3 gap-2">

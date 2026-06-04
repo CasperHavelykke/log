@@ -1776,17 +1776,24 @@ function Macros({
   day: DayState;
   setDay: (d: DayState) => void;
 }) {
-  const kcal =
-    (day.carbsG ?? 0) * 4 + (day.proteinG ?? 0) * 4 + (day.fatG ?? 0) * 9;
-  const hasAny =
-    day.carbsG !== null || day.proteinG !== null || day.fatG !== null;
+  const hasAll =
+    day.carbsG !== null && day.proteinG !== null && day.fatG !== null;
+  const hasPartial =
+    !hasAll &&
+    (day.carbsG !== null || day.proteinG !== null || day.fatG !== null);
+  const kcal = hasAll
+    ? (day.carbsG ?? 0) * 4 + (day.proteinG ?? 0) * 4 + (day.fatG ?? 0) * 9
+    : null;
   return (
     <div className="rounded-[3px] border border-border-light bg-bg p-3">
       <div className="mb-2 flex items-baseline justify-between">
         <span className="text-[13px] font-medium text-mid">Makronæring</span>
-        {hasAny && (
-          <span className="text-[12px] text-accent-bright">
-            {kcal} kcal
+        {kcal !== null && (
+          <span className="text-[12px] text-accent-bright">{kcal} kcal</span>
+        )}
+        {hasPartial && (
+          <span className="text-[11px] italic text-dim">
+            Udfyld alle tre for kcal
           </span>
         )}
       </div>

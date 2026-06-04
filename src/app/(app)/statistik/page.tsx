@@ -66,8 +66,10 @@ export default async function StatistikPage() {
     if (d.carbsG != null) row.carbs = d.carbsG;
     if (d.proteinG != null) row.protein = d.proteinG;
     if (d.fatG != null) row.fat = d.fatG;
-    if (d.carbsG != null || d.proteinG != null || d.fatG != null) {
-      row.kcal = (d.carbsG ?? 0) * 4 + (d.proteinG ?? 0) * 4 + (d.fatG ?? 0) * 9;
+    // Kcal kun beregnet når alle tre er logget — ellers ville en dag med
+    // bare protein=80 se ud som om brugeren kun spiste 320 kcal.
+    if (d.carbsG != null && d.proteinG != null && d.fatG != null) {
+      row.kcal = d.carbsG * 4 + d.proteinG * 4 + d.fatG * 9;
     }
   }
 

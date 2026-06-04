@@ -36,10 +36,8 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     proteinG: row.proteinG,
     fatG: row.fatG,
     kcal:
-      row.carbsG !== null || row.proteinG !== null || row.fatG !== null
-        ? (row.carbsG ?? 0) * 4 +
-          (row.proteinG ?? 0) * 4 +
-          (row.fatG ?? 0) * 9
+      row.carbsG !== null && row.proteinG !== null && row.fatG !== null
+        ? row.carbsG * 4 + row.proteinG * 4 + row.fatG * 9
         : null,
     updatedAt: row.updatedAt,
   };
