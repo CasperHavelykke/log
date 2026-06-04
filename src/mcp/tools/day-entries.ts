@@ -21,12 +21,19 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     constipation: row.constipation,
     constipationPain: row.constipationPain,
     seborrheicDermatitis: row.seborrheicDermatitis,
+    staph: row.staph,
     didExercise: row.didExercise,
     exerciseIntensity: row.exerciseIntensity,
     sleepHours: row.sleepHours === null ? null : row.sleepHours / 10,
     sleepQuality: row.sleepQuality,
     mood: row.mood,
     energy: row.energy,
+    weightKg: row.weightX10 === null ? null : row.weightX10 / 10,
+    waistCm: row.waistX10 === null ? null : row.waistX10 / 10,
+    breathingDifficulty: row.breathingDifficulty,
+    breathingContext: row.breathingContext,
+    foamyUrine: row.foamyUrine,
+    foamyUrinePattern: row.foamyUrinePattern,
     workNotes: row.workNotes,
     healthNotes: row.healthNotes,
     dayNotes: row.dayNotes,
@@ -338,6 +345,53 @@ export function registerDayEntryTools(server: McpServer) {
           .nullable()
           .optional()
           .describe("Fedt i gram for hele dagen."),
+        weightKg: z
+          .number()
+          .min(0)
+          .max(500)
+          .nullable()
+          .optional()
+          .describe("Vægt i kg som decimaltal, fx 78.5."),
+        waistCm: z
+          .number()
+          .min(0)
+          .max(300)
+          .nullable()
+          .optional()
+          .describe("Livvidde i cm som decimaltal, fx 89.5."),
+        staph: z
+          .number()
+          .int()
+          .min(1)
+          .max(5)
+          .nullable()
+          .optional()
+          .describe("Stafylokokker-niveau 1-5. Null hvis ikke aktivt."),
+        breathingDifficulty: z
+          .number()
+          .int()
+          .min(1)
+          .max(5)
+          .nullable()
+          .optional()
+          .describe("Vejrtrækningsbesvær 1-5. Null hvis ikke aktivt."),
+        breathingContext: z
+          .string()
+          .max(2000)
+          .nullable()
+          .optional()
+          .describe("Fri tekst: kontekst for vejrtrækningsbesvær."),
+        foamyUrine: z
+          .boolean()
+          .optional()
+          .describe("Skummende urin observeret i dag."),
+        foamyUrinePattern: z
+          .enum(["morning", "all_day"])
+          .nullable()
+          .optional()
+          .describe(
+            "Mønster for skummende urin: kun morgen eller hele dagen.",
+          ),
       },
     },
     async (args) => {
@@ -388,6 +442,36 @@ export function registerDayEntryTools(server: McpServer) {
           args.seborrheicDermatitis === undefined
             ? (existing?.seborrheicDermatitis ?? null)
             : args.seborrheicDermatitis,
+        staph:
+          args.staph === undefined ? (existing?.staph ?? null) : args.staph,
+        weightX10:
+          args.weightKg === undefined
+            ? (existing?.weightX10 ?? null)
+            : args.weightKg === null
+              ? null
+              : Math.round(args.weightKg * 10),
+        waistX10:
+          args.waistCm === undefined
+            ? (existing?.waistX10 ?? null)
+            : args.waistCm === null
+              ? null
+              : Math.round(args.waistCm * 10),
+        breathingDifficulty:
+          args.breathingDifficulty === undefined
+            ? (existing?.breathingDifficulty ?? null)
+            : args.breathingDifficulty,
+        breathingContext:
+          args.breathingContext === undefined
+            ? (existing?.breathingContext ?? null)
+            : args.breathingContext,
+        foamyUrine:
+          args.foamyUrine === undefined
+            ? (existing?.foamyUrine ?? false)
+            : args.foamyUrine,
+        foamyUrinePattern:
+          args.foamyUrinePattern === undefined
+            ? (existing?.foamyUrinePattern ?? null)
+            : args.foamyUrinePattern,
         sleepHours: sleepHoursX10,
         sleepQuality:
           args.sleepQuality === undefined
