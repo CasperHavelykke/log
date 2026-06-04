@@ -94,6 +94,9 @@ type DayState = {
   fastBreakTime: string | null;
   weightX10: number | null;
   waistX10: number | null;
+  carbsG: number | null;
+  proteinG: number | null;
+  fatG: number | null;
   breathingDifficulty: number | null;
   breathingContext: string;
   foamyUrine: boolean;
@@ -269,6 +272,9 @@ export function TodayPage(props: {
       fastBreakTime: day.didFast ? day.fastBreakTime : null,
       weightX10: day.weightX10,
       waistX10: day.waistX10,
+      carbsG: day.carbsG,
+      proteinG: day.proteinG,
+      fatG: day.fatG,
       breathingDifficulty: day.breathingDifficulty,
       breathingContext: day.breathingDifficulty
         ? day.breathingContext || null
@@ -1594,6 +1600,8 @@ function HealthBody({
         </div>
       </div>
 
+      <Macros day={day} setDay={setDay} />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <Label>Hovedpine?</Label>
@@ -1757,6 +1765,92 @@ function HealthBody({
       </div>
 
       <TrackerPhotoAdd date={date} trackers={trackers} />
+    </div>
+  );
+}
+
+function Macros({
+  day,
+  setDay,
+}: {
+  day: DayState;
+  setDay: (d: DayState) => void;
+}) {
+  const kcal =
+    (day.carbsG ?? 0) * 4 + (day.proteinG ?? 0) * 4 + (day.fatG ?? 0) * 9;
+  const hasAny =
+    day.carbsG !== null || day.proteinG !== null || day.fatG !== null;
+  return (
+    <div className="rounded-[3px] border border-border-light bg-bg p-3">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-[13px] font-medium text-mid">Makronæring</span>
+        {hasAny && (
+          <span className="text-[12px] text-accent-bright">
+            {kcal} kcal
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <MacroInput
+          label="Kulhydrater"
+          unit="g"
+          value={day.carbsG}
+          onChange={(n) => setDay({ ...day, carbsG: n })}
+        />
+        <MacroInput
+          label="Protein"
+          unit="g"
+          value={day.proteinG}
+          onChange={(n) => setDay({ ...day, proteinG: n })}
+        />
+        <MacroInput
+          label="Fedt"
+          unit="g"
+          value={day.fatG}
+          onChange={(n) => setDay({ ...day, fatG: n })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MacroInput({
+  label,
+  unit,
+  value,
+  onChange,
+}: {
+  label: string;
+  unit: string;
+  value: number | null;
+  onChange: (n: number | null) => void;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value === null ? "" : String(value)}
+          onChange={(e) => {
+            const raw = e.target.value.trim();
+            if (raw === "") {
+              onChange(null);
+              return;
+            }
+            const n = Number(raw);
+            if (Number.isFinite(n) && n >= 0 && n <= 2000) {
+              onChange(Math.round(n));
+            }
+          }}
+          placeholder="0"
+          className="!pr-7"
+        />
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-dim">
+          {unit}
+        </span>
+      </div>
     </div>
   );
 }

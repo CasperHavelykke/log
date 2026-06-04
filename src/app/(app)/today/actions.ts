@@ -28,6 +28,9 @@ const dayEntrySchema = z.object({
   fastBreakTime: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
   weightX10: z.coerce.number().int().min(0).max(5000).nullable(),
   waistX10: z.coerce.number().int().min(0).max(3000).nullable(),
+  carbsG: z.coerce.number().int().min(0).max(2000).nullable(),
+  proteinG: z.coerce.number().int().min(0).max(1000).nullable(),
+  fatG: z.coerce.number().int().min(0).max(1000).nullable(),
   breathingDifficulty: z.coerce.number().int().min(1).max(5).nullable(),
   breathingContext: z.string().max(2_000).nullable(),
   foamyUrine: z.boolean(),
@@ -84,6 +87,9 @@ export async function saveDayEntry(input: DayEntryInput): Promise<SaveResult> {
     fastBreakTime: data.didFast ? data.fastBreakTime : null,
     weightX10: data.weightX10,
     waistX10: data.waistX10,
+    carbsG: data.carbsG,
+    proteinG: data.proteinG,
+    fatG: data.fatG,
     breathingDifficulty: data.breathingDifficulty,
     breathingContext: data.breathingDifficulty
       ? nullIfEmpty(data.breathingContext)

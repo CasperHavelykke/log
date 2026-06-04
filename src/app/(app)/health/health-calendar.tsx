@@ -49,6 +49,9 @@ type Entry = {
   fastBreakTime: string | null;
   weightX10: number | null;
   waistX10: number | null;
+  carbsG: number | null;
+  proteinG: number | null;
+  fatG: number | null;
   breathingDifficulty: number | null;
   breathingContext: string;
   foamyUrine: boolean;
@@ -659,6 +662,11 @@ function DayEditor({
       ? ""
       : (entry.waistX10 / 10).toString().replace(".", ","),
   );
+  const [carbsG, setCarbsG] = useState<number | null>(entry?.carbsG ?? null);
+  const [proteinG, setProteinG] = useState<number | null>(
+    entry?.proteinG ?? null,
+  );
+  const [fatG, setFatG] = useState<number | null>(entry?.fatG ?? null);
   const [breathingDifficulty, setBreathingDifficulty] = useState<number | null>(
     entry?.breathingDifficulty ?? null,
   );
@@ -708,6 +716,9 @@ function DayEditor({
         fastBreakTime: entry?.fastBreakTime ?? null,
         weightX10,
         waistX10,
+        carbsG,
+        proteinG,
+        fatG,
         breathingDifficulty,
         breathingContext: breathingDifficulty ? breathingContext.trim() || null : null,
         foamyUrine,
@@ -743,6 +754,9 @@ function DayEditor({
         fastBreakTime: entry?.fastBreakTime ?? null,
         weightX10,
         waistX10,
+        carbsG,
+        proteinG,
+        fatG,
         breathingDifficulty,
         breathingContext: breathingDifficulty ? breathingContext : "",
         foamyUrine,
@@ -933,6 +947,15 @@ function DayEditor({
             />
           </div>
         </div>
+
+        <MacrosBlock
+          carbsG={carbsG}
+          proteinG={proteinG}
+          fatG={fatG}
+          setCarbsG={setCarbsG}
+          setProteinG={setProteinG}
+          setFatG={setFatG}
+        />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
@@ -1130,6 +1153,96 @@ function DayEditor({
               Dagsnotater bevares (redigeres på I dag / Journal)
             </span>
           )}
+      </div>
+    </div>
+  );
+}
+
+function MacrosBlock({
+  carbsG,
+  proteinG,
+  fatG,
+  setCarbsG,
+  setProteinG,
+  setFatG,
+}: {
+  carbsG: number | null;
+  proteinG: number | null;
+  fatG: number | null;
+  setCarbsG: (n: number | null) => void;
+  setProteinG: (n: number | null) => void;
+  setFatG: (n: number | null) => void;
+}) {
+  const kcal = (carbsG ?? 0) * 4 + (proteinG ?? 0) * 4 + (fatG ?? 0) * 9;
+  const hasAny = carbsG !== null || proteinG !== null || fatG !== null;
+  return (
+    <div className="rounded-[3px] border border-border-light bg-bg p-3">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-[13px] font-medium text-mid">Makronæring</span>
+        {hasAny && (
+          <span className="text-[12px] text-accent-bright">{kcal} kcal</span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <MacroFieldInput
+          label="Kulhydrater"
+          unit="g"
+          value={carbsG}
+          onChange={setCarbsG}
+        />
+        <MacroFieldInput
+          label="Protein"
+          unit="g"
+          value={proteinG}
+          onChange={setProteinG}
+        />
+        <MacroFieldInput
+          label="Fedt"
+          unit="g"
+          value={fatG}
+          onChange={setFatG}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MacroFieldInput({
+  label,
+  unit,
+  value,
+  onChange,
+}: {
+  label: string;
+  unit: string;
+  value: number | null;
+  onChange: (n: number | null) => void;
+}) {
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value === null ? "" : String(value)}
+          onChange={(e) => {
+            const raw = e.target.value.trim();
+            if (raw === "") {
+              onChange(null);
+              return;
+            }
+            const n = Number(raw);
+            if (Number.isFinite(n) && n >= 0 && n <= 2000) {
+              onChange(Math.round(n));
+            }
+          }}
+          placeholder="0"
+          className="!pr-7"
+        />
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-dim">
+          {unit}
+        </span>
       </div>
     </div>
   );

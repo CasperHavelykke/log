@@ -327,6 +327,9 @@ export const dayEntries = sqliteTable(
     breathingContext: text("breathing_context"),
     weightX10: integer("weight_x10"),
     waistX10: integer("waist_x10"),
+    carbsG: integer("carbs_g"),
+    proteinG: integer("protein_g"),
+    fatG: integer("fat_g"),
     foamyUrine: integer("foamy_urine", { mode: "boolean" })
       .notNull()
       .default(false),

@@ -63,6 +63,12 @@ export default async function StatistikPage() {
     if (d.weightX10 != null) row.weight = d.weightX10 / 10;
     if (d.waistX10 != null) row.waist = d.waistX10 / 10;
     if (d.sleepHours != null) row.sleepHoursManual = d.sleepHours / 10;
+    if (d.carbsG != null) row.carbs = d.carbsG;
+    if (d.proteinG != null) row.protein = d.proteinG;
+    if (d.fatG != null) row.fat = d.fatG;
+    if (d.carbsG != null || d.proteinG != null || d.fatG != null) {
+      row.kcal = (d.carbsG ?? 0) * 4 + (d.proteinG ?? 0) * 4 + (d.fatG ?? 0) * 9;
+    }
   }
 
   for (const s of sleepEntries) {

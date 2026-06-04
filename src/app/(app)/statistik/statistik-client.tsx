@@ -25,6 +25,10 @@ export type DataPoint = {
   alcohol?: number;
   weight?: number;
   waist?: number;
+  carbs?: number;
+  protein?: number;
+  fat?: number;
+  kcal?: number;
   sleepHours?: number;
   sleepHoursManual?: number;
   sleepHoursGarmin?: number;
@@ -57,7 +61,11 @@ type MetricKey =
   | "bodyBatteryChange"
   | "stress"
   | "alcohol"
-  | "fastHours";
+  | "fastHours"
+  | "carbs"
+  | "protein"
+  | "fat"
+  | "kcal";
 
 type Category =
   | "body"
@@ -65,6 +73,7 @@ type Category =
   | "symptoms"
   | "sleep"
   | "garmin"
+  | "nutrition"
   | "supplements"
   | "other";
 
@@ -84,6 +93,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "health", label: "Helbred" },
   { id: "sleep", label: "Søvn" },
   { id: "garmin", label: "Garmin biometri" },
+  { id: "nutrition", label: "Ernæring" },
   { id: "symptoms", label: "Symptomer" },
   { id: "supplements", label: "Kosttilskud" },
   { id: "other", label: "Andet" },
@@ -120,6 +130,10 @@ const METRICS: Metric[] = [
   { key: "breathing", label: "Vejrtrækningsbesvær", short: "Vejrtr.", category: "symptoms", unit: "/5", domain: [1, 5], color: "#22d3ee", decimals: 0 },
   { key: "alcohol", label: "Alkohol", short: "Alkohol", category: "other", unit: " g", color: "#fbbf24", decimals: 0 },
   { key: "fastHours", label: "Faste-varighed", short: "Faste", category: "other", unit: "t", color: "#a78bfa", decimals: 1 },
+  { key: "carbs", label: "Kulhydrater", short: "Carbs", category: "nutrition", unit: " g", color: "#fbbf24", decimals: 0 },
+  { key: "protein", label: "Protein", short: "Protein", category: "nutrition", unit: " g", color: "#ec4899", decimals: 0 },
+  { key: "fat", label: "Fedt", short: "Fedt", category: "nutrition", unit: " g", color: "#a78bfa", decimals: 0 },
+  { key: "kcal", label: "Kalorier", short: "Kcal", category: "nutrition", unit: " kcal", color: "#f97316", decimals: 0 },
 ];
 
 

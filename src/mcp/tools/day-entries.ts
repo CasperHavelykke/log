@@ -32,6 +32,15 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     dayNotes: row.dayNotes,
     wentWell: row.wentWell,
     nextStep: row.nextStep,
+    carbsG: row.carbsG,
+    proteinG: row.proteinG,
+    fatG: row.fatG,
+    kcal:
+      row.carbsG !== null || row.proteinG !== null || row.fatG !== null
+        ? (row.carbsG ?? 0) * 4 +
+          (row.proteinG ?? 0) * 4 +
+          (row.fatG ?? 0) * 9
+        : null,
     updatedAt: row.updatedAt,
   };
 }
@@ -307,6 +316,30 @@ export function registerDayEntryTools(server: McpServer) {
           .nullable()
           .optional()
           .describe("Fri tekst: hvad er næste skridt / hvad starter du med i morgen."),
+        carbsG: z
+          .number()
+          .int()
+          .min(0)
+          .max(2000)
+          .nullable()
+          .optional()
+          .describe("Kulhydrater i gram for hele dagen."),
+        proteinG: z
+          .number()
+          .int()
+          .min(0)
+          .max(1000)
+          .nullable()
+          .optional()
+          .describe("Protein i gram for hele dagen."),
+        fatG: z
+          .number()
+          .int()
+          .min(0)
+          .max(1000)
+          .nullable()
+          .optional()
+          .describe("Fedt i gram for hele dagen."),
       },
     },
     async (args) => {
@@ -381,6 +414,11 @@ export function registerDayEntryTools(server: McpServer) {
           args.wentWell === undefined ? (existing?.wentWell ?? null) : args.wentWell,
         nextStep:
           args.nextStep === undefined ? (existing?.nextStep ?? null) : args.nextStep,
+        carbsG:
+          args.carbsG === undefined ? (existing?.carbsG ?? null) : args.carbsG,
+        proteinG:
+          args.proteinG === undefined ? (existing?.proteinG ?? null) : args.proteinG,
+        fatG: args.fatG === undefined ? (existing?.fatG ?? null) : args.fatG,
         didExercise:
           args.didExercise === undefined
             ? (existing?.didExercise ?? false)
