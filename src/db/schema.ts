@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   index,
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -343,6 +344,75 @@ export const dayEntries = sqliteTable(
   },
   (t) => [uniqueIndex("day_entries_user_date").on(t.userId, t.date)],
 );
+
+export const customParameters = sqliteTable(
+  "custom_parameters",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // 'boolean' | 'scale_5' | 'scale_10' | 'bool_scale_5' | 'bool_scale_10' | 'number' | 'text'
+    kind: text("kind").notNull(),
+    unit: text("unit"),
+    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("custom_parameters_user").on(t.userId, t.archived)],
+);
+
+export const customParameterValues = sqliteTable(
+  "custom_parameter_values",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    parameterId: integer("parameter_id")
+      .notNull()
+      .references(() => customParameters.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    // En af disse er sat afhængigt af parameter-kind
+    valueBool: integer("value_bool", { mode: "boolean" }),
+    valueInt: integer("value_int"),
+    valueReal: real("value_real"),
+    valueText: text("value_text"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [
+    uniqueIndex("custom_parameter_values_uniq").on(
+      t.userId,
+      t.parameterId,
+      t.date,
+    ),
+    index("custom_parameter_values_date").on(t.userId, t.date),
+  ],
+);
+
+export const CUSTOM_PARAMETER_KINDS = [
+  "boolean",
+  "scale_5",
+  "scale_10",
+  "bool_scale_5",
+  "bool_scale_10",
+  "number",
+  "text",
+] as const;
+export type CustomParameterKind = (typeof CUSTOM_PARAMETER_KINDS)[number];
+
+export type CustomParameter = typeof customParameters.$inferSelect;
+export type NewCustomParameter = typeof customParameters.$inferInsert;
+export type CustomParameterValue = typeof customParameterValues.$inferSelect;
+export type NewCustomParameterValue = typeof customParameterValues.$inferInsert;
 
 export const trackers = sqliteTable(
   "trackers",

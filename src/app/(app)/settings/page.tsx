@@ -1,12 +1,16 @@
 import { requireUser } from "@/lib/session";
 import { SettingsPage } from "./settings-page";
 import { listOAuthClients } from "./oauth-actions";
+import { listCustomParameters } from "@/lib/custom-parameters";
 
 export const metadata = { title: "Indstillinger | Log" };
 
 export default async function Settings() {
   const user = await requireUser();
-  const clients = await listOAuthClients();
+  const [clients, customParameters] = await Promise.all([
+    listOAuthClients(),
+    listCustomParameters(true),
+  ]);
   return (
     <SettingsPage
       username={user.username}
@@ -17,6 +21,7 @@ export default async function Settings() {
         redirectUris: c.redirectUris,
         createdAt: c.createdAt,
       }))}
+      initialCustomParameters={customParameters}
     />
   );
 }

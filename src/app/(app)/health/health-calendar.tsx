@@ -4,6 +4,13 @@ import { useMemo, useState, useTransition } from "react";
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
 import { TrackerPhotoAdd } from "@/components/tracker-photo-add";
+import { CustomParametersSection } from "@/components/custom-parameters-section";
+import {
+  listCustomValuesForDate,
+  type CustomParamSummary,
+  type CustomValueRow,
+} from "@/lib/custom-parameters";
+import { useEffect } from "react";
 import { formatDanishDate, todayIsoDate } from "@/lib/date";
 import { garminScoreToQuality } from "@/lib/sleep";
 import { SleepQualityScale } from "@/components/sleep-quality-scale";
@@ -122,10 +129,12 @@ export function HealthCalendar({
   entries: initial,
   sleepEntries: initialSleep,
   trackers,
+  customParameters,
 }: {
   entries: Entry[];
   sleepEntries: Sleep[];
   trackers: { id: number; name: string; kind: string }[];
+  customParameters: CustomParamSummary[];
 }) {
   const today = todayIsoDate();
   const [entries, setEntries] = useState<Map<string, Entry>>(
@@ -443,6 +452,7 @@ export function HealthCalendar({
           entry={entries.get(selected) ?? null}
           sleep={sleeps.get(selected) ?? null}
           trackers={trackers}
+          customParameters={customParameters}
           onClose={() => setSelected(null)}
           onSaved={(saved) => {
             setEntries((m) => {
@@ -615,6 +625,7 @@ function DayEditor({
   entry,
   sleep,
   trackers,
+  customParameters,
   onClose,
   onSaved,
   onSleepDeleted,
@@ -623,6 +634,7 @@ function DayEditor({
   entry: Entry | null;
   sleep: Sleep | null;
   trackers: { id: number; name: string; kind: string }[];
+  customParameters: CustomParamSummary[];
   onClose: () => void;
   onSaved: (saved: Entry) => void;
   onSleepDeleted: () => void;
@@ -667,6 +679,10 @@ function DayEditor({
     entry?.proteinG ?? null,
   );
   const [fatG, setFatG] = useState<number | null>(entry?.fatG ?? null);
+  const [customValues, setCustomValues] = useState<CustomValueRow[]>([]);
+  useEffect(() => {
+    listCustomValuesForDate(date).then(setCustomValues);
+  }, [date]);
   const [breathingDifficulty, setBreathingDifficulty] = useState<number | null>(
     entry?.breathingDifficulty ?? null,
   );
@@ -1130,6 +1146,12 @@ function DayEditor({
             placeholder="Symptomer, medicin, observationer..."
           />
         </div>
+
+        <CustomParametersSection
+          parameters={customParameters}
+          date={date}
+          initialValues={customValues}
+        />
 
         <TrackerPhotoAdd date={date} trackers={trackers} />
       </div>

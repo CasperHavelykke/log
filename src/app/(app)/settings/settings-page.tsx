@@ -9,6 +9,8 @@ import {
   deleteOAuthClient,
   type CreateResult,
 } from "./oauth-actions";
+import { CustomParametersCard } from "./custom-parameters-card";
+import type { CustomParamSummary } from "@/lib/custom-parameters";
 
 type OAuthClientRow = {
   id: number;
@@ -21,9 +23,11 @@ type OAuthClientRow = {
 export function SettingsPage({
   username,
   initialClients,
+  initialCustomParameters,
 }: {
   username: string;
   initialClients: OAuthClientRow[];
+  initialCustomParameters: CustomParamSummary[];
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
@@ -49,6 +53,7 @@ export function SettingsPage({
 
       <div className="space-y-4">
         <PasswordCard />
+        <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
         <ExportCard />
         <ImportCard />

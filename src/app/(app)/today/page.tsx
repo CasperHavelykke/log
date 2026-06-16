@@ -16,6 +16,10 @@ import {
 import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
 import { listDocuments } from "../documents/actions";
 import { listTrackers } from "../health/trackere/actions";
+import {
+  listCustomParameters,
+  listCustomValuesForDate,
+} from "@/lib/custom-parameters";
 import { TodayPage } from "./today-form";
 
 export const metadata = { title: "Log" };
@@ -63,15 +67,25 @@ export default async function Today() {
     getDayEntry(user.id, yesterdayDate),
   ]);
 
-  const [supplements, todaysIntakes, activeFast, recentFasts, allDocs, trackers] =
-    await Promise.all([
-      getActiveSupplements(user.id),
-      getSupplementIntakesOnDate(user.id, date),
-      getActiveFast(user.id),
-      getRecentFasts(user.id, 5),
-      listDocuments(),
-      listTrackers(false),
-    ]);
+  const [
+    supplements,
+    todaysIntakes,
+    activeFast,
+    recentFasts,
+    allDocs,
+    trackers,
+    customParameters,
+    customValues,
+  ] = await Promise.all([
+    getActiveSupplements(user.id),
+    getSupplementIntakesOnDate(user.id, date),
+    getActiveFast(user.id),
+    getRecentFasts(user.id, 5),
+    listDocuments(),
+    listTrackers(false),
+    listCustomParameters(false),
+    listCustomValuesForDate(date),
+  ]);
 
   const docsByApp = new Map<number, typeof allDocs>();
   for (const d of allDocs) {
@@ -206,6 +220,8 @@ export default async function Today() {
       }))}
       unattachedDocuments={unattachedDocs}
       trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
+      customParameters={customParameters}
+      customValues={customValues}
       initialDay={{
         mood: entry?.mood ?? null,
         energy: entry?.energy ?? null,

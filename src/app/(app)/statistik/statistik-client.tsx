@@ -75,6 +75,7 @@ type Category =
   | "garmin"
   | "nutrition"
   | "supplements"
+  | "custom"
   | "other";
 
 type Metric = {
@@ -96,7 +97,19 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "nutrition", label: "Ernæring" },
   { id: "symptoms", label: "Symptomer" },
   { id: "supplements", label: "Kosttilskud" },
+  { id: "custom", label: "Egne målinger" },
   { id: "other", label: "Andet" },
+];
+
+const CUSTOM_COLORS = [
+  "#22d3ee",
+  "#a78bfa",
+  "#4ade80",
+  "#fb923c",
+  "#ec4899",
+  "#eab308",
+  "#5fa3f0",
+  "#f87171",
 ];
 
 const SUPPLEMENT_COLORS = [
@@ -237,9 +250,16 @@ function fromIsoNDaysAgo(days: number): string {
 export function StatistikClient({
   data,
   supplementMetrics,
+  customMetrics,
 }: {
   data: DataPoint[];
   supplementMetrics: { metricKey: string; label: string; unit: string }[];
+  customMetrics: {
+    metricKey: string;
+    label: string;
+    unit: string;
+    kind: string;
+  }[];
 }) {
   const dynamicMetrics: Metric[] = supplementMetrics.map((s, i) => ({
     key: s.metricKey as MetricKey,
@@ -251,7 +271,32 @@ export function StatistikClient({
     decimals: 1,
   }));
 
-  const ALL_METRICS = [...METRICS, ...dynamicMetrics];
+  const customDynamicMetrics: Metric[] = customMetrics.map((c, i) => {
+    let domain: [number, number] | undefined;
+    let decimals = 1;
+    if (c.kind === "boolean") {
+      domain = [0, 1];
+      decimals = 0;
+    } else if (c.kind === "scale_5" || c.kind === "bool_scale_5") {
+      domain = [1, 5];
+      decimals = 0;
+    } else if (c.kind === "scale_10" || c.kind === "bool_scale_10") {
+      domain = [1, 10];
+      decimals = 0;
+    }
+    return {
+      key: c.metricKey as MetricKey,
+      label: c.label,
+      short: c.label.length > 16 ? c.label.slice(0, 14) + "…" : c.label,
+      category: "custom",
+      unit: c.unit,
+      color: CUSTOM_COLORS[i % CUSTOM_COLORS.length],
+      domain,
+      decimals,
+    };
+  });
+
+  const ALL_METRICS = [...METRICS, ...dynamicMetrics, ...customDynamicMetrics];
   const METRIC_BY_KEY = new Map(ALL_METRICS.map((m) => [m.key, m]));
   const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>("90d");
   const [mode, setMode] = useState<"stacked" | "overlay">("stacked");

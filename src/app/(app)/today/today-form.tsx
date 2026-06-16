@@ -27,6 +27,11 @@ import {
   TrackerPhotoAdd,
   type TrackerRef,
 } from "@/components/tracker-photo-add";
+import { CustomParametersSection } from "@/components/custom-parameters-section";
+import type {
+  CustomParamSummary,
+  CustomValueRow,
+} from "@/lib/custom-parameters";
 import {
   Check,
   Circle,
@@ -214,6 +219,8 @@ export function TodayPage(props: {
   initialApplications: AppItem[];
   unattachedDocuments: AppDoc[];
   trackers: TrackerRef[];
+  customParameters: CustomParamSummary[];
+  customValues: CustomValueRow[];
   initialDay: DayState;
   garminSleep: GarminSleepSummary | null;
   yesterdayNextStep: string;
@@ -360,6 +367,8 @@ export function TodayPage(props: {
             garminSleep={props.garminSleep}
             date={props.date}
             trackers={props.trackers}
+            customParameters={props.customParameters}
+            customValues={props.customValues}
           />
         </Card>
       </div>
@@ -1380,6 +1389,8 @@ function HealthBody({
   garminSleep,
   date,
   trackers,
+  customParameters,
+  customValues,
 }: {
   day: DayState;
   setDay: (d: DayState) => void;
@@ -1392,6 +1403,8 @@ function HealthBody({
   } | null;
   date: string;
   trackers: TrackerRef[];
+  customParameters: CustomParamSummary[];
+  customValues: CustomValueRow[];
 }) {
   const hasGarminDuration =
     garminSleep !== null && garminSleep.durationMin !== null;
@@ -1763,6 +1776,12 @@ function HealthBody({
           placeholder="Symptomer, medicin, observationer..."
         />
       </div>
+
+      <CustomParametersSection
+        parameters={customParameters}
+        date={date}
+        initialValues={customValues}
+      />
 
       <TrackerPhotoAdd date={date} trackers={trackers} />
     </div>

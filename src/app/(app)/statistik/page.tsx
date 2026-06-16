@@ -2,14 +2,21 @@ import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
 import { db, schema } from "@/db";
 import { StatistikClient, type DataPoint } from "./statistik-client";
+import { listCustomParameters } from "@/lib/custom-parameters";
 
 export const metadata = { title: "Statistik | Log" };
 
 export default async function StatistikPage() {
   const user = await requireUser();
 
-  const [dayEntries, sleepEntries, completedFasts, supplementIntakes] =
-    await Promise.all([
+  const [
+    dayEntries,
+    sleepEntries,
+    completedFasts,
+    supplementIntakes,
+    customParameters,
+    customValuesRows,
+  ] = await Promise.all([
       db
         .select()
         .from(schema.dayEntries)
@@ -35,6 +42,12 @@ export default async function StatistikPage() {
         .from(schema.supplementIntakes)
         .where(eq(schema.supplementIntakes.userId, user.id))
         .orderBy(asc(schema.supplementIntakes.date)),
+      listCustomParameters(true),
+      db
+        .select()
+        .from(schema.customParameterValues)
+        .where(eq(schema.customParameterValues.userId, user.id))
+        .orderBy(asc(schema.customParameterValues.date)),
     ]);
 
   const byDate = new Map<string, DataPoint>();
@@ -160,9 +173,53 @@ export default async function StatistikPage() {
   }
   supplementMetrics.sort((a, b) => a.label.localeCompare(b.label, "da"));
 
+  // Brugerdefinerede parametre — text-typen springes over fra statistik.
+  const customMetrics: {
+    metricKey: string;
+    label: string;
+    unit: string;
+    kind: schema.CustomParameterKind;
+  }[] = [];
+  const customParamById = new Map(customParameters.map((p) => [p.id, p]));
+  for (const p of customParameters) {
+    if (p.kind === "text") continue;
+    customMetrics.push({
+      metricKey: `cp_${p.id}`,
+      label: p.unit ? `${p.name} (${p.unit})` : p.name,
+      unit: p.unit ? ` ${p.unit}` : "",
+      kind: p.kind,
+    });
+  }
+  for (const v of customValuesRows) {
+    const param = customParamById.get(v.parameterId);
+    if (!param || param.kind === "text") continue;
+    const row = ensure(v.date);
+    const key = `cp_${v.parameterId}`;
+    if (param.kind === "boolean") {
+      if (v.valueBool !== null) row[key] = v.valueBool ? 1 : 0;
+    } else if (param.kind === "scale_5" || param.kind === "scale_10") {
+      if (v.valueInt !== null) row[key] = v.valueInt;
+    } else if (
+      param.kind === "bool_scale_5" ||
+      param.kind === "bool_scale_10"
+    ) {
+      // Plot kun skala-værdien når bool er true. Ellers gap i grafen.
+      if (v.valueBool === true && v.valueInt !== null) row[key] = v.valueInt;
+    } else if (param.kind === "number") {
+      if (v.valueReal !== null) row[key] = v.valueReal;
+    }
+  }
+  customMetrics.sort((a, b) => a.label.localeCompare(b.label, "da"));
+
   const data = [...byDate.values()].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
 
-  return <StatistikClient data={data} supplementMetrics={supplementMetrics} />;
+  return (
+    <StatistikClient
+      data={data}
+      supplementMetrics={supplementMetrics}
+      customMetrics={customMetrics}
+    />
+  );
 }

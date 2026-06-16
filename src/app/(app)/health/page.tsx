@@ -1,21 +1,24 @@
 import { requireUser } from "@/lib/session";
 import { getAllDayEntries, getAllSleepEntries } from "@/lib/queries";
 import { listTrackers } from "./trackere/actions";
+import { listCustomParameters } from "@/lib/custom-parameters";
 import { HealthCalendar } from "./health-calendar";
 
 export const metadata = { title: "Helbred | Log" };
 
 export default async function Health() {
   const user = await requireUser();
-  const [entries, sleeps, trackers] = await Promise.all([
+  const [entries, sleeps, trackers, customParameters] = await Promise.all([
     getAllDayEntries(user.id),
     getAllSleepEntries(user.id),
     listTrackers(false),
+    listCustomParameters(false),
   ]);
 
   return (
     <HealthCalendar
       trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
+      customParameters={customParameters}
       sleepEntries={sleeps.map((s) => ({
         date: s.date,
         durationMin: s.durationMin,
