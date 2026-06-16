@@ -23,15 +23,15 @@ i `data/app.db`.
 
 ## Førstegangsopsætning
 
-Dobbeltklik `setup.bat` — det installerer afhængigheder, kører migrationer, og
-prompter dig for brugernavn + adgangskode.
+Dobbeltklik `setup.bat` — det installerer afhængigheder og kører migrationer.
+Du skal selv tilføje `.env.local` med `AUTH_SECRET` og `AUTH_RESEND_KEY` og logge
+ind via magic link på `/login` første gang.
 
 Alternativt manuelt:
 
 ```bash
 npm install
-npm run db:migrate
-npm run user:create
+npx tsx scripts/ensure-auth-schema.ts
 ```
 
 ## Daglig brug
@@ -50,7 +50,6 @@ For at lukke serveren: tryk `Ctrl+C` i terminalvinduet.
 ```bash
 npm run dev          # hot-reload dev-server
 npm run db:studio    # database GUI i browseren
-npm run user:create  # opret eller skift adgangskode
 ```
 
 Når schemaet ændres:

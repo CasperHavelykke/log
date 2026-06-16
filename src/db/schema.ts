@@ -11,27 +11,11 @@ import {
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  username: text("username").unique(),
-  passwordHash: text("password_hash"),
-  // Auth.js-felter
   email: text("email").unique(),
   emailVerified: integer("email_verified", { mode: "timestamp_ms" }),
   name: text("name"),
   image: text("image"),
   focusProjectId: integer("focus_project_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
-
-// Legacy session-tabel — bevares indtil session.ts er migreret væk.
-// Auth.js bruger authSessions nedenfor.
-export const sessions = sqliteTable("sessions", {
-  id: text("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
@@ -580,13 +564,13 @@ export type AuthSession = typeof authSessions.$inferSelect;
 export type NewAuthSession = typeof authSessions.$inferInsert;
 export type VerificationToken = typeof verificationTokens.$inferSelect;
 export type NewVerificationToken = typeof verificationTokens.$inferInsert;
+
 export type OAuthClient = typeof oauthClients.$inferSelect;
 export type NewOAuthClient = typeof oauthClients.$inferInsert;
 export type OAuthAuthCode = typeof oauthAuthCodes.$inferSelect;
 export type NewOAuthAuthCode = typeof oauthAuthCodes.$inferInsert;
 export type OAuthAccessToken = typeof oauthAccessTokens.$inferSelect;
 export type NewOAuthAccessToken = typeof oauthAccessTokens.$inferInsert;
-export type Session = typeof sessions.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type TimeEntry = typeof timeEntries.$inferSelect;
