@@ -14,21 +14,22 @@ export async function sendMagicLink(formData: FormData) {
   redirect(`/login?step=verify&email=${encodeURIComponent(email)}`);
 }
 
-export async function verifyCode(formData: FormData) {
+export async function verifyCode(formData: FormData): Promise<string | null> {
   const email = (formData.get("email") as string | null)?.trim().toLowerCase();
   const code = (formData.get("code") as string | null)?.trim();
   const returnTo = (formData.get("returnTo") as string | null) ?? "/";
-  if (!email || !code) return;
+  if (!email || !code) return null;
 
-  // Send brugeren igennem Auth.js' callback — den slår token op,
-  // opretter session og sætter cookie i samme cookie-jar som requesten
-  // (PWA'ens, hvis det er der brugeren tastede koden).
+  // Returnér URL'en — klienten navigerer via window.location så browseren
+  // laver en ægte HTTP-request. Hvis vi i stedet redirecter fra server-
+  // action'en, håndterer Next.js' klient det internt og Set-Cookie fra
+  // Auth.js' callback lander aldrig i browserens (eller PWA'ens) cookie-jar.
   const params = new URLSearchParams({
     token: code,
     email,
     callbackUrl: returnTo,
   });
-  redirect(`/api/auth/callback/resend?${params.toString()}`);
+  return `/api/auth/callback/resend?${params.toString()}`;
 }
 
 export async function logoutAction() {

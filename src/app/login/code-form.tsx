@@ -21,8 +21,15 @@ export function CodeForm({
         action={async (formData) => {
           setPending(true);
           try {
-            await verifyCode(formData);
-          } finally {
+            const url = await verifyCode(formData);
+            if (url) {
+              // Hard navigation (ikke router.push) så browseren modtager
+              // Auth.js' Set-Cookie fra callback'et. Især vigtigt på iOS PWA.
+              window.location.href = url;
+            } else {
+              setPending(false);
+            }
+          } catch {
             setPending(false);
           }
         }}
