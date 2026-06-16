@@ -10,7 +10,6 @@ function sanitizeReturnTo(raw: unknown): string {
   if (typeof raw !== "string" || !raw) return "/";
   try {
     const decoded = decodeURIComponent(raw);
-    // Tillader kun absolute paths på samme origin (start med "/" men ikke "//")
     if (decoded.startsWith("/") && !decoded.startsWith("//")) return decoded;
     return "/";
   } catch {
@@ -28,6 +27,9 @@ export default async function LoginPage({
     ? params.return_to[0]
     : params.return_to;
   const returnTo = sanitizeReturnTo(returnToRaw);
+  const checkEmail = params["check-email"] === "1";
+  const error =
+    typeof params.error === "string" ? params.error : undefined;
 
   const user = await getCurrentUser();
   if (user) redirect(returnTo);
@@ -39,7 +41,29 @@ export default async function LoginPage({
           <h1 className="text-2xl font-semibold tracking-tight">Log</h1>
           <p className="mt-1 text-sm text-muted">Log ind for at fortsætte</p>
         </div>
-        <LoginForm returnTo={returnTo} />
+
+        {checkEmail ? (
+          <div className="rounded-md border border-border bg-card p-6 text-center">
+            <h2 className="mb-2 font-medium text-ink">Tjek din indbakke</h2>
+            <p className="text-sm text-mid">
+              Vi har sendt dig et login-link. Klik på det i mailen for at logge ind.
+              Linket virker i 10 minutter.
+            </p>
+            <p className="mt-3 text-[12px] text-light">
+              Modtog du intet? Kig i spam — eller{" "}
+              <a href="/login" className="underline">prøv igen</a>.
+            </p>
+          </div>
+        ) : (
+          <>
+            {error && (
+              <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                Login fejlede. Prøv igen eller kontakt support.
+              </div>
+            )}
+            <LoginForm returnTo={returnTo} />
+          </>
+        )}
       </div>
     </main>
   );

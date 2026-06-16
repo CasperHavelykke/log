@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
-import { changePassword, importData } from "./actions";
+import { importData } from "./actions";
 import {
   createOAuthClient,
   deleteOAuthClient,
@@ -52,7 +52,6 @@ export function SettingsPage({
       </header>
 
       <div className="space-y-4">
-        <PasswordCard />
         <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
         <ExportCard />
@@ -83,84 +82,6 @@ function Card({
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label className="mb-1.5 block text-[13px] font-medium text-mid">{children}</label>
-  );
-}
-
-function PasswordCard() {
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [pending, start] = useTransition();
-
-  function submit() {
-    setMsg(null);
-    if (next !== confirm) {
-      setMsg({ ok: false, text: "De to nye adgangskoder matcher ikke." });
-      return;
-    }
-    start(async () => {
-      const res = await changePassword({ current, next });
-      if (res.ok) {
-        setMsg({ ok: true, text: "Adgangskoden er ændret." });
-        setCurrent("");
-        setNext("");
-        setConfirm("");
-      } else {
-        setMsg({ ok: false, text: res.error });
-      }
-    });
-  }
-
-  return (
-    <Card title="Skift adgangskode">
-      <div className="space-y-3">
-        <div>
-          <Label>Nuværende adgangskode</Label>
-          <input
-            type="password"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            autoComplete="current-password"
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <Label>Ny adgangskode</Label>
-            <input
-              type="password"
-              value={next}
-              onChange={(e) => setNext(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-          <div>
-            <Label>Gentag ny adgangskode</Label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={pending || !current || !next}
-          className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
-        >
-          {pending ? "Skifter..." : "Skift adgangskode"}
-        </button>
-        {msg && (
-          <span className={`text-[13px] ${msg.ok ? "text-success" : "text-danger"}`}>
-            {msg.text}
-          </span>
-        )}
-      </div>
-    </Card>
   );
 }
 

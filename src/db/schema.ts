@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
@@ -10,14 +11,21 @@ import {
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  username: text("username").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  username: text("username").unique(),
+  passwordHash: text("password_hash"),
+  // Auth.js-felter
+  email: text("email").unique(),
+  emailVerified: integer("email_verified", { mode: "timestamp_ms" }),
+  name: text("name"),
+  image: text("image"),
   focusProjectId: integer("focus_project_id"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+// Legacy session-tabel — bevares indtil session.ts er migreret væk.
+// Auth.js bruger authSessions nedenfor.
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
   userId: integer("user_id")
@@ -28,6 +36,50 @@ export const sessions = sqliteTable("sessions", {
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
+
+// Auth.js — provider-link tabel (Google, magic-link osv.)
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (t) => [
+    primaryKey({ columns: [t.provider, t.providerAccountId] }),
+    index("accounts_user").on(t.userId),
+  ],
+);
+
+// Auth.js — DB-baserede sessions (gør revoke muligt)
+export const authSessions = sqliteTable("auth_sessions", {
+  sessionToken: text("session_token").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+});
+
+// Auth.js — engangs-tokens til magic link
+export const verificationTokens = sqliteTable(
+  "verification_tokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.identifier, t.token] })],
+);
 
 export const oauthClients = sqliteTable("oauth_clients", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -522,6 +574,12 @@ export type NewDocument = typeof documents.$inferInsert;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;
+export type AuthSession = typeof authSessions.$inferSelect;
+export type NewAuthSession = typeof authSessions.$inferInsert;
+export type VerificationToken = typeof verificationTokens.$inferSelect;
+export type NewVerificationToken = typeof verificationTokens.$inferInsert;
 export type OAuthClient = typeof oauthClients.$inferSelect;
 export type NewOAuthClient = typeof oauthClients.$inferInsert;
 export type OAuthAuthCode = typeof oauthAuthCodes.$inferSelect;

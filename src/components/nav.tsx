@@ -24,7 +24,7 @@ const items = [
   { href: "/settings", label: "Indstillinger", icon: Settings },
 ];
 
-export function Nav({ username: _username }: { username: string }) {
+export function Nav() {
   const pathname = usePathname();
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">

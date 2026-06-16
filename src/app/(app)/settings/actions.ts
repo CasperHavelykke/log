@@ -5,31 +5,6 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
-import { hashPassword, verifyPassword } from "@/lib/password";
-
-export async function changePassword(input: {
-  current: string;
-  next: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const user = await requireUser();
-
-  const ok = await verifyPassword(input.current, user.passwordHash);
-  if (!ok) return { ok: false, error: "Forkert nuværende adgangskode." };
-  if (input.next.length < 8) {
-    return { ok: false, error: "Den nye adgangskode skal være mindst 8 tegn." };
-  }
-  if (input.next === input.current) {
-    return { ok: false, error: "Den nye adgangskode må ikke være den samme." };
-  }
-
-  const passwordHash = await hashPassword(input.next);
-  await db
-    .update(schema.users)
-    .set({ passwordHash })
-    .where(eq(schema.users.id, user.id));
-
-  return { ok: true };
-}
 
 // --- import -----------------------------------------------------------------
 

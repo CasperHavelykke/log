@@ -103,7 +103,7 @@ export default async function AuthorizePage({
         </p>
 
         <div className="mb-5 rounded-[3px] border border-border-light bg-bg p-3 text-[12px] text-light">
-          Logget ind som <span className="text-ink">{user.username}</span>
+          Logget ind som <span className="text-ink">{user.name ?? user.username ?? user.email}</span>
         </div>
 
         <form action={authorizeAction} className="flex gap-2">
