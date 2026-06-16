@@ -97,10 +97,18 @@ async function main() {
 
   if (usernameNotNull || passwordNotNull) {
     console.log("  rebuilding users-tabel for at fjerne NOT NULL...");
-    await client.execute("PRAGMA foreign_keys=OFF");
-    await client.execute("BEGIN");
+
+    // Ryd eventuel rest fra tidligere mislykket forsøg.
+    await client.execute("DROP TABLE IF EXISTS users_new");
+
+    // Brug libsql's interactive transaction så PRAGMA og statements
+    // deler den samme session.
+    const tx = await client.transaction("write");
     try {
-      await client.execute(`
+      // defer_foreign_keys udsætter FK-tjek til COMMIT — ellers ville
+      // DROP TABLE users fejle pga. FK fra time_entries, day_entries osv.
+      await tx.execute("PRAGMA defer_foreign_keys = ON");
+      await tx.execute(`
         CREATE TABLE users_new (
           id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
           username text,
@@ -113,28 +121,34 @@ async function main() {
           image text
         )
       `);
-      await client.execute(`
+      await tx.execute(`
         INSERT INTO users_new
           (id, username, password_hash, focus_project_id, created_at, email, email_verified, name, image)
         SELECT
           id, username, password_hash, focus_project_id, created_at, email, email_verified, name, image
         FROM users
       `);
-      await client.execute("DROP TABLE users");
-      await client.execute("ALTER TABLE users_new RENAME TO users");
-      await client.execute(
+      await tx.execute("DROP TABLE users");
+      await tx.execute("ALTER TABLE users_new RENAME TO users");
+      await tx.execute(
         "CREATE UNIQUE INDEX users_username_unique ON users (username)",
       );
-      await client.execute(
+      await tx.execute(
         "CREATE UNIQUE INDEX users_email_unique ON users (email)",
       );
-      await client.execute("COMMIT");
+      await tx.commit();
       console.log("✓ users rebuilt — username/password_hash er nu nullable");
     } catch (e) {
-      await client.execute("ROLLBACK");
+      // Surface den oprindelige fejl FØR rollback-forsøget, så vi ikke
+      // mister den hvis rollback selv kaster.
+      console.error("Original fejl under rebuild:", e);
+      try {
+        await tx.rollback();
+      } catch {
+        // ignore — transaction allerede auto-aborted
+      }
       throw e;
     }
-    await client.execute("PRAGMA foreign_keys=ON");
   } else {
     console.log("✓ users.username + password_hash er allerede nullable");
   }
