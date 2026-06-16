@@ -29,12 +29,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     // DB-baseret session så vi kan revoke individuelle sessions senere.
     strategy: "database",
-    maxAge: 30 * 24 * 60 * 60, // 30 dage
+    maxAge: 90 * 24 * 60 * 60, // 90 dage
   },
 
   pages: {
     signIn: "/login",
-    verifyRequest: "/login?check-email=1",
+    // Auth.js tilføjer selv ?provider=resend&type=email — vi bruger
+    // tilstedeværelsen af 'provider' som signal til at vise check-email-tilstanden.
+    verifyRequest: "/login",
   },
 
   callbacks: {

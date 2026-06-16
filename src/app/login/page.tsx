@@ -27,7 +27,9 @@ export default async function LoginPage({
     ? params.return_to[0]
     : params.return_to;
   const returnTo = sanitizeReturnTo(returnToRaw);
-  const checkEmail = params["check-email"] === "1";
+  // Auth.js redirecter til /login?provider=resend&type=email efter en magic-link
+  // er sendt — så tilstedeværelsen af provider er vores "tjek-din-indbakke"-flag.
+  const checkEmail = params.provider === "resend";
   const error =
     typeof params.error === "string" ? params.error : undefined;
 
