@@ -8,6 +8,7 @@ import {
   updateCustomParameter,
   type CustomParamSummary,
 } from "@/lib/custom-parameters";
+import { HEALTH_PRESETS, type ParameterPreset } from "@/lib/parameter-presets";
 
 const KIND_LABELS: Record<string, string> = {
   boolean: "Ja/nej",
@@ -76,7 +77,12 @@ export function CustomParametersCard({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <PresetSection
+        params={params}
+        onCreated={(p) => setParams((prev) => [...prev, p])}
+      />
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         {!showCreate && (
           <button
             type="button"
@@ -110,6 +116,80 @@ export function CustomParametersCard({
         />
       )}
     </section>
+  );
+}
+
+function PresetSection({
+  params,
+  onCreated,
+}: {
+  params: CustomParamSummary[];
+  onCreated: (p: CustomParamSummary) => void;
+}) {
+  const [pending, start] = useTransition();
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+  const usedNames = new Set(
+    params.map((p) => p.name.trim().toLowerCase()),
+  );
+
+  function addPreset(preset: ParameterPreset) {
+    setPendingKey(preset.key);
+    start(async () => {
+      const res = await createCustomParameter({
+        name: preset.name,
+        kind: preset.kind,
+        unit: null,
+      });
+      setPendingKey(null);
+      if (res.ok) {
+        onCreated({
+          id: res.parameter.id,
+          name: res.parameter.name,
+          kind: res.parameter.kind as never,
+          unit: res.parameter.unit,
+          archived: false,
+          sortOrder: res.parameter.sortOrder,
+        });
+      }
+    });
+  }
+
+  return (
+    <div className="mt-4 rounded-[3px] border border-border-light bg-bg p-3">
+      <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.5px] text-light">
+        Hurtigt tilføj — helbreds-præsets
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {HEALTH_PRESETS.map((preset) => {
+          const added = usedNames.has(preset.name.toLowerCase());
+          const loading = pending && pendingKey === preset.key;
+          return (
+            <button
+              key={preset.key}
+              type="button"
+              onClick={() => addPreset(preset)}
+              disabled={added || pending}
+              className={`inline-flex items-center gap-1.5 rounded-[3px] border px-2.5 py-1 text-[12px] transition ${
+                added
+                  ? "border-border-light bg-bg text-dim"
+                  : "border-border bg-card text-ink hover:border-accent hover:text-accent-bright"
+              } ${pending ? "cursor-not-allowed" : "cursor-pointer"}`}
+              title={preset.description}
+            >
+              {!added && <Plus className="size-3" />}
+              {preset.name}
+              {added && (
+                <span className="ml-1 text-[10px] text-dim">tilføjet</span>
+              )}
+              {loading && (
+                <span className="ml-1 text-[10px] text-mid">...</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
