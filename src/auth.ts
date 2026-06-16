@@ -19,10 +19,58 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   providers: [
     Resend({
-      // Resend kører i "sandbox"-mode uden et verificeret domæne — den kan
-      // kun sende til kontoens egen verificerede email. Det er fint mens vi
-      // er solo. Når domænet er klar, skift FROM til fx login@dit-domæne.dk.
       from: process.env.EMAIL_FROM ?? "onboarding@resend.dev",
+      // 6-cifret kode i stedet for UUID, så iOS PWA-brugere kan taste den
+      // ind i appen frem for at klikke et link (links åbner i Safari, ikke
+      // i PWA'en — cookien lander det forkerte sted).
+      generateVerificationToken: async () => {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+      },
+      // Send email der både viser koden TOPMOST og link som fallback til
+      // desktop-brugere.
+      sendVerificationRequest: async ({
+        identifier: email,
+        url,
+        token,
+        provider,
+      }) => {
+        const resendKey = process.env.AUTH_RESEND_KEY;
+        if (!resendKey) {
+          throw new Error("AUTH_RESEND_KEY mangler");
+        }
+        const from = provider.from ?? "onboarding@resend.dev";
+        const subject = `Login-kode: ${token}`;
+        const html = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+            <h1 style="font-size: 18px; color: #1a2436; margin: 0 0 16px;">Din login-kode</h1>
+            <div style="font-size: 36px; letter-spacing: 8px; font-weight: 600; color: #1a2436; background: #f4f7fb; padding: 16px 24px; border-radius: 6px; text-align: center; margin: 0 0 16px; font-family: monospace;">
+              ${token}
+            </div>
+            <p style="color: #6b7a92; font-size: 13px; margin: 0 0 16px;">
+              Tast koden i Log-appen. Den udløber om 10 minutter.
+            </p>
+            <hr style="border: 0; border-top: 1px solid #e5e9f0; margin: 24px 0;">
+            <p style="color: #6b7a92; font-size: 12px; margin: 0 0 8px;">
+              Eller klik linket nedenfor (virker kun i samme browser som du bestilte fra):
+            </p>
+            <a href="${url}" style="color: #4a90e2; font-size: 12px; word-break: break-all;">${url}</a>
+          </div>
+        `;
+        const text = `Din login-kode: ${token}\n\nTast den i Log-appen. Udløber om 10 minutter.\n\nEller åbn dette link: ${url}`;
+
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ from, to: email, subject, html, text }),
+        });
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`Resend fejlede: ${res.status} ${body}`);
+        }
+      },
     }),
   ],
 

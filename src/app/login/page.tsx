@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { LoginForm } from "./login-form";
+import { CodeForm } from "./code-form";
 
 export const metadata = { title: "Log ind | Log" };
 
@@ -27,11 +28,10 @@ export default async function LoginPage({
     ? params.return_to[0]
     : params.return_to;
   const returnTo = sanitizeReturnTo(returnToRaw);
-  // Auth.js redirecter til /login?provider=resend&type=email efter en magic-link
-  // er sendt — så tilstedeværelsen af provider er vores "tjek-din-indbakke"-flag.
-  const checkEmail = params.provider === "resend";
-  const error =
-    typeof params.error === "string" ? params.error : undefined;
+
+  const step = params.step === "verify" ? "verify" : "email";
+  const email = typeof params.email === "string" ? params.email : "";
+  const error = typeof params.error === "string" ? params.error : undefined;
 
   const user = await getCurrentUser();
   if (user) redirect(returnTo);
@@ -44,18 +44,8 @@ export default async function LoginPage({
           <p className="mt-1 text-sm text-muted">Log ind for at fortsætte</p>
         </div>
 
-        {checkEmail ? (
-          <div className="rounded-md border border-border bg-card p-6 text-center">
-            <h2 className="mb-2 font-medium text-ink">Tjek din indbakke</h2>
-            <p className="text-sm text-mid">
-              Vi har sendt dig et login-link. Klik på det i mailen for at logge ind.
-              Linket virker i 10 minutter.
-            </p>
-            <p className="mt-3 text-[12px] text-light">
-              Modtog du intet? Kig i spam — eller{" "}
-              <a href="/login" className="underline">prøv igen</a>.
-            </p>
-          </div>
+        {step === "verify" && email ? (
+          <CodeForm email={email} returnTo={returnTo} error={error} />
         ) : (
           <>
             {error && (
