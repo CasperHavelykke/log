@@ -137,7 +137,8 @@ async function main() {
   for (const blob of photos) {
     if (existingPhotos.has(blob.pathname)) continue;
     const mime = guessMime(blob.pathname);
-    const takenAt = new Date(blob.uploadedAt).toISOString();
+    // Schema forventer YYYY-MM-DD, ikke fuld ISO-timestamp.
+    const takenAt = new Date(blob.uploadedAt).toISOString().slice(0, 10);
     const caption = pathnameToTitle(blob.pathname);
     await client.execute({
       sql: `INSERT INTO photos

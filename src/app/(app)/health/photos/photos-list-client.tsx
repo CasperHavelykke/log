@@ -176,7 +176,7 @@ function PhotoCard({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/api/files/photos/${photo.id}`}
+          src={`/api/files/photo/${photo.id}`}
           alt={photo.caption ?? ""}
           className="size-full object-cover transition hover:scale-105"
           loading="lazy"
@@ -214,7 +214,7 @@ function PhotoCard({
           </button>
         )}
         <div className="text-[11px] text-light">
-          {formatDanishDate(photo.takenAt)}
+          {formatDanishDate(photo.takenAt.slice(0, 10))}
         </div>
         <select
           value={photo.trackerId ?? ""}
@@ -266,7 +266,7 @@ function Lightbox({
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/api/files/photos/${photoId}`}
+        src={`/api/files/photo/${photoId}`}
         alt=""
         className="max-h-full max-w-full object-contain"
         onClick={(e) => e.stopPropagation()}
