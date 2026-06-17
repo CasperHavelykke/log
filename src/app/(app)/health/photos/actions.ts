@@ -124,3 +124,28 @@ export async function listPhotos() {
     .where(eq(schema.photos.userId, user.id))
     .orderBy(asc(schema.photos.bodyArea), desc(schema.photos.takenAt));
 }
+
+export async function setPhotoTracker(photoId: number, trackerId: number | null) {
+  const user = await requireUser();
+  await db
+    .update(schema.photos)
+    .set({ trackerId })
+    .where(
+      and(eq(schema.photos.id, photoId), eq(schema.photos.userId, user.id)),
+    );
+  revalidatePath("/health/photos");
+  revalidatePath("/health/trackere");
+  return { ok: true as const };
+}
+
+export async function updatePhotoCaption(photoId: number, caption: string) {
+  const user = await requireUser();
+  await db
+    .update(schema.photos)
+    .set({ caption: caption.trim() || null })
+    .where(
+      and(eq(schema.photos.id, photoId), eq(schema.photos.userId, user.id)),
+    );
+  revalidatePath("/health/photos");
+  return { ok: true as const };
+}
