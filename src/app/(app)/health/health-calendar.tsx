@@ -1,6 +1,22 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useEffect, useRef } from "react";
+import {
+  Activity,
+  Apple,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Moon,
+  Pencil,
+  Scale,
+  Smile,
+  Sparkles,
+  Upload,
+  Check,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
 import { TrackerPhotoAdd } from "@/components/tracker-photo-add";
@@ -10,8 +26,7 @@ import {
   type CustomParamSummary,
   type CustomValueRow,
 } from "@/lib/custom-parameters";
-import { useEffect } from "react";
-import { formatDanishDate, todayIsoDate } from "@/lib/date";
+import { formatDanishDate, danishWeekday, todayIsoDate } from "@/lib/date";
 import { garminScoreToQuality } from "@/lib/sleep";
 import { SleepQualityScale } from "@/components/sleep-quality-scale";
 
@@ -59,11 +74,13 @@ type Entry = {
   nextStep: string;
 };
 
+type TrackerRef = { id: number; name: string; kind: string };
+
 const MONTHS = [
   "januar", "februar", "marts", "april", "maj", "juni",
   "juli", "august", "september", "oktober", "november", "december",
 ];
-const WEEKDAYS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
+const WEEKDAYS_SHORT = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -74,7 +91,6 @@ function isoOf(y: number, m: number, d: number) {
 function daysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }
-/** Monday-indexed weekday (0=Mon … 6=Sun) of the 1st of the month. */
 function firstWeekday(y: number, m: number) {
   return (new Date(y, m, 1).getDay() + 6) % 7;
 }
@@ -98,20 +114,18 @@ function moodTone(mood: number | null): string {
   if (mood === 3) return "bg-warning";
   return "bg-success";
 }
-
 function scoreColor(score: number | null): string {
-  if (score === null) return "bg-border text-mid";
-  if (score >= 80) return "bg-[rgba(74,222,128,0.18)] text-success";
-  if (score >= 60) return "bg-[rgba(251,191,36,0.18)] text-warning";
-  return "bg-[rgba(248,113,113,0.18)] text-danger";
+  if (score === null) return "text-mid";
+  if (score >= 80) return "bg-[rgba(74,222,128,0.15)] text-success";
+  if (score >= 60) return "bg-[rgba(251,191,36,0.15)] text-warning";
+  return "bg-[rgba(248,113,113,0.15)] text-danger";
 }
-
 function fmtMinutes(m: number | null): string {
   if (m === null) return "–";
   const h = Math.floor(m / 60);
   const r = m % 60;
   if (h === 0) return `${r}m`;
-  return `${h}t ${String(r).padStart(2, "0")}m`;
+  return `${h}t ${pad(r)}m`;
 }
 
 export function HealthCalendar({
@@ -122,7 +136,7 @@ export function HealthCalendar({
 }: {
   entries: Entry[];
   sleepEntries: Sleep[];
-  trackers: { id: number; name: string; kind: string }[];
+  trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
 }) {
   const today = todayIsoDate();
@@ -135,145 +149,88 @@ export function HealthCalendar({
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string>(today);
 
   function shift(delta: number) {
     const d = new Date(year, month + delta, 1);
     setYear(d.getFullYear());
     setMonth(d.getMonth());
-    setSelected(null);
   }
 
-  const dim = daysInMonth(year, month);
-  const lead = firstWeekday(year, month);
-  const cells: (string | null)[] = [];
-  for (let i = 0; i < lead; i++) cells.push(null);
-  for (let d = 1; d <= dim; d++) cells.push(isoOf(year, month, d));
-  while (cells.length % 7 !== 0) cells.push(null);
+  // Build cells for current month (Mon-indexed grid)
+  const cells = useMemo<(string | null)[]>(() => {
+    const arr: (string | null)[] = [];
+    const start = firstWeekday(year, month);
+    for (let i = 0; i < start; i++) arr.push(null);
+    for (let d = 1; d <= daysInMonth(year, month); d++) {
+      arr.push(isoOf(year, month, d));
+    }
+    return arr;
+  }, [year, month]);
 
   const monthEntries = useMemo(() => {
     const prefix = `${year}-${pad(month + 1)}`;
     return [...entries.values()].filter((e) => e.date.startsWith(prefix));
   }, [entries, year, month]);
 
-  const summary = useMemo(
-    () => ({
-      logged: monthEntries.length,
-      training: monthEntries.filter((e) => e.didExercise).length,
-      alcohol: monthEntries.filter(
-        (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
-      ).length,
-      sleep: avg(
-        monthEntries.filter((e) => e.sleepHoursX10 !== null).map((e) => e.sleepHoursX10! / 10),
-      ),
-      mood: avg(monthEntries.filter((e) => e.mood !== null).map((e) => e.mood!)),
-      energy: avg(monthEntries.filter((e) => e.energy !== null).map((e) => e.energy!)),
-    }),
-    [monthEntries],
-  );
-
-  // Beregn streaks fra de seneste 90 dage. For "negative" hændelser
-  // (forstoppelse, hovedpine) viser vi nuværende serie og sidste forekomst.
-  // For "positive" (træning) viser vi count i seneste 30 dage og current streak.
-  const streaks = useMemo(() => {
-    const all = [...entries.values()].sort((a, b) =>
-      a.date.localeCompare(b.date),
+  const summary = useMemo(() => {
+    const logged = monthEntries.length;
+    const training = monthEntries.filter((e) => e.didExercise).length;
+    const alcohol = monthEntries.filter(
+      (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
+    ).length;
+    const sleepAvg = avg(
+      monthEntries
+        .filter((e) => e.sleepHoursX10 !== null)
+        .map((e) => e.sleepHoursX10! / 10),
     );
-    const byDate = new Map(all.map((e) => [e.date, e]));
-    const lastDate = all.length > 0 ? all[all.length - 1].date : null;
+    const moodAvg = avg(
+      monthEntries.filter((e) => e.mood !== null).map((e) => e.mood!),
+    );
+    const energyAvg = avg(
+      monthEntries.filter((e) => e.energy !== null).map((e) => e.energy!),
+    );
 
-    const todayD = new Date(today + "T00:00:00");
-    function daysAgo(iso: string): number {
-      const d = new Date(iso + "T00:00:00");
-      return Math.round((todayD.getTime() - d.getTime()) / 86_400_000);
-    }
-    function countLast(predicate: (e: Entry) => boolean, days: number): number {
-      let c = 0;
-      for (const e of all) {
-        if (daysAgo(e.date) < days && predicate(e)) c++;
+    // Vægt-trend: nyeste vs. tidligere i måneden
+    const weightEntries = monthEntries
+      .filter((e) => e.weightX10 !== null)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    let weightLatest: number | null = null;
+    let weightDelta: number | null = null;
+    if (weightEntries.length > 0) {
+      weightLatest = weightEntries[weightEntries.length - 1].weightX10! / 10;
+      if (weightEntries.length >= 2) {
+        weightDelta =
+          weightLatest - weightEntries[0].weightX10! / 10;
       }
-      return c;
-    }
-    function lastOccurrence(
-      predicate: (e: Entry) => boolean,
-    ): string | null {
-      for (let i = all.length - 1; i >= 0; i--) {
-        if (predicate(all[i])) return all[i].date;
-      }
-      return null;
-    }
-    function currentRunFromLatest(predicate: (e: Entry) => boolean): number {
-      // Tæller dage i træk der opfylder predikat, sluttende på seneste log-dato.
-      let count = 0;
-      for (let i = all.length - 1; i >= 0; i--) {
-        if (predicate(all[i])) count++;
-        else break;
-      }
-      return count;
-    }
-    function daysSince(iso: string | null): number | null {
-      if (iso === null) return null;
-      return daysAgo(iso);
     }
 
     return {
-      lastDate,
-      byDate,
-      training: {
-        last30: countLast((e) => e.didExercise, 30),
-        currentRun: currentRunFromLatest((e) => e.didExercise),
-        lastOccurrence: lastOccurrence((e) => e.didExercise),
-      },
-      alcohol: {
-        last30: countLast(
-          (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
-          30,
-        ),
-        daysSinceLast: daysSince(
-          lastOccurrence(
-            (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
-          ),
-        ),
-      },
+      logged,
+      training,
+      alcohol,
+      sleep: sleepAvg,
+      mood: moodAvg,
+      energy: energyAvg,
+      weightLatest,
+      weightDelta,
     };
-  }, [entries, today]);
+  }, [monthEntries]);
+
+  function handleEntrySaved(date: string, next: Entry) {
+    setEntries((prev) => {
+      const m = new Map(prev);
+      m.set(date, next);
+      return m;
+    });
+  }
 
   return (
-    <div className="mx-auto max-w-[880px] px-5 py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-        <div className="flex flex-wrap items-baseline gap-4">
-          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
-            Helbred
-          </h1>
-          <a
-            href="/health/trackere"
-            className="text-[13px] text-accent-bright hover:underline"
-          >
-            Trackere →
-          </a>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => shift(-1)}
-            className="cursor-pointer rounded-[3px] border border-border bg-bg px-3 py-1.5 text-mid hover:border-accent-dim hover:text-ink"
-          >
-            ‹
-          </button>
-          <span className="min-w-[150px] text-center font-serif text-[20px] text-ink">
-            {MONTHS[month]} {year}
-          </span>
-          <button
-            type="button"
-            onClick={() => shift(1)}
-            className="cursor-pointer rounded-[3px] border border-border bg-bg px-3 py-1.5 text-mid hover:border-accent-dim hover:text-ink"
-          >
-            ›
-          </button>
-        </div>
-      </header>
-
-      <SleepImport
+    <div className="mx-auto max-w-[1280px] px-4 py-6 sm:py-8">
+      <PageHead
+        month={month}
+        year={year}
+        onShift={shift}
         onImported={(s) =>
           setSleeps((m) => {
             const next = new Map(m);
@@ -283,32 +240,212 @@ export function HealthCalendar({
         }
       />
 
-      <Streaks data={streaks} />
+      <StatRow summary={summary} />
 
-      <div className="mb-5 flex flex-wrap gap-x-6 gap-y-2 rounded-md border border-border bg-card px-5 py-3 text-[13px]">
-        <Stat label="Logget" value={`${summary.logged} dage`} />
-        <Stat label="Søvn Ø" value={summary.sleep !== null ? `${fmtHours(summary.sleep * 10)} t` : "–"} />
-        <Stat label="Humør Ø" value={summary.mood !== null ? String(summary.mood) : "–"} />
-        <Stat label="Energi Ø" value={summary.energy !== null ? String(summary.energy) : "–"} />
-        {summary.training > 0 && (
-          <Stat label="Træning" value={`${summary.training} dage`} tone="text-success" />
-        )}
-        {summary.alcohol > 0 && (
-          <Stat label="Alkohol" value={`${summary.alcohol} dage`} tone="text-warning" />
-        )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <CalendarPane
+          cells={cells}
+          entries={entries}
+          sleeps={sleeps}
+          selected={selected}
+          today={today}
+          onSelect={setSelected}
+        />
+
+        <DayEditorPanel
+          key={selected}
+          date={selected}
+          entry={entries.get(selected)}
+          sleep={sleeps.get(selected)}
+          trackers={trackers}
+          customParameters={customParameters}
+          onSaved={(e) => handleEntrySaved(selected, e)}
+          onSleepDeleted={() =>
+            setSleeps((m) => {
+              const next = new Map(m);
+              next.delete(selected);
+              return next;
+            })
+          }
+        />
       </div>
+    </div>
+  );
+}
 
-      <div className="mb-2 grid grid-cols-7 gap-1.5">
-        {WEEKDAYS.map((w) => (
-          <div key={w} className="text-center text-[11px] uppercase tracking-[0.5px] text-light">
+// --- PAGE HEAD -------------------------------------------------------------
+
+function PageHead({
+  month,
+  year,
+  onShift,
+  onImported,
+}: {
+  month: number;
+  year: number;
+  onShift: (delta: number) => void;
+  onImported: (s: Sleep) => void;
+}) {
+  return (
+    <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+      <div className="flex flex-wrap items-baseline gap-4">
+        <h1 className="font-serif text-[30px] font-medium leading-none text-ink">
+          Helbred
+        </h1>
+        <a
+          href="/health/trackere"
+          className="text-[12px] text-accent-bright hover:underline"
+        >
+          Trackere →
+        </a>
+        <a
+          href="/health/photos"
+          className="text-[12px] text-accent-bright hover:underline"
+        >
+          Fotos →
+        </a>
+      </div>
+      <div className="flex items-center gap-2">
+        <SleepImport onImported={onImported} />
+        <div className="inline-flex items-center rounded-[4px] border border-border bg-card p-0.5">
+          <button
+            type="button"
+            onClick={() => onShift(-1)}
+            className="inline-flex min-h-[32px] min-w-[32px] cursor-pointer items-center justify-center rounded-[3px] text-mid hover:bg-bg hover:text-ink"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <span className="min-w-[140px] px-3 text-center font-serif text-[17px] text-ink">
+            {capitalize(MONTHS[month])} {year}
+          </span>
+          <button
+            type="button"
+            onClick={() => onShift(1)}
+            className="inline-flex min-h-[32px] min-w-[32px] cursor-pointer items-center justify-center rounded-[3px] text-mid hover:bg-bg hover:text-ink"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// --- STAT ROW --------------------------------------------------------------
+
+function StatRow({
+  summary,
+}: {
+  summary: {
+    logged: number;
+    training: number;
+    alcohol: number;
+    sleep: number | null;
+    mood: number | null;
+    energy: number | null;
+    weightLatest: number | null;
+    weightDelta: number | null;
+  };
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
+      <Stat label="Logget" value={`${summary.logged} dage`} />
+      <Stat
+        label="Søvn Ø"
+        value={summary.sleep !== null ? `${fmtHours(summary.sleep * 10)} t` : "–"}
+      />
+      <Stat label="Humør Ø" value={summary.mood !== null ? String(summary.mood) : "–"} />
+      <Stat
+        label="Energi Ø"
+        value={summary.energy !== null ? String(summary.energy) : "–"}
+      />
+      {summary.training > 0 && (
+        <Stat label="Træning" value={`${summary.training} dage`} tone="text-success" />
+      )}
+      {summary.alcohol > 0 && (
+        <Stat label="Alkohol" value={`${summary.alcohol} dage`} tone="text-warning" />
+      )}
+      {summary.weightLatest !== null && (
+        <Stat
+          label="Vægt"
+          value={
+            <>
+              {summary.weightLatest.toFixed(1).replace(".", ",")} kg{" "}
+              {summary.weightDelta !== null && summary.weightDelta !== 0 && (
+                <span
+                  className={`text-[11px] ${
+                    summary.weightDelta < 0 ? "text-success" : "text-warning"
+                  }`}
+                >
+                  {summary.weightDelta < 0 ? "↓" : "↑"}{" "}
+                  {Math.abs(summary.weightDelta).toFixed(1).replace(".", ",")}
+                </span>
+              )}
+            </>
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: string;
+}) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-[10px] uppercase tracking-[0.4px] text-light">
+        {label}
+      </span>
+      <span className={`font-medium ${tone ?? "text-ink"}`}>{value}</span>
+    </div>
+  );
+}
+
+// --- CALENDAR --------------------------------------------------------------
+
+function CalendarPane({
+  cells,
+  entries,
+  sleeps,
+  selected,
+  today,
+  onSelect,
+}: {
+  cells: (string | null)[];
+  entries: Map<string, Entry>;
+  sleeps: Map<string, Sleep>;
+  selected: string;
+  today: string;
+  onSelect: (iso: string) => void;
+}) {
+  return (
+    <div className="rounded-md border border-border bg-card p-3">
+      <div className="mb-1.5 grid grid-cols-7 gap-1">
+        {WEEKDAYS_SHORT.map((w) => (
+          <div
+            key={w}
+            className="text-center text-[10px] uppercase tracking-[0.5px] text-dim"
+          >
             {w}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1">
         {cells.map((iso, i) => {
-          if (!iso) return <div key={i} />;
+          if (!iso) return <div key={i} className="aspect-square" />;
           const e = entries.get(iso);
+          const sleep = sleeps.get(iso);
           const day = Number(iso.slice(8));
           const isToday = iso === today;
           const isSelected = iso === selected;
@@ -316,210 +453,87 @@ export function HealthCalendar({
             <button
               key={iso}
               type="button"
-              onClick={() => setSelected(isSelected ? null : iso)}
-              className={`flex aspect-square flex-col rounded-[4px] border p-1.5 text-left transition ${
+              onClick={() => onSelect(iso)}
+              className={`relative flex aspect-square min-h-[44px] cursor-pointer flex-col rounded-[4px] border p-1 text-left transition ${
                 isSelected
                   ? "border-accent bg-accent-bg"
                   : isToday
-                    ? "border-accent-dim bg-card"
-                    : "border-border bg-card hover:border-accent-dim"
+                    ? "border-accent-dim bg-bg"
+                    : "border-border-light bg-bg hover:border-accent-dim"
               }`}
             >
-              <div className="flex items-start justify-between gap-0.5">
+              <span
+                className={`text-[11px] font-medium ${
+                  isToday ? "text-accent-bright" : "text-mid"
+                }`}
+              >
+                {day}
+              </span>
+              {sleep?.score !== null && sleep?.score !== undefined && (
                 <span
-                  className={`text-[12px] ${isToday ? "font-semibold text-accent-bright" : "text-mid"}`}
+                  className={`absolute right-1 top-1 rounded-[2px] px-1 text-[9px] font-medium ${scoreColor(sleep.score)}`}
+                  title={`Garmin: ${sleep.score}`}
                 >
-                  {day}
+                  {sleep.score}
                 </span>
-                {e && (
-                  <div className="flex flex-wrap items-center justify-end gap-0.5">
-                    {e.didExercise && (
-                      <span className="size-1.5 rounded-full bg-success" title="Træning" />
-                    )}
-                    {e.alcoholUnits !== null && e.alcoholUnits > 0 && (
-                      <span className="size-1.5 rounded-full bg-warning" title="Alkohol" />
-                    )}
-                  </div>
+              )}
+              <div className="mt-auto flex items-end justify-between gap-1">
+                {e?.didExercise && (
+                  <span
+                    className="size-1.5 rounded-full bg-success"
+                    title="Træning"
+                  />
                 )}
               </div>
-              <div className="mt-auto space-y-1">
-                {(() => {
-                  const sleep = sleeps.get(iso);
-                  if (sleep?.score !== null && sleep?.score !== undefined) {
-                    return (
-                      <div className="flex items-center justify-between gap-1">
-                        <span
-                          className={`rounded-[3px] px-1 text-[10px] font-medium ${scoreColor(sleep.score)}`}
-                          title={`Søvnscore${sleep.qualityLabel ? ` · ${sleep.qualityLabel}` : ""}`}
-                        >
-                          {sleep.score}
-                        </span>
-                        {sleep.durationMin !== null && (
-                          <span className="text-[9px] text-dim">
-                            {Math.floor(sleep.durationMin / 60)}t
-                            {String(sleep.durationMin % 60).padStart(2, "0")}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  }
-                  if (e?.sleepHoursX10 !== null && e?.sleepHoursX10 !== undefined) {
-                    return (
-                      <div className="text-[9px] text-dim">
-                        {fmtHours(e.sleepHoursX10)} t søvn
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-                {e?.mood !== null && e?.mood !== undefined && (
-                  <div className={`h-1 rounded-full ${moodTone(e.mood)}`} />
-                )}
-              </div>
+              {e?.mood !== null && e?.mood !== undefined && (
+                <div className={`mt-1 h-0.5 rounded-full ${moodTone(e.mood)}`} />
+              )}
             </button>
           );
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-dim">
-        <Legend className="bg-success" label="Godt humør / træning" />
-        <Legend className="bg-warning" label="Neutralt / alkohol" />
-        <Legend className="bg-danger" label="Lavt humør" />
-        <Legend className="bg-border" label="Ikke logget" />
-      </div>
-
-      {selected && (
-        <DayEditor
-          key={selected}
-          date={selected}
-          entry={entries.get(selected) ?? null}
-          sleep={sleeps.get(selected) ?? null}
-          trackers={trackers}
-          customParameters={customParameters}
-          onClose={() => setSelected(null)}
-          onSaved={(saved) => {
-            setEntries((m) => {
-              const next = new Map(m);
-              next.set(saved.date, saved);
-              return next;
-            });
-          }}
-          onSleepDeleted={() => {
-            setSleeps((m) => {
-              const next = new Map(m);
-              next.delete(selected);
-              return next;
-            });
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-type StreakData = {
-  lastDate: string | null;
-  training: {
-    last30: number;
-    currentRun: number;
-    lastOccurrence: string | null;
-  };
-  alcohol: { last30: number; daysSinceLast: number | null };
-};
-
-function Streaks({ data }: { data: StreakData }) {
-  if (data.lastDate === null) return null;
-
-  const cards: { label: string; value: string; sub?: string; tone?: string }[] = [];
-
-  if (data.training.last30 > 0 || data.training.currentRun > 0) {
-    cards.push({
-      label: "Træning",
-      value: `${data.training.last30}/30`,
-      sub:
-        data.training.currentRun >= 2
-          ? `${data.training.currentRun} dage i træk`
-          : data.training.lastOccurrence
-            ? `sidst ${shortDate(data.training.lastOccurrence)}`
-            : undefined,
-      tone: "text-success",
-    });
-  }
-  if (data.alcohol.daysSinceLast !== null) {
-    cards.push({
-      label: "Ingen alkohol",
-      value: `${data.alcohol.daysSinceLast} dage`,
-      sub: `${data.alcohol.last30}/30 dage med`,
-      tone: data.alcohol.daysSinceLast > 7 ? "text-success" : undefined,
-    });
-  }
-
-  if (cards.length === 0) return null;
-
-  return (
-    <div className="mb-5 rounded-md border border-border bg-card px-4 py-3">
-      <div className="mb-2 text-[11px] uppercase tracking-[0.5px] text-light">
-        Aktive serier
-      </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 md:grid-cols-4">
-        {cards.map((c) => (
-          <div key={c.label}>
-            <div className="text-[11px] text-light">{c.label}</div>
-            <div className={`text-[14px] font-medium ${c.tone ?? "text-ink"}`}>
-              {c.value}
-            </div>
-            {c.sub && <div className="text-[10px] text-dim">{c.sub}</div>}
-          </div>
-        ))}
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-border-light pt-3 text-[10px] text-dim">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-full bg-success" />
+          Godt humør
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-full bg-warning" />
+          Neutralt
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-full bg-danger" />
+          Lavt humør
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="rounded-[2px] bg-[rgba(74,222,128,0.15)] px-1 text-[9px] text-success">
+            82
+          </span>
+          Garmin-score
+        </span>
       </div>
     </div>
   );
 }
 
-function shortDate(iso: string): string {
-  const months = [
-    "jan", "feb", "mar", "apr", "maj", "jun",
-    "jul", "aug", "sep", "okt", "nov", "dec",
-  ];
-  const [, m, d] = iso.split("-").map(Number);
-  return `${d}. ${months[m - 1]}`;
-}
+// --- DAY EDITOR PANEL ------------------------------------------------------
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
-  return (
-    <div>
-      <div className="text-[11px] uppercase tracking-[0.5px] text-light">{label}</div>
-      <div className={`text-[15px] font-medium ${tone ?? "text-ink"}`}>{value}</div>
-    </div>
-  );
-}
-
-function Legend({ className, label }: { className: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span className={`size-2.5 rounded-full ${className}`} />
-      {label}
-    </span>
-  );
-}
-
-function DayEditor({
+function DayEditorPanel({
   date,
   entry,
   sleep,
   trackers,
   customParameters,
-  onClose,
   onSaved,
   onSleepDeleted,
 }: {
   date: string;
-  entry: Entry | null;
-  sleep: Sleep | null;
-  trackers: { id: number; name: string; kind: string }[];
+  entry?: Entry;
+  sleep?: Sleep;
+  trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
-  onClose: () => void;
-  onSaved: (saved: Entry) => void;
+  onSaved: (e: Entry) => void;
   onSleepDeleted: () => void;
 }) {
   const [mood, setMood] = useState<number | null>(entry?.mood ?? null);
@@ -549,430 +563,411 @@ function DayEditor({
     entry?.proteinG ?? null,
   );
   const [fatG, setFatG] = useState<number | null>(entry?.fatG ?? null);
+  const [sleepInput, setSleepInput] = useState(
+    fmtHours(entry?.sleepHoursX10 ?? null),
+  );
+  const [healthNotes, setHealthNotes] = useState(entry?.healthNotes ?? "");
+
   const [customValues, setCustomValues] = useState<CustomValueRow[]>([]);
   useEffect(() => {
     listCustomValuesForDate(date).then(setCustomValues);
   }, [date]);
-  const [sleepInput, setSleepInput] = useState(fmtHours(entry?.sleepHoursX10 ?? null));
-  const [healthNotes, setHealthNotes] = useState(entry?.healthNotes ?? "");
-  const [pending, startSave] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
-  function save() {
-    setError(null);
-    const sleepHoursX10 = parseHours(sleepInput);
-    const parseDecX10 = (s: string, max: number): number | null => {
-      const t = s.trim().replace(",", ".");
-      if (t === "") return null;
-      const n = Number(t);
-      if (!Number.isFinite(n) || n < 0 || n > max) return null;
-      return Math.round(n * 10);
+  // Auto-save state
+  const [saveState, setSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [, startSave] = useTransition();
+  const isFirstRender = useRef(true);
+  const errorMsg = useRef<string | null>(null);
+
+  function buildPayload() {
+    return {
+      date,
+      mood,
+      energy,
+      sleepHoursX10: parseHours(sleepInput),
+      sleepQuality,
+      alcoholUnits,
+      didExercise,
+      exerciseIntensity: didExercise ? exerciseIntensity : null,
+      didFast: entry?.didFast ?? false,
+      fastHoursX10: entry?.fastHoursX10 ?? null,
+      fastBreakTime: entry?.fastBreakTime ?? null,
+      weightX10: parseDecX10(weightInput, 500),
+      waistX10: parseDecX10(waistInput, 300),
+      carbsG,
+      proteinG,
+      fatG,
+      healthNotes: healthNotes.trim() || null,
+      workNotes: entry?.workNotes || null,
+      dayNotes: entry?.dayNotes || null,
+      wentWell: entry?.wentWell || null,
+      nextStep: entry?.nextStep || null,
     };
-    const weightX10 = parseDecX10(weightInput, 500);
-    const waistX10 = parseDecX10(waistInput, 300);
-    startSave(async () => {
-      const res = await saveDayEntry({
-        date,
-        mood,
-        energy,
-        sleepHoursX10,
-        sleepQuality,
-        alcoholUnits,
-        didExercise,
-        exerciseIntensity: didExercise ? exerciseIntensity : null,
-        didFast: entry?.didFast ?? false,
-        fastHoursX10: entry?.fastHoursX10 ?? null,
-        fastBreakTime: entry?.fastBreakTime ?? null,
-        weightX10,
-        waistX10,
-        carbsG,
-        proteinG,
-        fatG,
-        healthNotes: healthNotes.trim() || null,
-        workNotes: entry?.workNotes || null,
-        dayNotes: entry?.dayNotes || null,
-        wentWell: entry?.wentWell || null,
-        nextStep: entry?.nextStep || null,
-      });
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
-      onSaved({
-        date,
-        mood,
-        energy,
-        sleepHoursX10,
-        sleepQuality,
-        alcoholUnits,
-        didExercise,
-        exerciseIntensity: didExercise ? exerciseIntensity : null,
-        didFast: entry?.didFast ?? false,
-        fastHoursX10: entry?.fastHoursX10 ?? null,
-        fastBreakTime: entry?.fastBreakTime ?? null,
-        weightX10,
-        waistX10,
-        carbsG,
-        proteinG,
-        fatG,
-        healthNotes,
-        workNotes: entry?.workNotes ?? "",
-        dayNotes: entry?.dayNotes ?? "",
-        wentWell: entry?.wentWell ?? "",
-        nextStep: entry?.nextStep ?? "",
-      });
-      onClose();
-    });
   }
 
-  return (
-    <div className="mt-5 rounded-md border border-accent bg-card p-5">
-      <div className="mb-4 flex items-baseline justify-between border-b border-border-light pb-2.5">
-        <h2 className="font-serif text-[19px] text-accent-bright">
-          {formatDanishDate(date)}
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="cursor-pointer text-mid hover:text-ink"
-        >
-          ✕
-        </button>
-      </div>
+  // Auto-save: debounced effect that fires whenever any input changes
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setSaveState("saving");
+    const handle = setTimeout(() => {
+      startSave(async () => {
+        const payload = buildPayload();
+        const res = await saveDayEntry(payload);
+        if (res.ok) {
+          setSaveState("saved");
+          setSavedAt(new Date());
+          errorMsg.current = null;
+          onSaved({
+            date,
+            mood,
+            energy,
+            sleepHoursX10: payload.sleepHoursX10,
+            sleepQuality,
+            alcoholUnits,
+            didExercise,
+            exerciseIntensity: didExercise ? exerciseIntensity : null,
+            didFast: entry?.didFast ?? false,
+            fastHoursX10: entry?.fastHoursX10 ?? null,
+            fastBreakTime: entry?.fastBreakTime ?? null,
+            weightX10: payload.weightX10,
+            waistX10: payload.waistX10,
+            carbsG,
+            proteinG,
+            fatG,
+            healthNotes,
+            workNotes: entry?.workNotes ?? "",
+            dayNotes: entry?.dayNotes ?? "",
+            wentWell: entry?.wentWell ?? "",
+            nextStep: entry?.nextStep ?? "",
+          });
+        } else {
+          setSaveState("error");
+          errorMsg.current = res.error;
+        }
+      });
+    }, 800);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    mood, energy, sleepInput, sleepQuality, alcoholUnits, didExercise,
+    exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, healthNotes,
+  ]);
 
-      {sleep && (
-        <GarminSleepDetails
-          sleep={sleep}
-          onDelete={async () => {
-            if (!confirm("Slet Garmin-søvndata for denne dag?")) return;
-            await deleteSleepEntry(date);
-            onSleepDeleted();
-          }}
-        />
+  const hasGarminScore = sleep?.score !== null && sleep?.score !== undefined;
+  const hasGarminDuration =
+    sleep?.durationMin !== null && sleep?.durationMin !== undefined;
+
+  const kcal =
+    carbsG !== null && proteinG !== null && fatG !== null
+      ? carbsG * 4 + proteinG * 4 + fatG * 9
+      : null;
+
+  return (
+    <aside className="rounded-md border border-border bg-card p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+      <EditorHead date={date} saveState={saveState} savedAt={savedAt} errorMsg={errorMsg.current} />
+
+      {(hasGarminScore || hasGarminDuration) && (
+        <GarminBanner sleep={sleep!} onDelete={onSleepDeleted} />
       )}
 
-
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <FieldLabel>Humør</FieldLabel>
-            <Scale value={mood} onChange={setMood} max={5} lo="lavt" hi="højt" />
-          </div>
-          <div>
-            <FieldLabel>Energi</FieldLabel>
-            <Scale value={energy} onChange={setEnergy} max={5} lo="lavt" hi="højt" />
-          </div>
-          <div>
-            <FieldLabel>
-              Søvn (timer)
-              {sleep?.durationMin && (
-                <span className="ml-2 rounded-[3px] bg-accent-bg px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-accent-bright">
-                  Garmin
-                </span>
-              )}
-            </FieldLabel>
-            {sleep?.durationMin ? (
-              <div className="rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[14px] text-ink">
-                {`${Math.floor(sleep.durationMin / 60)}t ${String(sleep.durationMin % 60).padStart(2, "0")}m`}
-              </div>
-            ) : (
-              <input
-                type="number"
-                min={0}
-                max={24}
-                step={0.5}
-                value={sleepInput}
-                onChange={(e) => setSleepInput(e.target.value)}
-                placeholder="Fx 7,5"
-                className="!w-32"
-              />
-            )}
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel>
-            Søvnkvalitet
-            {sleep?.score !== null && sleep?.score !== undefined && (
-              <span
-                className="ml-2 rounded-[3px] bg-accent-bg px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-accent-bright"
-                title={sleep.qualityLabel ?? undefined}
-              >
-                Garmin
-              </span>
-            )}
-          </FieldLabel>
-          <SleepQualityScale
-            value={
-              sleep?.score !== null && sleep?.score !== undefined
-                ? garminScoreToQuality(sleep.score)
-                : sleepQuality
-            }
-            onChange={setSleepQuality}
-            disabled={sleep?.score !== null && sleep?.score !== undefined}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <FieldLabel>
-              Vægt <span className="ml-1 italic text-dim">— kg</span>
-            </FieldLabel>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={weightInput}
-              onChange={(e) => setWeightInput(e.target.value)}
-              placeholder="Fx 78,5"
-              className="!w-32"
-            />
-          </div>
-          <div>
-            <FieldLabel>
-              Livvidde <span className="ml-1 italic text-dim">— cm</span>
-            </FieldLabel>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={waistInput}
-              onChange={(e) => setWaistInput(e.target.value)}
-              placeholder="Fx 89,5"
-              className="!w-32"
-            />
-          </div>
-        </div>
-
-        <MacrosBlock
-          carbsG={carbsG}
-          proteinG={proteinG}
-          fatG={fatG}
-          setCarbsG={setCarbsG}
-          setProteinG={setProteinG}
-          setFatG={setFatG}
-        />
-
-        <div>
-          <FieldLabel>
-            Genstande <span className="ml-1 italic text-dim">— alkohol</span>
-          </FieldLabel>
-          <input
-            type="number"
-            min={0}
-            max={50}
-            step={1}
-            value={alcoholUnits === null ? "" : alcoholUnits}
-            onChange={(e) => {
-              const v = e.target.value.trim();
-              setAlcoholUnits(
-                v === "" ? null : Math.max(0, Math.floor(Number(v))),
-              );
-            }}
-            placeholder="0"
-            className="!w-24"
-          />
-        </div>
-
-        <div>
-          <FieldLabel>Træning?</FieldLabel>
-          <div className="flex gap-1.5">
-            {[
-              { label: "Ja", v: true },
-              { label: "Nej", v: false },
-            ].map(({ label, v }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  setDidExercise(v);
-                  if (!v) setExerciseIntensity(null);
-                }}
-                className={`cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
-                  didExercise === v
-                    ? "border-accent bg-accent-bg text-accent-bright"
-                    : "border-border bg-bg text-mid hover:border-accent-dim"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {didExercise && (
-            <div className="mt-3">
-              <FieldLabel>Intensitet</FieldLabel>
-              <div className="flex gap-1.5">
-                {(
-                  [
-                    { v: "light", label: "Let" },
-                    { v: "medium", label: "Mellem" },
-                    { v: "hard", label: "Hård" },
-                  ] as const
-                ).map(({ v, label }) => {
-                  const active = exerciseIntensity === v;
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setExerciseIntensity(active ? null : v)}
-                      className={`flex-1 cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
-                        active
-                          ? "border-accent bg-accent-bg text-accent-bright"
-                          : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <FieldLabel>Helbredsnoter</FieldLabel>
-          <textarea
-            value={healthNotes}
-            onChange={(e) => setHealthNotes(e.target.value)}
-            rows={3}
-            placeholder="Symptomer, medicin, observationer..."
-          />
-        </div>
-
-        <CustomParametersSection
-          parameters={customParameters}
-          date={date}
-          initialValues={customValues}
-        />
-
-        <TrackerPhotoAdd date={date} trackers={trackers} />
-      </div>
-
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending}
-          className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
-        >
-          {pending ? "Gemmer..." : "Gem"}
-        </button>
-        {error && <span className="text-[13px] text-danger">{error}</span>}
-        {entry &&
-          (entry.workNotes ||
-            entry.dayNotes ||
-            entry.wentWell ||
-            entry.nextStep) && (
-            <span className="text-[12px] text-dim">
-              Dagsnotater bevares (redigeres på I dag / Journal)
+      <Section icon={<Moon className="size-3.5" />} title="Søvn">
+        <Field label="Varighed" hint={hasGarminDuration ? "Garmin" : undefined}>
+          {hasGarminDuration ? (
+            <span className="text-[13px] text-mid">
+              {fmtMinutes(sleep!.durationMin)}
             </span>
+          ) : (
+            <NumberInput
+              value={sleepInput}
+              onChange={setSleepInput}
+              unit="t"
+              placeholder="Fx 7,5"
+            />
           )}
+        </Field>
+        <Field label="Kvalitet" hint={hasGarminScore ? "Garmin" : undefined}>
+          <SleepQualityScale
+            value={hasGarminScore ? garminScoreToQuality(sleep!.score) : sleepQuality}
+            onChange={setSleepQuality}
+            disabled={hasGarminScore}
+          />
+        </Field>
+      </Section>
+
+      <Section icon={<Smile className="size-3.5" />} title="Stemning">
+        <Field label="Humør">
+          <Scale1to5 value={mood} onChange={setMood} />
+        </Field>
+        <Field label="Energi">
+          <Scale1to5 value={energy} onChange={setEnergy} />
+        </Field>
+      </Section>
+
+      <Section icon={<Scale className="size-3.5" />} title="Krop">
+        <Field label="Vægt">
+          <NumberInput
+            value={weightInput}
+            onChange={setWeightInput}
+            unit="kg"
+            placeholder="78,5"
+          />
+        </Field>
+        <Field label="Livvidde">
+          <NumberInput
+            value={waistInput}
+            onChange={setWaistInput}
+            unit="cm"
+            placeholder="89,5"
+          />
+        </Field>
+      </Section>
+
+      <Section
+        icon={<Apple className="size-3.5" />}
+        title="Ernæring"
+        meta={kcal !== null ? `${kcal} kcal` : undefined}
+      >
+        <Field label="Kulhydrat">
+          <NumberInput
+            value={carbsG === null ? "" : String(carbsG)}
+            onChange={(v) => setCarbsG(parseInt0to2000(v))}
+            unit="g"
+            placeholder="0"
+          />
+        </Field>
+        <Field label="Protein">
+          <NumberInput
+            value={proteinG === null ? "" : String(proteinG)}
+            onChange={(v) => setProteinG(parseInt0to1000(v))}
+            unit="g"
+            placeholder="0"
+          />
+        </Field>
+        <Field label="Fedt">
+          <NumberInput
+            value={fatG === null ? "" : String(fatG)}
+            onChange={(v) => setFatG(parseInt0to1000(v))}
+            unit="g"
+            placeholder="0"
+          />
+        </Field>
+      </Section>
+
+      <Section icon={<Activity className="size-3.5" />} title="Aktivitet">
+        <Field label="Træning">
+          <YesNo
+            value={didExercise}
+            onChange={(v) => {
+              setDidExercise(v);
+              if (!v) setExerciseIntensity(null);
+            }}
+          />
+        </Field>
+        {didExercise && (
+          <Field label="Intensitet" indent>
+            <IntensityPicker
+              value={exerciseIntensity}
+              onChange={setExerciseIntensity}
+            />
+          </Field>
+        )}
+        <Field label="Alkohol">
+          <NumberInput
+            value={alcoholUnits === null ? "" : String(alcoholUnits)}
+            onChange={(v) => setAlcoholUnits(parseInt0to50(v))}
+            unit="×"
+            placeholder="0"
+          />
+        </Field>
+      </Section>
+
+      {customParameters.length > 0 && (
+        <Section
+          icon={<Sparkles className="size-3.5" />}
+          title="Mine parametre"
+          aiPill
+        >
+          <CustomParametersSection
+            date={date}
+            parameters={customParameters}
+            initialValues={customValues}
+          />
+        </Section>
+      )}
+
+      <Section icon={<Pencil className="size-3.5" />} title="Helbredsnoter">
+        <textarea
+          value={healthNotes}
+          onChange={(e) => setHealthNotes(e.target.value)}
+          rows={3}
+          placeholder="Symptomer, medicin, observationer..."
+          className="!text-[13px]"
+        />
+      </Section>
+
+      <Section icon={<Camera className="size-3.5" />} title="Fotos">
+        <TrackerPhotoAdd date={date} trackers={trackers} defaultExpanded={false} />
+      </Section>
+    </aside>
+  );
+}
+
+// --- EDITOR SUB-COMPONENTS --------------------------------------------------
+
+function EditorHead({
+  date,
+  saveState,
+  savedAt,
+  errorMsg,
+}: {
+  date: string;
+  saveState: "idle" | "saving" | "saved" | "error";
+  savedAt: Date | null;
+  errorMsg: string | null;
+}) {
+  return (
+    <div className="mb-3 flex items-baseline justify-between gap-2 border-b border-border-light pb-2.5">
+      <div>
+        <div className="text-[11px] uppercase tracking-[0.4px] text-light">
+          {danishWeekday(date)}
+        </div>
+        <div className="font-serif text-[18px] text-accent-bright">
+          {formatDanishDate(date)}
+        </div>
       </div>
+      <SaveIndicator state={saveState} savedAt={savedAt} errorMsg={errorMsg} />
     </div>
   );
 }
 
-function MacrosBlock({
-  carbsG,
-  proteinG,
-  fatG,
-  setCarbsG,
-  setProteinG,
-  setFatG,
+function SaveIndicator({
+  state,
+  savedAt,
+  errorMsg,
 }: {
-  carbsG: number | null;
-  proteinG: number | null;
-  fatG: number | null;
-  setCarbsG: (n: number | null) => void;
-  setProteinG: (n: number | null) => void;
-  setFatG: (n: number | null) => void;
+  state: "idle" | "saving" | "saved" | "error";
+  savedAt: Date | null;
+  errorMsg: string | null;
 }) {
-  const hasAll = carbsG !== null && proteinG !== null && fatG !== null;
-  const hasPartial =
-    !hasAll && (carbsG !== null || proteinG !== null || fatG !== null);
-  const kcal = hasAll
-    ? (carbsG ?? 0) * 4 + (proteinG ?? 0) * 4 + (fatG ?? 0) * 9
-    : null;
+  if (state === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] italic text-light">
+        <Loader2 className="size-3 animate-spin" />
+        Gemmer…
+      </span>
+    );
+  }
+  if (state === "saved" && savedAt) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] italic text-success">
+        <Check className="size-3" />
+        Gemt {pad(savedAt.getHours())}:{pad(savedAt.getMinutes())}
+      </span>
+    );
+  }
+  if (state === "error") {
+    return (
+      <span className="text-[11px] italic text-danger" title={errorMsg ?? ""}>
+        Fejl – ikke gemt
+      </span>
+    );
+  }
+  return null;
+}
+
+function Section({
+  icon,
+  title,
+  meta,
+  aiPill,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  meta?: string;
+  aiPill?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-[3px] border border-border-light bg-bg p-3">
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-[13px] font-medium text-mid">Makronæring</span>
-        {kcal !== null && (
-          <span className="text-[12px] text-accent-bright">{kcal} kcal</span>
-        )}
-        {hasPartial && (
-          <span className="text-[11px] italic text-dim">
-            Udfyld alle tre for kcal
+    <div className="mb-4">
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
+        <span className="text-mid">{icon}</span>
+        <span>{title}</span>
+        {aiPill && (
+          <span className="ml-auto rounded-full bg-accent-bg px-1.5 py-0.5 text-[8px] tracking-[0.3px] text-accent-bright">
+            AI
           </span>
         )}
+        {meta && (
+          <span className="ml-auto text-[10px] text-accent-bright">{meta}</span>
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        <MacroFieldInput
-          label="Kulhydrater"
-          unit="g"
-          value={carbsG}
-          onChange={setCarbsG}
-        />
-        <MacroFieldInput
-          label="Protein"
-          unit="g"
-          value={proteinG}
-          onChange={setProteinG}
-        />
-        <MacroFieldInput
-          label="Fedt"
-          unit="g"
-          value={fatG}
-          onChange={setFatG}
-        />
-      </div>
+      <div className="space-y-1">{children}</div>
     </div>
   );
 }
 
-function MacroFieldInput({
+function Field({
   label,
-  unit,
+  hint,
+  indent,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  indent?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 py-1 ${indent ? "ml-3" : ""}`}
+    >
+      <span className="text-[13px] text-ink">
+        {label}
+        {hint && (
+          <span className="ml-1.5 rounded-[2px] bg-accent-bg px-1 py-0.5 text-[9px] uppercase tracking-[0.3px] text-accent-bright">
+            {hint}
+          </span>
+        )}
+      </span>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function Scale1to5({
   value,
   onChange,
 }: {
-  label: string;
-  unit: string;
   value: number | null;
-  onChange: (n: number | null) => void;
+  onChange: (v: number | null) => void;
 }) {
   return (
-    <div>
-      <FieldLabel>{label}</FieldLabel>
-      <div className="relative">
-        <input
-          type="text"
-          inputMode="numeric"
-          value={value === null ? "" : String(value)}
-          onChange={(e) => {
-            const raw = e.target.value.trim();
-            if (raw === "") {
-              onChange(null);
-              return;
-            }
-            const n = Number(raw);
-            if (Number.isFinite(n) && n >= 0 && n <= 2000) {
-              onChange(Math.round(n));
-            }
-          }}
-          placeholder="0"
-          className="!pr-7"
-        />
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-dim">
-          {unit}
-        </span>
-      </div>
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const active = value === n;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(active ? null : n)}
+            className={`min-h-[28px] min-w-[28px] cursor-pointer rounded-[3px] border text-[11px] transition ${
+              active
+                ? "border-accent bg-accent-bg text-accent-bright"
+                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+            }`}
+          >
+            {n}
+          </button>
+        );
+      })}
     </div>
-  );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="mb-1.5 block text-[13px] font-medium text-mid">{children}</label>
   );
 }
 
@@ -984,259 +979,247 @@ function YesNo({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex gap-1.5">
+    <div className="flex gap-0.5">
       {[
-        { label: "Nej", v: false },
-        { label: "Ja", v: true },
-      ].map(({ label, v }) => (
-        <button
-          key={label}
-          type="button"
-          onClick={() => onChange(v)}
-          className={`flex-1 cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
-            value === v
-              ? "border-accent bg-accent-bg text-accent-bright"
-              : "border-border bg-bg text-mid hover:border-accent-dim"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
+        { label: "Ja", v: true, cls: "yes" },
+        { label: "Nej", v: false, cls: "no" },
+      ].map(({ label, v, cls }) => {
+        const active = value === v;
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onChange(v)}
+            className={`min-h-[28px] min-w-[44px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
+              active
+                ? cls === "yes"
+                  ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
+                  : "border-mid text-ink"
+                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-function Scale({
+function IntensityPicker({
   value,
   onChange,
-  max,
-  lo,
-  hi,
 }: {
-  value: number | null;
-  onChange: (v: number | null) => void;
-  max: number;
-  lo?: string;
-  hi?: string;
+  value: "light" | "medium" | "hard" | null;
+  onChange: (v: "light" | "medium" | "hard" | null) => void;
 }) {
-  const maxWidthPx = max * 36 + (max - 1) * 4;
   return (
-    <div style={{ maxWidth: `${maxWidthPx}px` }}>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
-          const active = value === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange(active ? null : n)}
-              className={`aspect-square max-w-[36px] flex-1 cursor-pointer rounded-[3px] border text-[13px] font-medium transition ${
-                active
-                  ? "border-accent bg-accent text-white"
-                  : "border-border bg-bg text-mid hover:border-accent-dim"
-              }`}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
-      {(lo || hi) && (
-        <div className="mt-1 flex justify-between text-[11px] italic text-dim">
-          <span>{lo ?? ""}</span>
-          <span>{hi ?? ""}</span>
-        </div>
-      )}
+    <div className="flex gap-0.5">
+      {(
+        [
+          { v: "light", label: "Let" },
+          { v: "medium", label: "Mellem" },
+          { v: "hard", label: "Hård" },
+        ] as const
+      ).map(({ v, label }) => {
+        const active = value === v;
+        return (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(active ? null : v)}
+            className={`min-h-[28px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
+              active
+                ? "border-accent bg-accent-bg text-accent-bright"
+                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-// --- Garmin sleep details -------------------------------------------------
+function NumberInput({
+  value,
+  onChange,
+  unit,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  unit: string;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative w-[110px]">
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="!text-[12px]"
+        style={{ paddingRight: "32px", paddingTop: "5px", paddingBottom: "5px" }}
+      />
+      <span
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-dim"
+      >
+        {unit}
+      </span>
+    </div>
+  );
+}
 
-function GarminSleepDetails({
+function GarminBanner({
   sleep,
   onDelete,
 }: {
   sleep: Sleep;
   onDelete: () => void;
 }) {
+  const [pending, start] = useTransition();
+  function del() {
+    if (!confirm("Slet Garmin-søvndata for denne dag?")) return;
+    start(async () => {
+      const dateAttr = (sleep as Sleep).date;
+      await deleteSleepEntry(dateAttr);
+      onDelete();
+    });
+  }
   return (
-    <div className="mb-4 rounded-[4px] border border-[var(--accent-dim)] bg-[rgba(74,144,226,0.06)] px-4 py-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-serif text-[15px] text-accent-bright">
-            Garmin søvn
-          </span>
-          {sleep.score !== null && (
-            <span
-              className={`rounded-[3px] px-1.5 py-0.5 text-[11px] font-medium ${scoreColor(sleep.score)}`}
-            >
-              {sleep.score}
-              {sleep.qualityLabel ? ` · ${sleep.qualityLabel}` : ""}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="cursor-pointer text-[11px] text-dim hover:text-danger"
-          title="Slet Garmin-data for denne dag"
+    <div className="mb-3 flex items-center gap-2 rounded-[4px] border border-[rgba(74,144,226,0.2)] bg-gradient-to-r from-accent-bg to-transparent px-3 py-2 text-[12px] text-mid">
+      <Moon className="size-3.5 text-accent-bright" />
+      <span>
+        <strong className="font-medium text-ink">Garmin søvn</strong>
+        {sleep.durationMin !== null && (
+          <> · {fmtMinutes(sleep.durationMin)}</>
+        )}
+        {sleep.qualityLabel && <> · {sleep.qualityLabel.toLowerCase()}</>}
+      </span>
+      {sleep.score !== null && (
+        <span
+          className={`ml-auto rounded-[3px] px-2 py-0.5 text-[11px] font-semibold ${scoreColor(sleep.score)}`}
         >
-          ✕
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] sm:grid-cols-4">
-        <SleepStat label="Varighed" value={fmtMinutes(sleep.durationMin)} />
-        <SleepStat label="Dyb" value={fmtMinutes(sleep.deepMin)} />
-        <SleepStat label="Let" value={fmtMinutes(sleep.lightMin)} />
-        <SleepStat label="REM" value={fmtMinutes(sleep.remMin)} />
-        <SleepStat label="Vågen" value={fmtMinutes(sleep.awakeMin)} />
-        <SleepStat
-          label="Hvilepuls"
-          value={sleep.restingHeartRate !== null ? `${sleep.restingHeartRate} bpm` : "–"}
-        />
-        <SleepStat
-          label="HRV"
-          value={
-            sleep.hrvMs !== null
-              ? `${sleep.hrvMs} ms${sleep.hrv7dStatus ? ` · ${sleep.hrv7dStatus}` : ""}`
-              : "–"
-          }
-        />
-        <SleepStat
-          label="SpO₂ Ø"
-          value={sleep.avgSpO2 !== null ? `${sleep.avgSpO2}%` : "–"}
-        />
-        <SleepStat
-          label="Stress Ø"
-          value={sleep.avgStress !== null ? String(sleep.avgStress) : "–"}
-        />
-        <SleepStat
-          label="Body Battery"
-          value={
-            sleep.bodyBatteryChange !== null
-              ? (sleep.bodyBatteryChange > 0 ? "+" : "") + sleep.bodyBatteryChange
-              : "–"
-          }
-        />
-        <SleepStat
-          label="Vejrtræk. Ø"
-          value={
-            sleep.avgBreathingX10 !== null
-              ? `${(sleep.avgBreathingX10 / 10).toString().replace(".", ",")} brpm`
-              : "–"
-          }
-        />
-        <SleepStat
-          label="Nattepuls Ø"
-          value={sleep.avgHeartRate !== null ? `${sleep.avgHeartRate} bpm` : "–"}
-        />
-      </div>
+          {sleep.score}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={del}
+        disabled={pending}
+        className="ml-1 cursor-pointer text-dim hover:text-danger"
+        title="Slet Garmin-data"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
     </div>
   );
 }
 
-function SleepStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-[0.4px] text-light">{label}</div>
-      <div className="text-[13px] text-ink">{value}</div>
-    </div>
-  );
-}
-
-// --- Sleep import ---------------------------------------------------------
+// --- SLEEP IMPORT (button in PageHead) ------------------------------------
 
 function SleepImport({ onImported }: { onImported: (s: Sleep) => void }) {
-  const [pending, startImport] = useTransition();
-  const [results, setResults] = useState<{ ok: boolean; text: string }[]>([]);
+  const [pending, start] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  async function handleFiles(files: FileList | null) {
+  function onFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    setResults([]);
-    startImport(async () => {
-      const out: { ok: boolean; text: string }[] = [];
-      for (const file of Array.from(files)) {
-        try {
-          const text = await file.text();
-          const res = await importGarminSleepCsv({ csvText: text, filename: file.name });
-          if (res.ok) {
-            out.push({
-              ok: true,
-              text: `${file.name}: ${res.action === "created" ? "tilføjet" : "opdateret"} (${res.date})`,
-            });
-            // Hent den lige indsatte søvn-entry tilbage til UI'et —
-            // server-action returnerer ikke det fulde objekt, så vi parser igen
-            // og bruger det til at opdatere kalenderen optimistisk.
-            const reparsed = await import("@/lib/garmin-sleep").then((m) =>
-              m.parseGarminSleepCsv(text),
-            );
-            if (reparsed) {
-              onImported({
-                date: reparsed.date,
-                durationMin: reparsed.durationMin,
-                score: reparsed.score,
-                qualityLabel: reparsed.qualityLabel,
-                deepMin: reparsed.deepMin,
-                lightMin: reparsed.lightMin,
-                remMin: reparsed.remMin,
-                awakeMin: reparsed.awakeMin,
-                avgStress: reparsed.avgStress,
-                avgHeartRate: reparsed.avgHeartRate,
-                restingHeartRate: reparsed.restingHeartRate,
-                bodyBatteryChange: reparsed.bodyBatteryChange,
-                avgSpO2: reparsed.avgSpO2,
-                lowestSpO2: reparsed.lowestSpO2,
-                avgBreathingX10: reparsed.avgBreathingX10,
-                hrvMs: reparsed.hrvMs,
-                hrv7dStatus: reparsed.hrv7dStatus,
-              });
-            }
-          } else {
-            out.push({ ok: false, text: res.error });
-          }
-        } catch (e) {
-          out.push({
-            ok: false,
-            text: `${file.name}: ${e instanceof Error ? e.message : "ukendt fejl"}`,
+    setMsg(null);
+    start(async () => {
+      let created = 0,
+        updated = 0,
+        errors = 0;
+      for (const f of Array.from(files)) {
+        const text = await f.text();
+        const res = await importGarminSleepCsv({ csvText: text, filename: f.name });
+        if (res.ok) {
+          if (res.action === "created") created++;
+          else updated++;
+          onImported({
+            date: res.date,
+            durationMin: null,
+            score: null,
+            qualityLabel: null,
+            deepMin: null,
+            lightMin: null,
+            remMin: null,
+            awakeMin: null,
+            avgStress: null,
+            avgHeartRate: null,
+            restingHeartRate: null,
+            bodyBatteryChange: null,
+            avgSpO2: null,
+            lowestSpO2: null,
+            avgBreathingX10: null,
+            hrvMs: null,
+            hrv7dStatus: null,
           });
+        } else {
+          errors++;
         }
       }
-      setResults(out);
+      const parts: string[] = [];
+      if (created) parts.push(`${created} ny`);
+      if (updated) parts.push(`${updated} opdateret`);
+      if (errors) parts.push(`${errors} fejl`);
+      setMsg(parts.join(", "));
+      setTimeout(() => setMsg(null), 4000);
+      if (fileRef.current) fileRef.current.value = "";
     });
   }
 
   return (
-    <details className="mb-5 rounded-md border border-border bg-card">
-      <summary className="cursor-pointer list-none px-5 py-3 text-[14px] text-mid hover:text-ink">
-        <span className="font-serif text-accent-bright">Importér Garmin-søvn</span>
-        <span className="ml-3 text-[12px] text-dim">
-          Træk eller vælg én eller flere CSV-filer eksporteret fra Garmin Connect
-        </span>
-      </summary>
-      <div className="border-t border-border-light px-5 py-3">
-        <input
-          type="file"
-          accept=".csv,text/csv,application/vnd.ms-excel"
-          multiple
-          onChange={(e) => handleFiles(e.target.files)}
-          disabled={pending}
-          className="!w-auto text-[13px] text-mid file:mr-3 file:cursor-pointer file:rounded-[3px] file:border file:border-border file:bg-bg file:px-3 file:py-1.5 file:text-[13px] file:text-ink"
-        />
-        {pending && <span className="ml-3 text-[12px] text-light">Importerer...</span>}
-        {results.length > 0 && (
-          <ul className="mt-3 space-y-1">
-            {results.map((r, i) => (
-              <li
-                key={i}
-                className={`text-[12px] ${r.ok ? "text-success" : "text-danger"}`}
-              >
-                {r.ok ? "✓" : "✗"} {r.text}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </details>
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        multiple
+        onChange={(e) => onFiles(e.target.files)}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={pending}
+        className="inline-flex min-h-[32px] cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-transparent px-2.5 py-1 text-[12px] text-mid hover:border-accent-bright hover:text-ink"
+        title={msg ?? "Importér Garmin søvn-CSV"}
+      >
+        <Upload className="size-3.5" />
+        {pending ? "Importerer…" : msg ?? "Garmin søvn"}
+      </button>
+    </>
   );
+}
+
+// --- helpers --------------------------------------------------------------
+
+function parseDecX10(s: string, max: number): number | null {
+  const t = s.trim().replace(",", ".");
+  if (t === "") return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0 || n > max) return null;
+  return Math.round(n * 10);
+}
+function parseInt0to2000(s: string): number | null {
+  if (s.trim() === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 2000) return null;
+  return Math.floor(n);
+}
+function parseInt0to1000(s: string): number | null {
+  if (s.trim() === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 1000) return null;
+  return Math.floor(n);
+}
+function parseInt0to50(s: string): number | null {
+  if (s.trim() === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 50) return null;
+  return Math.floor(n);
 }
