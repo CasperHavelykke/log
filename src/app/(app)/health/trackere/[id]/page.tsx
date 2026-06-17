@@ -38,20 +38,10 @@ export default async function TrackerDetailPage({
       .filter((r): r is { date: string; value: number } => r.value !== null)
       .map((r) => ({ date: r.date, value: r.value / 10 }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  } else if (tracker.kind === "dermatitis" || tracker.kind === "staph") {
-    const column =
-      tracker.kind === "dermatitis"
-        ? schema.dayEntries.seborrheicDermatitis
-        : schema.dayEntries.staph;
-    const rows = await db
-      .select({ date: schema.dayEntries.date, value: column })
-      .from(schema.dayEntries)
-      .where(and(eq(schema.dayEntries.userId, user.id), isNotNull(column)));
-    metricData = rows
-      .filter((r): r is { date: string; value: number } => r.value !== null)
-      .map((r) => ({ date: r.date, value: r.value }))
-      .sort((a, b) => a.date.localeCompare(b.date));
   }
+  // Note: dermatitis/staph-trackere viste tidligere en metric-graf fra
+  // day_entries-kolonner. De felter er nu custom parameters — se /statistik
+  // for graf-visning af "Skæleksem" / "Stafylokokker" hvis du har dem.
 
   return (
     <TrackerDetailClient

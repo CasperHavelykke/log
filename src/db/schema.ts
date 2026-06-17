@@ -332,13 +332,7 @@ export const dayEntries = sqliteTable(
     energy: integer("energy"),
     sleepHours: integer("sleep_hours_x10"),
     sleepQuality: integer("sleep_quality"),
-    headache: integer("headache", { mode: "boolean" }).notNull().default(false),
-    headacheIntensity: integer("headache_intensity"),
-    iskiasPain: integer("iskias_pain"),
     alcoholUnits: integer("alcohol_units"),
-    constipation: integer("constipation", { mode: "boolean" }).notNull().default(false),
-    constipationPain: integer("constipation_pain"),
-    seborrheicDermatitis: integer("seborrheic_dermatitis"),
     workNotes: text("work_notes"),
     healthNotes: text("health_notes"),
     dayNotes: text("day_notes"),
@@ -347,9 +341,6 @@ export const dayEntries = sqliteTable(
     applicationsTarget: integer("applications_target"),
     focusHoursTargetX10: integer("focus_hours_target_x10"),
     goalNote: text("goal_note"),
-    // Bemærk: legacy 'exercise' text-kolonne ligger stadig på tabellen ubrugt;
-    // erstattet af didExercise + exerciseIntensity for at matche Hovedpine-mønstret.
-    staph: integer("staph"),
     didExercise: integer("did_exercise", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -360,17 +351,11 @@ export const dayEntries = sqliteTable(
       .default(false),
     fastHoursX10: integer("fast_hours_x10"),
     fastBreakTime: text("fast_break_time"),
-    breathingDifficulty: integer("breathing_difficulty"),
-    breathingContext: text("breathing_context"),
     weightX10: integer("weight_x10"),
     waistX10: integer("waist_x10"),
     carbsG: integer("carbs_g"),
     proteinG: integer("protein_g"),
     fatG: integer("fat_g"),
-    foamyUrine: integer("foamy_urine", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    foamyUrinePattern: text("foamy_urine_pattern"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),

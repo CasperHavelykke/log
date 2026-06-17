@@ -17,11 +17,6 @@ export type DataPoint = {
   mood?: number;
   energy?: number;
   sleepQuality?: number;
-  headache?: number;
-  iskias?: number;
-  derm?: number;
-  staph?: number;
-  breathing?: number;
   alcohol?: number;
   weight?: number;
   waist?: number;
@@ -48,11 +43,6 @@ type MetricKey =
   | "mood"
   | "energy"
   | "sleepQuality"
-  | "headache"
-  | "iskias"
-  | "derm"
-  | "staph"
-  | "breathing"
   | "sleepHours"
   | "sleepScore"
   | "hrv"
@@ -70,7 +60,6 @@ type MetricKey =
 type Category =
   | "body"
   | "health"
-  | "symptoms"
   | "sleep"
   | "garmin"
   | "nutrition"
@@ -95,7 +84,6 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "sleep", label: "Søvn" },
   { id: "garmin", label: "Garmin biometri" },
   { id: "nutrition", label: "Ernæring" },
-  { id: "symptoms", label: "Symptomer" },
   { id: "supplements", label: "Kosttilskud" },
   { id: "custom", label: "Egne målinger" },
   { id: "other", label: "Andet" },
@@ -136,11 +124,6 @@ const METRICS: Metric[] = [
   { key: "spo2", label: "SpO₂ (snit)", short: "SpO₂", category: "garmin", unit: "%", color: "#22d3ee", decimals: 0 },
   { key: "bodyBatteryChange", label: "Body Battery (ændring)", short: "BB-ændring", category: "garmin", unit: "", color: "#4ade80", decimals: 0 },
   { key: "stress", label: "Stress (snit)", short: "Stress", category: "garmin", unit: "/100", domain: [0, 100], color: "#f87171", decimals: 0 },
-  { key: "headache", label: "Hovedpine-intensitet", short: "Hovedpine", category: "symptoms", unit: "/10", domain: [0, 10], color: "#f87171", decimals: 0 },
-  { key: "iskias", label: "Iskias-smerte", short: "Iskias", category: "symptoms", unit: "/5", domain: [1, 5], color: "#fb923c", decimals: 0 },
-  { key: "derm", label: "Skæleksem", short: "Skæleksem", category: "symptoms", unit: "/5", domain: [1, 5], color: "#eab308", decimals: 0 },
-  { key: "staph", label: "Stafylokokker", short: "Stafylokk.", category: "symptoms", unit: "/5", domain: [1, 5], color: "#ec4899", decimals: 0 },
-  { key: "breathing", label: "Vejrtrækningsbesvær", short: "Vejrtr.", category: "symptoms", unit: "/5", domain: [1, 5], color: "#22d3ee", decimals: 0 },
   { key: "alcohol", label: "Alkohol", short: "Alkohol", category: "other", unit: " g", color: "#fbbf24", decimals: 0 },
   { key: "fastHours", label: "Faste-varighed", short: "Faste", category: "other", unit: "t", color: "#a78bfa", decimals: 1 },
   { key: "carbs", label: "Kulhydrater", short: "Carbs", category: "nutrition", unit: " g", color: "#fbbf24", decimals: 0 },

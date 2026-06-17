@@ -84,14 +84,7 @@ type DayState = {
   energy: number | null;
   sleepHoursX10: number | null;
   sleepQuality: number | null;
-  headache: boolean;
-  headacheIntensity: number | null;
-  iskiasPain: number | null;
   alcoholUnits: number | null;
-  constipation: boolean;
-  constipationPain: number | null;
-  seborrheicDermatitis: number | null;
-  staph: number | null;
   didExercise: boolean;
   exerciseIntensity: "light" | "medium" | "hard" | null;
   didFast: boolean;
@@ -102,10 +95,6 @@ type DayState = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
-  breathingDifficulty: number | null;
-  breathingContext: string;
-  foamyUrine: boolean;
-  foamyUrinePattern: "morning" | "all_day" | null;
   workNotes: string;
   healthNotes: string;
   dayNotes: string;
@@ -264,14 +253,7 @@ export function TodayPage(props: {
       energy: day.energy,
       sleepHoursX10: parseHours(sleepInput),
       sleepQuality: day.sleepQuality,
-      headache: day.headache,
-      headacheIntensity: day.headache ? day.headacheIntensity : null,
-      iskiasPain: day.iskiasPain,
       alcoholUnits: day.alcoholUnits,
-      constipation: day.constipation,
-      constipationPain: day.constipation ? day.constipationPain : null,
-      seborrheicDermatitis: day.seborrheicDermatitis,
-      staph: day.staph,
       didExercise: day.didExercise,
       exerciseIntensity: day.didExercise ? day.exerciseIntensity : null,
       didFast: day.didFast,
@@ -282,12 +264,6 @@ export function TodayPage(props: {
       carbsG: day.carbsG,
       proteinG: day.proteinG,
       fatG: day.fatG,
-      breathingDifficulty: day.breathingDifficulty,
-      breathingContext: day.breathingDifficulty
-        ? day.breathingContext || null
-        : null,
-      foamyUrine: day.foamyUrine,
-      foamyUrinePattern: day.foamyUrine ? day.foamyUrinePattern : null,
       workNotes: day.workNotes || null,
       healthNotes: day.healthNotes || null,
       dayNotes: day.dayNotes || null,
@@ -1499,69 +1475,6 @@ function HealthBody({
             disabled={hasGarminScore}
           />
         </div>
-        <div>
-          <Label>Iskias-smerte</Label>
-          <Scale
-            value={day.iskiasPain}
-            onChange={(v) => setDay({ ...day, iskiasPain: v })}
-            max={5}
-            lo="ingen"
-            hi="stærk"
-          />
-        </div>
-        <div>
-          <Label>Skæleksem</Label>
-          <Scale
-            value={day.seborrheicDermatitis}
-            onChange={(v) => setDay({ ...day, seborrheicDermatitis: v })}
-            max={5}
-            lo="ingen"
-            hi="slemt"
-          />
-        </div>
-        <div>
-          <Label>Stafylokokker</Label>
-          <Scale
-            value={day.staph}
-            onChange={(v) => setDay({ ...day, staph: v })}
-            max={5}
-            lo="ingen"
-            hi="slemt"
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label>Vejrtrækningsbesvær</Label>
-        <Scale
-          value={day.breathingDifficulty}
-          onChange={(v) =>
-            setDay({
-              ...day,
-              breathingDifficulty: v,
-              breathingContext: v ? day.breathingContext : "",
-            })
-          }
-          max={5}
-          lo="ingen"
-          hi="svært"
-        />
-        {day.breathingDifficulty && (
-          <div className="mt-3">
-            <Label>
-              Hvornår / hvor?{" "}
-              <span className="ml-1 italic text-dim">— valgfri</span>
-            </Label>
-            <input
-              type="text"
-              value={day.breathingContext}
-              onChange={(e) =>
-                setDay({ ...day, breathingContext: e.target.value })
-              }
-              placeholder="Fx 'efter trappe', 'da jeg lagde mig', 'uden grund mens jeg sad'"
-            />
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1615,80 +1528,26 @@ function HealthBody({
 
       <Macros day={day} setDay={setDay} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <Label>Hovedpine?</Label>
-          <ToggleYesNo
-            value={day.headache}
-            onChange={(v) =>
-              setDay({
-                ...day,
-                headache: v,
-                headacheIntensity: v ? day.headacheIntensity : null,
-              })
-            }
-          />
-          {day.headache && (
-            <div className="mt-3">
-              <Label>
-                Intensitet <span className="ml-1 italic text-dim">— 1 til 10</span>
-              </Label>
-              <Scale
-                value={day.headacheIntensity}
-                onChange={(v) => setDay({ ...day, headacheIntensity: v })}
-                max={10}
-              />
-            </div>
-          )}
-        </div>
-
-        <div>
-          <Label>Forstoppelse?</Label>
-          <ToggleYesNo
-            value={day.constipation}
-            onChange={(v) =>
-              setDay({
-                ...day,
-                constipation: v,
-                constipationPain: v ? day.constipationPain : null,
-              })
-            }
-          />
-          {day.constipation && (
-            <div className="mt-3">
-              <Label>Smerte</Label>
-              <Scale
-                value={day.constipationPain}
-                onChange={(v) => setDay({ ...day, constipationPain: v })}
-                max={5}
-                lo="let"
-                hi="stærk"
-              />
-            </div>
-          )}
-        </div>
-
-        <div>
-          <Label>
-            Genstande <span className="ml-1 italic text-dim">— alkohol</span>
-          </Label>
-          <input
-            type="number"
-            min={0}
-            max={50}
-            step={1}
-            value={day.alcoholUnits === null ? "" : day.alcoholUnits}
-            onChange={(e) => {
-              const v = e.target.value.trim();
-              setDay({
-                ...day,
-                alcoholUnits: v === "" ? null : Math.max(0, Math.floor(Number(v))),
-              });
-            }}
-            placeholder="0"
-            className="!w-24"
-          />
-        </div>
+      <div>
+        <Label>
+          Genstande <span className="ml-1 italic text-dim">— alkohol</span>
+        </Label>
+        <input
+          type="number"
+          min={0}
+          max={50}
+          step={1}
+          value={day.alcoholUnits === null ? "" : day.alcoholUnits}
+          onChange={(e) => {
+            const v = e.target.value.trim();
+            setDay({
+              ...day,
+              alcoholUnits: v === "" ? null : Math.max(0, Math.floor(Number(v))),
+            });
+          }}
+          placeholder="0"
+          className="!w-24"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1715,54 +1574,6 @@ function HealthBody({
           )}
         </div>
 
-      </div>
-
-      <div>
-        <Label>Skummende urin?</Label>
-        <ToggleYesNo
-          value={day.foamyUrine}
-          onChange={(v) =>
-            setDay({
-              ...day,
-              foamyUrine: v,
-              foamyUrinePattern: v ? day.foamyUrinePattern : null,
-            })
-          }
-        />
-        {day.foamyUrine && (
-          <div className="mt-3">
-            <Label>Hvornår?</Label>
-            <div className="flex gap-1.5">
-              {(
-                [
-                  { v: "morning", label: "Morgenstunden" },
-                  { v: "all_day", label: "Hen over dagen" },
-                ] as const
-              ).map(({ v, label }) => {
-                const active = day.foamyUrinePattern === v;
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() =>
-                      setDay({
-                        ...day,
-                        foamyUrinePattern: active ? null : v,
-                      })
-                    }
-                    className={`flex-1 cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
-                      active
-                        ? "border-accent bg-accent-bg text-accent-bright"
-                        : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       <div>

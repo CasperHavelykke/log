@@ -12,8 +12,6 @@ type Entry = {
   healthNotes: string;
   mood: number | null;
   energy: number | null;
-  headache: boolean;
-  headacheIntensity: number | null;
 };
 
 const SECTIONS: { key: keyof Entry; label: string }[] = [
@@ -138,11 +136,6 @@ function JournalCard({ entry, highlight }: { entry: Entry; highlight: string }) 
         <div className="flex gap-2 text-[11px] uppercase tracking-[0.3px] text-light">
           {entry.mood !== null && <span>Humør {entry.mood}/5</span>}
           {entry.energy !== null && <span>Energi {entry.energy}/5</span>}
-          {entry.headache && (
-            <span className="text-danger">
-              Hovedpine{entry.headacheIntensity ? ` ${entry.headacheIntensity}/10` : ""}
-            </span>
-          )}
         </div>
       </div>
       <div className="space-y-3">

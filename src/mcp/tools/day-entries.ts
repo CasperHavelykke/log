@@ -14,14 +14,7 @@ function todayIso(): string {
 function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
   return {
     date: row.date,
-    headache: row.headache,
-    headacheIntensity: row.headacheIntensity,
-    iskiasPain: row.iskiasPain,
     alcoholUnits: row.alcoholUnits,
-    constipation: row.constipation,
-    constipationPain: row.constipationPain,
-    seborrheicDermatitis: row.seborrheicDermatitis,
-    staph: row.staph,
     didExercise: row.didExercise,
     exerciseIntensity: row.exerciseIntensity,
     sleepHours: row.sleepHours === null ? null : row.sleepHours / 10,
@@ -30,10 +23,6 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     energy: row.energy,
     weightKg: row.weightX10 === null ? null : row.weightX10 / 10,
     waistCm: row.waistX10 === null ? null : row.waistX10 / 10,
-    breathingDifficulty: row.breathingDifficulty,
-    breathingContext: row.breathingContext,
-    foamyUrine: row.foamyUrine,
-    foamyUrinePattern: row.foamyUrinePattern,
     workNotes: row.workNotes,
     healthNotes: row.healthNotes,
     dayNotes: row.dayNotes,
@@ -58,7 +47,7 @@ export function registerDayEntryTools(server: McpServer) {
     {
       title: "Hent en dags log",
       description:
-        "Henter dagens logbogsindgang (helbred, søvn, humør, notater) for en bestemt dato. Bruger dags dato hvis ingen angives.",
+        "Henter dagens logbogsindgang (helbred, søvn, humør, notater) for en bestemt dato. Bruger dags dato hvis ingen angives. For specifikke helbreds-parametre (hovedpine, iskias osv.) brug get_custom_parameter_values.",
       inputSchema: {
         date: z
           .string()
@@ -121,7 +110,7 @@ export function registerDayEntryTools(server: McpServer) {
     {
       title: "Helbredsoversigt for sidste N dage",
       description:
-        "Aggregerer hovedpine, søvn, humør og energi over de sidste N dage. Bruges fx til 'hvordan har min hovedpine været på det seneste'.",
+        "Aggregerer søvn, humør og energi over de sidste N dage. For specifikke helbreds-parametre (hovedpine, iskias osv.) brug list_custom_parameters + get_custom_parameter_values.",
       inputSchema: {
         days: z
           .number()
@@ -161,7 +150,6 @@ export function registerDayEntryTools(server: McpServer) {
       ]);
 
       const count = rows.length;
-      const headacheDays = rows.filter((r) => r.headache);
       const moodRows = rows.filter((r) => r.mood !== null);
       const energyRows = rows.filter((r) => r.energy !== null);
 
@@ -196,14 +184,6 @@ export function registerDayEntryTools(server: McpServer) {
         rangeDays: days,
         from: startIso,
         loggedDays: count,
-        headache: {
-          days: headacheDays.length,
-          avgIntensity: avg(
-            headacheDays
-              .map((r) => r.headacheIntensity)
-              .filter((v): v is number => v !== null),
-          ),
-        },
         sleep: {
           avgHours: avg(effectiveHours),
           avgQuality: avg(effectiveQuality),
@@ -219,30 +199,13 @@ export function registerDayEntryTools(server: McpServer) {
     {
       title: "Opret eller opdater en dags log",
       description:
-        "Skriver helbreds- og notatfelter for en bestemt dato. Felter der ikke angives bevares (eksisterende række) eller forbliver null (ny række). Sæt headache=true OG headacheIntensity=null for at logge hovedpine uden intensitet.",
+        "Skriver søvn, humør, energi, makroer, vægt og notater for en bestemt dato. Felter der ikke angives bevares (eksisterende række) eller forbliver null (ny række). For helbreds-parametre (hovedpine, iskias osv.) brug set_custom_parameter_value.",
       inputSchema: {
         date: z
           .string()
           .regex(dateRegex)
           .optional()
           .describe("Dato YYYY-MM-DD. Standard: i dag."),
-        headache: z.boolean().optional(),
-        headacheIntensity: z
-          .number()
-          .int()
-          .min(1)
-          .max(10)
-          .nullable()
-          .optional()
-          .describe("1-10. Sættes til null hvis headache=false."),
-        iskiasPain: z
-          .number()
-          .int()
-          .min(1)
-          .max(5)
-          .nullable()
-          .optional()
-          .describe("Iskias-smerte 1-5. Null = ingen / ikke logget."),
         alcoholUnits: z
           .number()
           .int()
@@ -251,23 +214,6 @@ export function registerDayEntryTools(server: McpServer) {
           .nullable()
           .optional()
           .describe("Antal genstande indtaget. 0 eller null = ingen."),
-        constipation: z.boolean().optional(),
-        constipationPain: z
-          .number()
-          .int()
-          .min(1)
-          .max(5)
-          .nullable()
-          .optional()
-          .describe("Smerte ved forstoppelse 1-5. Null hvis ingen forstoppelse."),
-        seborrheicDermatitis: z
-          .number()
-          .int()
-          .min(1)
-          .max(5)
-          .nullable()
-          .optional()
-          .describe("Skæleksem-niveau 1-5. Null hvis ikke aktivt."),
         sleepHours: z
           .number()
           .min(0)
@@ -359,39 +305,6 @@ export function registerDayEntryTools(server: McpServer) {
           .nullable()
           .optional()
           .describe("Livvidde i cm som decimaltal, fx 89.5."),
-        staph: z
-          .number()
-          .int()
-          .min(1)
-          .max(5)
-          .nullable()
-          .optional()
-          .describe("Stafylokokker-niveau 1-5. Null hvis ikke aktivt."),
-        breathingDifficulty: z
-          .number()
-          .int()
-          .min(1)
-          .max(5)
-          .nullable()
-          .optional()
-          .describe("Vejrtrækningsbesvær 1-5. Null hvis ikke aktivt."),
-        breathingContext: z
-          .string()
-          .max(2000)
-          .nullable()
-          .optional()
-          .describe("Fri tekst: kontekst for vejrtrækningsbesvær."),
-        foamyUrine: z
-          .boolean()
-          .optional()
-          .describe("Skummende urin observeret i dag."),
-        foamyUrinePattern: z
-          .enum(["morning", "all_day"])
-          .nullable()
-          .optional()
-          .describe(
-            "Mønster for skummende urin: kun morgen eller hele dagen.",
-          ),
       },
     },
     async (args) => {
@@ -410,14 +323,6 @@ export function registerDayEntryTools(server: McpServer) {
         .limit(1);
       const existing = existingRows[0];
 
-      const headache = args.headache ?? existing?.headache ?? false;
-      const headacheIntensity = headache
-        ? (args.headacheIntensity ?? existing?.headacheIntensity ?? null)
-        : null;
-      const constipation = args.constipation ?? existing?.constipation ?? false;
-      const constipationPain = constipation
-        ? (args.constipationPain ?? existing?.constipationPain ?? null)
-        : null;
       const sleepHoursX10 =
         args.sleepHours === undefined
           ? (existing?.sleepHours ?? null)
@@ -426,24 +331,10 @@ export function registerDayEntryTools(server: McpServer) {
             : Math.round(args.sleepHours * 10);
 
       const fields = {
-        headache,
-        headacheIntensity,
-        iskiasPain:
-          args.iskiasPain === undefined
-            ? (existing?.iskiasPain ?? null)
-            : args.iskiasPain,
         alcoholUnits:
           args.alcoholUnits === undefined
             ? (existing?.alcoholUnits ?? null)
             : args.alcoholUnits,
-        constipation,
-        constipationPain,
-        seborrheicDermatitis:
-          args.seborrheicDermatitis === undefined
-            ? (existing?.seborrheicDermatitis ?? null)
-            : args.seborrheicDermatitis,
-        staph:
-          args.staph === undefined ? (existing?.staph ?? null) : args.staph,
         weightX10:
           args.weightKg === undefined
             ? (existing?.weightX10 ?? null)
@@ -456,22 +347,6 @@ export function registerDayEntryTools(server: McpServer) {
             : args.waistCm === null
               ? null
               : Math.round(args.waistCm * 10),
-        breathingDifficulty:
-          args.breathingDifficulty === undefined
-            ? (existing?.breathingDifficulty ?? null)
-            : args.breathingDifficulty,
-        breathingContext:
-          args.breathingContext === undefined
-            ? (existing?.breathingContext ?? null)
-            : args.breathingContext,
-        foamyUrine:
-          args.foamyUrine === undefined
-            ? (existing?.foamyUrine ?? false)
-            : args.foamyUrine,
-        foamyUrinePattern:
-          args.foamyUrinePattern === undefined
-            ? (existing?.foamyUrinePattern ?? null)
-            : args.foamyUrinePattern,
         sleepHours: sleepHoursX10,
         sleepQuality:
           args.sleepQuality === undefined

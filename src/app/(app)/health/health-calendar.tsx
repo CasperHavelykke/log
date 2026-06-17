@@ -41,14 +41,7 @@ type Entry = {
   energy: number | null;
   sleepHoursX10: number | null;
   sleepQuality: number | null;
-  headache: boolean;
-  headacheIntensity: number | null;
-  iskiasPain: number | null;
   alcoholUnits: number | null;
-  constipation: boolean;
-  constipationPain: number | null;
-  seborrheicDermatitis: number | null;
-  staph: number | null;
   didExercise: boolean;
   exerciseIntensity: "light" | "medium" | "hard" | null;
   didFast: boolean;
@@ -59,10 +52,6 @@ type Entry = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
-  breathingDifficulty: number | null;
-  breathingContext: string;
-  foamyUrine: boolean;
-  foamyUrinePattern: "morning" | "all_day" | null;
   healthNotes: string;
   workNotes: string;
   dayNotes: string;
@@ -170,13 +159,10 @@ export function HealthCalendar({
   const summary = useMemo(
     () => ({
       logged: monthEntries.length,
-      headache: monthEntries.filter((e) => e.headache).length,
       training: monthEntries.filter((e) => e.didExercise).length,
       alcohol: monthEntries.filter(
         (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
       ).length,
-      constipation: monthEntries.filter((e) => e.constipation).length,
-      foamy: monthEntries.filter((e) => e.foamyUrine).length,
       sleep: avg(
         monthEntries.filter((e) => e.sleepHoursX10 !== null).map((e) => e.sleepHoursX10! / 10),
       ),
@@ -238,11 +224,6 @@ export function HealthCalendar({
         currentRun: currentRunFromLatest((e) => e.didExercise),
         lastOccurrence: lastOccurrence((e) => e.didExercise),
       },
-      headache: {
-        last30: countLast((e) => e.headache, 30),
-        currentRun: currentRunFromLatest((e) => e.headache),
-        daysSinceLast: daysSince(lastOccurrence((e) => e.headache)),
-      },
       alcohol: {
         last30: countLast(
           (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
@@ -253,16 +234,6 @@ export function HealthCalendar({
             (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
           ),
         ),
-      },
-      constipation: {
-        last30: countLast((e) => e.constipation, 30),
-        currentRun: currentRunFromLatest((e) => e.constipation),
-        daysSinceLast: daysSince(lastOccurrence((e) => e.constipation)),
-      },
-      foamy: {
-        last30: countLast((e) => e.foamyUrine, 30),
-        currentRun: currentRunFromLatest((e) => e.foamyUrine),
-        daysSinceLast: daysSince(lastOccurrence((e) => e.foamyUrine)),
       },
     };
   }, [entries, today]);
@@ -316,11 +287,6 @@ export function HealthCalendar({
 
       <div className="mb-5 flex flex-wrap gap-x-6 gap-y-2 rounded-md border border-border bg-card px-5 py-3 text-[13px]">
         <Stat label="Logget" value={`${summary.logged} dage`} />
-        <Stat
-          label="Hovedpine"
-          value={`${summary.headache} dag${summary.headache === 1 ? "" : "e"}`}
-          tone={summary.headache > 0 ? "text-danger" : undefined}
-        />
         <Stat label="Søvn Ø" value={summary.sleep !== null ? `${fmtHours(summary.sleep * 10)} t` : "–"} />
         <Stat label="Humør Ø" value={summary.mood !== null ? String(summary.mood) : "–"} />
         <Stat label="Energi Ø" value={summary.energy !== null ? String(summary.energy) : "–"} />
@@ -329,12 +295,6 @@ export function HealthCalendar({
         )}
         {summary.alcohol > 0 && (
           <Stat label="Alkohol" value={`${summary.alcohol} dage`} tone="text-warning" />
-        )}
-        {summary.constipation > 0 && (
-          <Stat label="Forstoppelse" value={`${summary.constipation} dage`} />
-        )}
-        {summary.foamy > 0 && (
-          <Stat label="Skummende urin" value={`${summary.foamy} dage`} />
         )}
       </div>
 
@@ -378,21 +338,6 @@ export function HealthCalendar({
                     )}
                     {e.alcoholUnits !== null && e.alcoholUnits > 0 && (
                       <span className="size-1.5 rounded-full bg-warning" title="Alkohol" />
-                    )}
-                    {e.constipation && (
-                      <span
-                        className="size-1.5 rounded-full bg-[#a67c52]"
-                        title="Forstoppelse"
-                      />
-                    )}
-                    {e.foamyUrine && (
-                      <span
-                        className="size-1.5 rounded-full bg-[#facc15]"
-                        title="Skummende urin"
-                      />
-                    )}
-                    {e.headache && (
-                      <span className="size-2 rounded-full bg-danger" title="Hovedpine" />
                     )}
                   </div>
                 )}
@@ -439,9 +384,7 @@ export function HealthCalendar({
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-dim">
         <Legend className="bg-success" label="Godt humør / træning" />
         <Legend className="bg-warning" label="Neutralt / alkohol" />
-        <Legend className="bg-danger" label="Lavt / hovedpine" />
-        <Legend className="bg-[#a67c52]" label="Forstoppelse" />
-        <Legend className="bg-[#facc15]" label="Skummende urin" />
+        <Legend className="bg-danger" label="Lavt humør" />
         <Legend className="bg-border" label="Ikke logget" />
       </div>
 
@@ -481,22 +424,7 @@ type StreakData = {
     currentRun: number;
     lastOccurrence: string | null;
   };
-  headache: {
-    last30: number;
-    currentRun: number;
-    daysSinceLast: number | null;
-  };
   alcohol: { last30: number; daysSinceLast: number | null };
-  constipation: {
-    last30: number;
-    currentRun: number;
-    daysSinceLast: number | null;
-  };
-  foamy: {
-    last30: number;
-    currentRun: number;
-    daysSinceLast: number | null;
-  };
 };
 
 function Streaks({ data }: { data: StreakData }) {
@@ -517,57 +445,12 @@ function Streaks({ data }: { data: StreakData }) {
       tone: "text-success",
     });
   }
-  if (data.constipation.currentRun >= 1) {
-    cards.push({
-      label: "Forstoppelse",
-      value:
-        data.constipation.currentRun === 1
-          ? "i dag"
-          : `${data.constipation.currentRun} dage i træk`,
-      sub: `${data.constipation.last30}/30 dage`,
-      tone: "text-warning",
-    });
-  } else if (data.constipation.daysSinceLast !== null) {
-    cards.push({
-      label: "Forstoppelse",
-      value: `${data.constipation.daysSinceLast} dage siden`,
-      sub: `${data.constipation.last30}/30 dage`,
-    });
-  }
   if (data.alcohol.daysSinceLast !== null) {
     cards.push({
       label: "Ingen alkohol",
       value: `${data.alcohol.daysSinceLast} dage`,
       sub: `${data.alcohol.last30}/30 dage med`,
       tone: data.alcohol.daysSinceLast > 7 ? "text-success" : undefined,
-    });
-  }
-  if (data.headache.currentRun >= 1) {
-    cards.push({
-      label: "Hovedpine",
-      value:
-        data.headache.currentRun === 1
-          ? "i dag"
-          : `${data.headache.currentRun} dage i træk`,
-      sub: `${data.headache.last30}/30 dage`,
-      tone: "text-danger",
-    });
-  } else if (data.headache.daysSinceLast !== null) {
-    cards.push({
-      label: "Ingen hovedpine",
-      value: `${data.headache.daysSinceLast} dage`,
-      sub: `${data.headache.last30}/30 dage med`,
-    });
-  }
-  if (data.foamy.currentRun >= 1) {
-    cards.push({
-      label: "Skummende urin",
-      value:
-        data.foamy.currentRun === 1
-          ? "i dag"
-          : `${data.foamy.currentRun} dage i træk`,
-      sub: `${data.foamy.last30}/30 dage`,
-      tone: "text-warning",
     });
   }
 
@@ -644,22 +527,9 @@ function DayEditor({
   const [sleepQuality, setSleepQuality] = useState<number | null>(
     entry?.sleepQuality ?? null,
   );
-  const [headache, setHeadache] = useState(entry?.headache ?? false);
-  const [headacheIntensity, setHeadacheIntensity] = useState<number | null>(
-    entry?.headacheIntensity ?? null,
-  );
-  const [iskiasPain, setIskiasPain] = useState<number | null>(entry?.iskiasPain ?? null);
   const [alcoholUnits, setAlcoholUnits] = useState<number | null>(
     entry?.alcoholUnits ?? null,
   );
-  const [constipation, setConstipation] = useState(entry?.constipation ?? false);
-  const [constipationPain, setConstipationPain] = useState<number | null>(
-    entry?.constipationPain ?? null,
-  );
-  const [seborrheicDermatitis, setSeborrheicDermatitis] = useState<number | null>(
-    entry?.seborrheicDermatitis ?? null,
-  );
-  const [staph, setStaph] = useState<number | null>(entry?.staph ?? null);
   const [didExercise, setDidExercise] = useState(entry?.didExercise ?? false);
   const [exerciseIntensity, setExerciseIntensity] = useState<
     "light" | "medium" | "hard" | null
@@ -683,16 +553,6 @@ function DayEditor({
   useEffect(() => {
     listCustomValuesForDate(date).then(setCustomValues);
   }, [date]);
-  const [breathingDifficulty, setBreathingDifficulty] = useState<number | null>(
-    entry?.breathingDifficulty ?? null,
-  );
-  const [breathingContext, setBreathingContext] = useState(
-    entry?.breathingContext ?? "",
-  );
-  const [foamyUrine, setFoamyUrine] = useState(entry?.foamyUrine ?? false);
-  const [foamyUrinePattern, setFoamyUrinePattern] = useState<
-    "morning" | "all_day" | null
-  >(entry?.foamyUrinePattern ?? null);
   const [sleepInput, setSleepInput] = useState(fmtHours(entry?.sleepHoursX10 ?? null));
   const [healthNotes, setHealthNotes] = useState(entry?.healthNotes ?? "");
   const [pending, startSave] = useTransition();
@@ -717,14 +577,7 @@ function DayEditor({
         energy,
         sleepHoursX10,
         sleepQuality,
-        headache,
-        headacheIntensity: headache ? headacheIntensity : null,
-        iskiasPain,
         alcoholUnits,
-        constipation,
-        constipationPain: constipation ? constipationPain : null,
-        seborrheicDermatitis,
-        staph,
         didExercise,
         exerciseIntensity: didExercise ? exerciseIntensity : null,
         didFast: entry?.didFast ?? false,
@@ -735,10 +588,6 @@ function DayEditor({
         carbsG,
         proteinG,
         fatG,
-        breathingDifficulty,
-        breathingContext: breathingDifficulty ? breathingContext.trim() || null : null,
-        foamyUrine,
-        foamyUrinePattern: foamyUrine ? foamyUrinePattern : null,
         healthNotes: healthNotes.trim() || null,
         workNotes: entry?.workNotes || null,
         dayNotes: entry?.dayNotes || null,
@@ -755,14 +604,7 @@ function DayEditor({
         energy,
         sleepHoursX10,
         sleepQuality,
-        headache,
-        headacheIntensity: headache ? headacheIntensity : null,
-        iskiasPain,
         alcoholUnits,
-        constipation,
-        constipationPain: constipation ? constipationPain : null,
-        seborrheicDermatitis,
-        staph,
         didExercise,
         exerciseIntensity: didExercise ? exerciseIntensity : null,
         didFast: entry?.didFast ?? false,
@@ -773,10 +615,6 @@ function DayEditor({
         carbsG,
         proteinG,
         fatG,
-        breathingDifficulty,
-        breathingContext: breathingDifficulty ? breathingContext : "",
-        foamyUrine,
-        foamyUrinePattern: foamyUrine ? foamyUrinePattern : null,
         healthNotes,
         workNotes: entry?.workNotes ?? "",
         dayNotes: entry?.dayNotes ?? "",
@@ -852,87 +690,27 @@ function DayEditor({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <FieldLabel>
-              Søvnkvalitet
-              {sleep?.score !== null && sleep?.score !== undefined && (
-                <span
-                  className="ml-2 rounded-[3px] bg-accent-bg px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-accent-bright"
-                  title={sleep.qualityLabel ?? undefined}
-                >
-                  Garmin
-                </span>
-              )}
-            </FieldLabel>
-            <SleepQualityScale
-              value={
-                sleep?.score !== null && sleep?.score !== undefined
-                  ? garminScoreToQuality(sleep.score)
-                  : sleepQuality
-              }
-              onChange={setSleepQuality}
-              disabled={sleep?.score !== null && sleep?.score !== undefined}
-            />
-          </div>
-          <div>
-            <FieldLabel>Iskias-smerte</FieldLabel>
-            <Scale
-              value={iskiasPain}
-              onChange={setIskiasPain}
-              max={5}
-              lo="ingen"
-              hi="stærk"
-            />
-          </div>
-          <div>
-            <FieldLabel>Skæleksem</FieldLabel>
-            <Scale
-              value={seborrheicDermatitis}
-              onChange={setSeborrheicDermatitis}
-              max={5}
-              lo="ingen"
-              hi="slemt"
-            />
-          </div>
-          <div>
-            <FieldLabel>Stafylokokker</FieldLabel>
-            <Scale
-              value={staph}
-              onChange={setStaph}
-              max={5}
-              lo="ingen"
-              hi="slemt"
-            />
-          </div>
-        </div>
-
         <div>
-          <FieldLabel>Vejrtrækningsbesvær</FieldLabel>
-          <Scale
-            value={breathingDifficulty}
-            onChange={(v) => {
-              setBreathingDifficulty(v);
-              if (!v) setBreathingContext("");
-            }}
-            max={5}
-            lo="ingen"
-            hi="svært"
+          <FieldLabel>
+            Søvnkvalitet
+            {sleep?.score !== null && sleep?.score !== undefined && (
+              <span
+                className="ml-2 rounded-[3px] bg-accent-bg px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-accent-bright"
+                title={sleep.qualityLabel ?? undefined}
+              >
+                Garmin
+              </span>
+            )}
+          </FieldLabel>
+          <SleepQualityScale
+            value={
+              sleep?.score !== null && sleep?.score !== undefined
+                ? garminScoreToQuality(sleep.score)
+                : sleepQuality
+            }
+            onChange={setSleepQuality}
+            disabled={sleep?.score !== null && sleep?.score !== undefined}
           />
-          {breathingDifficulty && (
-            <div className="mt-3">
-              <FieldLabel>
-                Hvornår / hvor?{" "}
-                <span className="ml-1 italic text-dim">— valgfri</span>
-              </FieldLabel>
-              <input
-                type="text"
-                value={breathingContext}
-                onChange={(e) => setBreathingContext(e.target.value)}
-                placeholder="Fx 'efter trappe', 'da jeg lagde mig'"
-              />
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -973,57 +751,25 @@ function DayEditor({
           setFatG={setFatG}
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <FieldLabel>Hovedpine</FieldLabel>
-            <YesNo value={headache} onChange={setHeadache} />
-            {headache && (
-              <div className="mt-3">
-                <FieldLabel>Intensitet (1–10)</FieldLabel>
-                <Scale
-                  value={headacheIntensity}
-                  onChange={setHeadacheIntensity}
-                  max={10}
-                />
-              </div>
-            )}
-          </div>
-          <div>
-            <FieldLabel>Forstoppelse</FieldLabel>
-            <YesNo value={constipation} onChange={setConstipation} />
-            {constipation && (
-              <div className="mt-3">
-                <FieldLabel>Smerte</FieldLabel>
-                <Scale
-                  value={constipationPain}
-                  onChange={setConstipationPain}
-                  max={5}
-                  lo="let"
-                  hi="stærk"
-                />
-              </div>
-            )}
-          </div>
-          <div>
-            <FieldLabel>
-              Genstande <span className="ml-1 italic text-dim">— alkohol</span>
-            </FieldLabel>
-            <input
-              type="number"
-              min={0}
-              max={50}
-              step={1}
-              value={alcoholUnits === null ? "" : alcoholUnits}
-              onChange={(e) => {
-                const v = e.target.value.trim();
-                setAlcoholUnits(
-                  v === "" ? null : Math.max(0, Math.floor(Number(v))),
-                );
-              }}
-              placeholder="0"
-              className="!w-24"
-            />
-          </div>
+        <div>
+          <FieldLabel>
+            Genstande <span className="ml-1 italic text-dim">— alkohol</span>
+          </FieldLabel>
+          <input
+            type="number"
+            min={0}
+            max={50}
+            step={1}
+            value={alcoholUnits === null ? "" : alcoholUnits}
+            onChange={(e) => {
+              const v = e.target.value.trim();
+              setAlcoholUnits(
+                v === "" ? null : Math.max(0, Math.floor(Number(v))),
+              );
+            }}
+            placeholder="0"
+            className="!w-24"
+          />
         </div>
 
         <div>
@@ -1067,61 +813,6 @@ function DayEditor({
                       key={v}
                       type="button"
                       onClick={() => setExerciseIntensity(active ? null : v)}
-                      className={`flex-1 cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
-                        active
-                          ? "border-accent bg-accent-bg text-accent-bright"
-                          : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <FieldLabel>Skummende urin?</FieldLabel>
-          <div className="flex gap-1.5">
-            {[
-              { label: "Ja", v: true },
-              { label: "Nej", v: false },
-            ].map(({ label, v }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  setFoamyUrine(v);
-                  if (!v) setFoamyUrinePattern(null);
-                }}
-                className={`cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
-                  foamyUrine === v
-                    ? "border-accent bg-accent-bg text-accent-bright"
-                    : "border-border bg-bg text-mid hover:border-accent-dim"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {foamyUrine && (
-            <div className="mt-3">
-              <FieldLabel>Hvornår?</FieldLabel>
-              <div className="flex gap-1.5">
-                {(
-                  [
-                    { v: "morning", label: "Morgenstunden" },
-                    { v: "all_day", label: "Hen over dagen" },
-                  ] as const
-                ).map(({ v, label }) => {
-                  const active = foamyUrinePattern === v;
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setFoamyUrinePattern(active ? null : v)}
                       className={`flex-1 cursor-pointer rounded-[3px] border px-3.5 py-2 text-[13px] transition ${
                         active
                           ? "border-accent bg-accent-bg text-accent-bright"

@@ -94,12 +94,7 @@ export function registerTrackerTools(server: McpServer) {
         | { date: string; value: number; unit: string }[]
         | null = null;
 
-      if (
-        tracker.kind === "weight" ||
-        tracker.kind === "waist" ||
-        tracker.kind === "dermatitis" ||
-        tracker.kind === "staph"
-      ) {
+      if (tracker.kind === "weight" || tracker.kind === "waist") {
         const allDays = await db
           .select()
           .from(schema.dayEntries)
@@ -112,21 +107,12 @@ export function registerTrackerTools(server: McpServer) {
             series.push({ date: d.date, value: d.weightX10 / 10, unit: "kg" });
           } else if (tracker.kind === "waist" && d.waistX10 !== null) {
             series.push({ date: d.date, value: d.waistX10 / 10, unit: "cm" });
-          } else if (
-            tracker.kind === "dermatitis" &&
-            d.seborrheicDermatitis !== null
-          ) {
-            series.push({
-              date: d.date,
-              value: d.seborrheicDermatitis,
-              unit: "/5",
-            });
-          } else if (tracker.kind === "staph" && d.staph !== null) {
-            series.push({ date: d.date, value: d.staph, unit: "/5" });
           }
         }
         metricSeries = series;
       }
+      // Note: dermatitis/staph-trackere har ikke længere numerisk historik
+      // via day_entries — brug list_custom_parameters + get_custom_parameter_values.
 
       return jsonContent({
         tracker: {

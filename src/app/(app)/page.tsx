@@ -105,7 +105,6 @@ export default async function Dashboard() {
     const d = toIsoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i));
     last7.push({ date: d, entry: byDate.get(d) });
   }
-  const headacheDays = weekDays.filter((d) => d.headache).length;
   // Effective sleep: Garmin's measured duration wins; otherwise the manual value.
   const allDatesForSleep = new Set<string>();
   for (const d of weekDays) allDatesForSleep.add(d.date);
@@ -167,14 +166,6 @@ export default async function Dashboard() {
                 label="Søvn"
                 value={todayEntry.sleepHours ? `${fmtHours(todayEntry.sleepHours)} t` : "–"}
               />
-              <Metric
-                label="Hovedpine"
-                value={
-                  todayEntry.headache
-                    ? `Ja${todayEntry.headacheIntensity ? ` (${todayEntry.headacheIntensity}/10)` : ""}`
-                    : "Nej"
-                }
-              />
             </div>
           ) : (
             <p className="text-[13px] italic text-light">
@@ -186,7 +177,6 @@ export default async function Dashboard() {
         {/* Helbred 7 dage */}
         <Card title="Helbred · 7 dage" href="/health">
           <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
-            <Metric label="Hovedpine" value={`${headacheDays}/7 dage`} />
             <Metric label="Søvn Ø" value={avgSleep !== null ? `${fmtHours(avgSleep * 10)} t` : "–"} />
             <Metric label="Humør Ø" value={avgMood !== null ? `${avgMood}` : "–"} />
             <Metric label="Energi Ø" value={avgEnergy !== null ? `${avgEnergy}` : "–"} />
@@ -195,7 +185,7 @@ export default async function Dashboard() {
             {last7.map(({ date, entry }) => {
               const dot = !entry
                 ? "bg-border"
-                : entry.headache
+                : entry.mood !== null && entry.mood <= 2
                   ? "bg-danger"
                   : "bg-success";
               return (

@@ -28,8 +28,6 @@ export default async function Journal() {
         healthNotes: e.healthNotes ?? "",
         mood: e.mood,
         energy: e.energy,
-        headache: e.headache,
-        headacheIntensity: e.headacheIntensity,
       }))}
     />
   );

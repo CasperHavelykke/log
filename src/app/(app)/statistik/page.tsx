@@ -65,13 +65,6 @@ export default async function StatistikPage() {
     if (d.mood != null) row.mood = d.mood;
     if (d.energy != null) row.energy = d.energy;
     if (d.sleepQuality != null) row.sleepQuality = d.sleepQuality;
-    if (d.headache && d.headacheIntensity != null) {
-      row.headache = d.headacheIntensity;
-    }
-    if (d.iskiasPain != null) row.iskias = d.iskiasPain;
-    if (d.seborrheicDermatitis != null) row.derm = d.seborrheicDermatitis;
-    if (d.staph != null) row.staph = d.staph;
-    if (d.breathingDifficulty != null) row.breathing = d.breathingDifficulty;
     if (d.alcoholUnits != null) row.alcohol = d.alcoholUnits;
     if (d.weightX10 != null) row.weight = d.weightX10 / 10;
     if (d.waistX10 != null) row.waist = d.waistX10 / 10;
