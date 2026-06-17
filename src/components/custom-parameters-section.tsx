@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Check } from "lucide-react";
 import {
   setCustomParameterValue,
@@ -83,28 +83,25 @@ export function CustomParametersSection({
   if (parameters.length === 0) return null;
 
   return (
-    <div className="rounded-[3px] border border-border-light bg-bg p-3">
-      <div className="mb-2 text-[13px] font-medium text-mid">Mine parametre</div>
-      <div className="space-y-3">
-        {parameters.map((p) => (
-          <ParameterInput
-            key={p.id}
-            parameter={p}
-            value={getValue(p.id)}
-            saving={saving.has(p.id)}
-            savedRecently={
-              savedAt.get(p.id) !== undefined &&
-              Date.now() - (savedAt.get(p.id) ?? 0) < 2000
-            }
-            onChange={(next) => persist(p.id, next)}
-          />
-        ))}
-      </div>
+    <div className="space-y-1">
+      {parameters.map((p) => (
+        <ParameterRow
+          key={p.id}
+          parameter={p}
+          value={getValue(p.id)}
+          saving={saving.has(p.id)}
+          savedRecently={
+            savedAt.get(p.id) !== undefined &&
+            Date.now() - (savedAt.get(p.id) ?? 0) < 2000
+          }
+          onChange={(next) => persist(p.id, next)}
+        />
+      ))}
     </div>
   );
 }
 
-function ParameterInput({
+function ParameterRow({
   parameter,
   value,
   saving,
@@ -117,25 +114,62 @@ function ParameterInput({
   savedRecently: boolean;
   onChange: (next: ValueState) => void;
 }) {
+  // For "text" type the input takes full width below the label.
+  // For other types the controls sit to the right of the label.
+  const isText = parameter.kind === "text";
+  const isBoolScale =
+    parameter.kind === "bool_scale_5" || parameter.kind === "bool_scale_10";
+
+  if (isText) {
+    return (
+      <div className="py-1">
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <label className="text-[13px] text-ink">
+            {parameter.name}
+            {parameter.unit && (
+              <span className="ml-1 text-[10px] text-dim">
+                · {parameter.unit}
+              </span>
+            )}
+          </label>
+          <SaveIndicator saving={saving} saved={savedRecently} />
+        </div>
+        <TextInput
+          value={value.valueText}
+          onChange={(v) => onChange({ ...emptyValue, valueText: v })}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="mb-1 flex items-baseline justify-between gap-2">
-        <label className="text-[12px] font-medium text-mid">
+    <div className="py-1">
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-[13px] text-ink">
           {parameter.name}
           {parameter.unit && (
-            <span className="ml-1 text-[10px] text-dim">
-              · {parameter.unit}
-            </span>
+            <span className="text-[10px] text-dim">· {parameter.unit}</span>
           )}
+          <SaveIndicator saving={saving} saved={savedRecently} />
         </label>
-        <SaveIndicator saving={saving} saved={savedRecently} />
+        <div>{renderControls(parameter, value, onChange)}</div>
       </div>
-      {renderInput(parameter, value, onChange)}
+      {isBoolScale && value.valueBool === true && (
+        <div className="ml-3 mt-1 flex justify-end">
+          <ScaleButtons
+            max={parameter.kind === "bool_scale_5" ? 5 : 10}
+            value={value.valueInt}
+            onChange={(v) =>
+              onChange({ ...emptyValue, valueBool: true, valueInt: v })
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-function renderInput(
+function renderControls(
   parameter: CustomParamSummary,
   value: ValueState,
   onChange: (next: ValueState) => void,
@@ -165,45 +199,25 @@ function renderInput(
         />
       );
     case "bool_scale_5":
-    case "bool_scale_10": {
-      const max = parameter.kind === "bool_scale_5" ? 5 : 10;
+    case "bool_scale_10":
       return (
-        <div className="space-y-2">
-          <YesNoButtons
-            value={value.valueBool}
-            onChange={(v) =>
-              onChange({
-                ...emptyValue,
-                valueBool: v,
-                valueInt: v ? value.valueInt : null,
-              })
-            }
-          />
-          {value.valueBool === true && (
-            <ScaleButtons
-              max={max}
-              value={value.valueInt}
-              onChange={(v) =>
-                onChange({ ...emptyValue, valueBool: true, valueInt: v })
-              }
-            />
-          )}
-        </div>
+        <YesNoButtons
+          value={value.valueBool}
+          onChange={(v) =>
+            onChange({
+              ...emptyValue,
+              valueBool: v,
+              valueInt: v ? value.valueInt : null,
+            })
+          }
+        />
       );
-    }
     case "number":
       return (
         <NumberInput
           value={value.valueReal}
           unit={parameter.unit}
           onChange={(v) => onChange({ ...emptyValue, valueReal: v })}
-        />
-      );
-    case "text":
-      return (
-        <TextInput
-          value={value.valueText}
-          onChange={(v) => onChange({ ...emptyValue, valueText: v })}
         />
       );
     default:
@@ -219,14 +233,14 @@ function YesNoButtons({
   onChange: (v: boolean | null) => void;
 }) {
   return (
-    <div className="flex gap-1.5">
+    <div className="flex gap-0.5">
       <button
         type="button"
         onClick={() => onChange(value === true ? null : true)}
-        className={`min-h-[36px] cursor-pointer rounded-[3px] border px-3 py-1.5 text-[13px] ${
+        className={`min-h-[28px] min-w-[44px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
           value === true
-            ? "border-success bg-[rgba(74,222,128,0.15)] text-success"
-            : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
+            ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
+            : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
         }`}
       >
         Ja
@@ -234,10 +248,10 @@ function YesNoButtons({
       <button
         type="button"
         onClick={() => onChange(value === false ? null : false)}
-        className={`min-h-[36px] cursor-pointer rounded-[3px] border px-3 py-1.5 text-[13px] ${
+        className={`min-h-[28px] min-w-[44px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
           value === false
-            ? "border-mid bg-bg text-ink"
-            : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
+            ? "border-mid text-ink"
+            : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
         }`}
       >
         Nej
@@ -256,16 +270,16 @@ function ScaleButtons({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-0.5">
       {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
         <button
           key={n}
           type="button"
           onClick={() => onChange(value === n ? null : n)}
-          className={`min-h-[36px] min-w-[36px] cursor-pointer rounded-[3px] border text-[13px] ${
+          className={`min-h-[28px] min-w-[28px] cursor-pointer rounded-[3px] border text-[11px] transition ${
             value === n
               ? "border-accent bg-accent-bg text-accent-bright"
-              : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
+              : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
           }`}
         >
           {n}
@@ -288,7 +302,7 @@ function NumberInput({
     value === null ? "" : String(value).replace(".", ","),
   );
   return (
-    <div className="relative max-w-[180px]">
+    <div className="relative w-[110px]">
       <input
         type="text"
         inputMode="decimal"
@@ -305,10 +319,15 @@ function NumberInput({
           if (Number.isFinite(n)) onChange(n);
         }}
         placeholder="–"
-        className={unit ? "!pr-10" : ""}
+        className="!text-[12px]"
+        style={{
+          paddingRight: unit ? "32px" : undefined,
+          paddingTop: "5px",
+          paddingBottom: "5px",
+        }}
       />
       {unit && (
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-dim">
+        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-dim">
           {unit}
         </span>
       )}
@@ -331,21 +350,17 @@ function TextInput({
       onBlur={() => onChange(text.trim() === "" ? null : text)}
       rows={2}
       placeholder="…"
+      className="!text-[13px]"
     />
   );
 }
 
 function SaveIndicator({ saving, saved }: { saving: boolean; saved: boolean }) {
   if (saving) {
-    return <span className="text-[10px] italic text-light">Gemmer…</span>;
+    return <span className="text-[10px] italic text-light">…</span>;
   }
   if (saved) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] text-success">
-        <Check className="size-3" />
-        Gemt
-      </span>
-    );
+    return <Check className="size-3 text-success" />;
   }
   return null;
 }
