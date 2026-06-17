@@ -101,13 +101,11 @@ async function main() {
     // Ryd eventuel rest fra tidligere mislykket forsøg.
     await client.execute("DROP TABLE IF EXISTS users_new");
 
-    // Brug libsql's interactive transaction så PRAGMA og statements
-    // deler den samme session.
+    // KRITISK: foreign_keys = OFF før DROP TABLE — ellers cascade-sletter
+    // ON DELETE CASCADE alle child-rows. defer_foreign_keys hjælper IKKE.
+    await client.execute("PRAGMA foreign_keys = OFF");
     const tx = await client.transaction("write");
     try {
-      // defer_foreign_keys udsætter FK-tjek til COMMIT — ellers ville
-      // DROP TABLE users fejle pga. FK fra time_entries, day_entries osv.
-      await tx.execute("PRAGMA defer_foreign_keys = ON");
       await tx.execute(`
         CREATE TABLE users_new (
           id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -139,8 +137,6 @@ async function main() {
       await tx.commit();
       console.log("✓ users rebuilt — username/password_hash er nu nullable");
     } catch (e) {
-      // Surface den oprindelige fejl FØR rollback-forsøget, så vi ikke
-      // mister den hvis rollback selv kaster.
       console.error("Original fejl under rebuild:", e);
       try {
         await tx.rollback();
@@ -149,6 +145,7 @@ async function main() {
       }
       throw e;
     }
+    await client.execute("PRAGMA foreign_keys = ON");
   } else {
     console.log("✓ users.username + password_hash er allerede nullable");
   }

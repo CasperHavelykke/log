@@ -54,9 +54,14 @@ async function main() {
     console.log("  rebuilding users uden legacy-felter...");
     await client.execute("DROP TABLE IF EXISTS users_new");
 
+    // KRITISK: foreign_keys = OFF før DROP TABLE users — ellers fyrer
+    // ON DELETE CASCADE og sletter ALT data der peger på users (day_entries,
+    // projects, time_entries, photos, documents osv.). defer_foreign_keys
+    // hjælper IKKE her — den udsætter constraint-checks, ikke cascade-actions.
+    // Casper's data blev slettet på denne måde i juni 2026 før denne fix.
+    await client.execute("PRAGMA foreign_keys = OFF");
     const tx = await client.transaction("write");
     try {
-      await tx.execute("PRAGMA defer_foreign_keys = ON");
       await tx.execute(`
         CREATE TABLE users_new (
           id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -84,6 +89,7 @@ async function main() {
       try { await tx.rollback(); } catch {}
       throw e;
     }
+    await client.execute("PRAGMA foreign_keys = ON");
   } else {
     console.log("✓ users har ingen legacy-felter at fjerne");
   }
