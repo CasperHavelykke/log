@@ -33,14 +33,29 @@ import type {
   CustomValueRow,
 } from "@/lib/custom-parameters";
 import {
+  Activity,
+  Apple,
+  Camera,
   Check,
   Circle,
   Hourglass,
+  Moon,
   Pencil,
+  Scale as ScaleIcon,
+  Smile,
+  Sparkles,
   Utensils,
   UtensilsCrossed,
   X,
 } from "lucide-react";
+import {
+  Section as FieldSection,
+  Field as FieldRow,
+  Scale1to5,
+  YesNo as YesNoButtons,
+  IntensityPicker,
+  CompactNumberInput,
+} from "@/components/health-fields";
 import {
   FAST_QUALIFIED_MINUTES,
   fastDurationMinutes,
@@ -1405,87 +1420,55 @@ function HealthBody({
       : (day.waistX10 / 10).toString().replace(".", ","),
   );
 
+  const kcal =
+    day.carbsG !== null && day.proteinG !== null && day.fatG !== null
+      ? day.carbsG * 4 + day.proteinG * 4 + day.fatG * 9
+      : null;
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <Label>Humør</Label>
-          <Scale
-            value={day.mood}
-            onChange={(v) => setDay({ ...day, mood: v })}
-            max={5}
-            lo="lavt"
-            hi="højt"
-          />
-        </div>
-        <div>
-          <Label>Energi</Label>
-          <Scale
-            value={day.energy}
-            onChange={(v) => setDay({ ...day, energy: v })}
-            max={5}
-            lo="lavt"
-            hi="højt"
-          />
-        </div>
-        <div>
-          <Label>
-            Søvn (timer)
-            {hasGarminDuration && (
-              <span className="ml-2 rounded-[3px] bg-accent-bg px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-accent-bright">
-                Garmin
-              </span>
-            )}
-          </Label>
+    <div>
+      <FieldSection icon={<Moon className="size-3.5" />} title="Søvn">
+        <FieldRow label="Varighed" hint={hasGarminDuration ? "Garmin" : undefined}>
           {hasGarminDuration ? (
-            <div className="rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[14px] text-ink">
-              {garminHoursText}
-            </div>
+            <span className="text-[13px] text-mid">{garminHoursText}</span>
           ) : (
-            <input
-              type="number"
-              min={0}
-              max={24}
-              step={0.5}
+            <CompactNumberInput
               value={sleepInput}
-              onChange={(e) => setSleepInput(e.target.value)}
+              onChange={setSleepInput}
+              unit="t"
               placeholder="Fx 7,5"
-              className="!w-32"
             />
           )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <Label>
-            Søvnkvalitet
-            {hasGarminScore && (
-              <span
-                className="ml-2 rounded-[3px] bg-accent-bg px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-accent-bright"
-                title={garminSleep!.qualityLabel ?? undefined}
-              >
-                Garmin
-              </span>
-            )}
-          </Label>
+        </FieldRow>
+        <FieldRow label="Kvalitet" hint={hasGarminScore ? "Garmin" : undefined}>
           <SleepQualityScale
             value={hasGarminScore ? garminQualityValue : day.sleepQuality}
             onChange={(v) => setDay({ ...day, sleepQuality: v })}
             disabled={hasGarminScore}
           />
-        </div>
-      </div>
+        </FieldRow>
+      </FieldSection>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Vægt <span className="ml-1 italic text-dim">— kg</span></Label>
-          <input
-            type="text"
-            inputMode="decimal"
+      <FieldSection icon={<Smile className="size-3.5" />} title="Stemning">
+        <FieldRow label="Humør">
+          <Scale1to5
+            value={day.mood}
+            onChange={(v) => setDay({ ...day, mood: v })}
+          />
+        </FieldRow>
+        <FieldRow label="Energi">
+          <Scale1to5
+            value={day.energy}
+            onChange={(v) => setDay({ ...day, energy: v })}
+          />
+        </FieldRow>
+      </FieldSection>
+
+      <FieldSection icon={<ScaleIcon className="size-3.5" />} title="Krop">
+        <FieldRow label="Vægt">
+          <CompactNumberInput
             value={weightInput}
-            onChange={(e) => {
-              const raw = e.target.value;
+            onChange={(raw) => {
               setWeightInput(raw);
               const t = raw.trim().replace(",", ".");
               if (t === "") {
@@ -1497,18 +1480,14 @@ function HealthBody({
                 setDay({ ...day, weightX10: Math.round(n * 10) });
               }
             }}
-            placeholder="Fx 78,5"
-            className="!w-32"
+            unit="kg"
+            placeholder="78,5"
           />
-        </div>
-        <div>
-          <Label>Livvidde <span className="ml-1 italic text-dim">— cm</span></Label>
-          <input
-            type="text"
-            inputMode="decimal"
+        </FieldRow>
+        <FieldRow label="Livvidde">
+          <CompactNumberInput
             value={waistInput}
-            onChange={(e) => {
-              const raw = e.target.value;
+            onChange={(raw) => {
               setWaistInput(raw);
               const t = raw.trim().replace(",", ".");
               if (t === "") {
@@ -1520,40 +1499,67 @@ function HealthBody({
                 setDay({ ...day, waistX10: Math.round(n * 10) });
               }
             }}
-            placeholder="Fx 89,5"
-            className="!w-32"
+            unit="cm"
+            placeholder="89,5"
           />
-        </div>
-      </div>
+        </FieldRow>
+      </FieldSection>
 
-      <Macros day={day} setDay={setDay} />
+      <FieldSection
+        icon={<Apple className="size-3.5" />}
+        title="Ernæring"
+        meta={kcal !== null ? `${kcal} kcal` : undefined}
+      >
+        <FieldRow label="Kulhydrat">
+          <CompactNumberInput
+            value={day.carbsG === null ? "" : String(day.carbsG)}
+            onChange={(v) => {
+              const t = v.trim();
+              if (t === "") return setDay({ ...day, carbsG: null });
+              const n = Number(t);
+              if (Number.isFinite(n) && n >= 0 && n <= 2000) {
+                setDay({ ...day, carbsG: Math.floor(n) });
+              }
+            }}
+            unit="g"
+            placeholder="0"
+          />
+        </FieldRow>
+        <FieldRow label="Protein">
+          <CompactNumberInput
+            value={day.proteinG === null ? "" : String(day.proteinG)}
+            onChange={(v) => {
+              const t = v.trim();
+              if (t === "") return setDay({ ...day, proteinG: null });
+              const n = Number(t);
+              if (Number.isFinite(n) && n >= 0 && n <= 1000) {
+                setDay({ ...day, proteinG: Math.floor(n) });
+              }
+            }}
+            unit="g"
+            placeholder="0"
+          />
+        </FieldRow>
+        <FieldRow label="Fedt">
+          <CompactNumberInput
+            value={day.fatG === null ? "" : String(day.fatG)}
+            onChange={(v) => {
+              const t = v.trim();
+              if (t === "") return setDay({ ...day, fatG: null });
+              const n = Number(t);
+              if (Number.isFinite(n) && n >= 0 && n <= 1000) {
+                setDay({ ...day, fatG: Math.floor(n) });
+              }
+            }}
+            unit="g"
+            placeholder="0"
+          />
+        </FieldRow>
+      </FieldSection>
 
-      <div>
-        <Label>
-          Genstande <span className="ml-1 italic text-dim">— alkohol</span>
-        </Label>
-        <input
-          type="number"
-          min={0}
-          max={50}
-          step={1}
-          value={day.alcoholUnits === null ? "" : day.alcoholUnits}
-          onChange={(e) => {
-            const v = e.target.value.trim();
-            setDay({
-              ...day,
-              alcoholUnits: v === "" ? null : Math.max(0, Math.floor(Number(v))),
-            });
-          }}
-          placeholder="0"
-          className="!w-24"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Træning?</Label>
-          <ToggleYesNo
+      <FieldSection icon={<Activity className="size-3.5" />} title="Aktivitet">
+        <FieldRow label="Træning">
+          <YesNoButtons
             value={day.didExercise}
             onChange={(v) =>
               setDay({
@@ -1563,38 +1569,59 @@ function HealthBody({
               })
             }
           />
-          {day.didExercise && (
-            <div className="mt-3">
-              <Label>Intensitet</Label>
-              <ExerciseIntensityToggle
-                value={day.exerciseIntensity}
-                onChange={(v) => setDay({ ...day, exerciseIntensity: v })}
-              />
-            </div>
-          )}
-        </div>
+        </FieldRow>
+        {day.didExercise && (
+          <FieldRow label="Intensitet" indent>
+            <IntensityPicker
+              value={day.exerciseIntensity}
+              onChange={(v) => setDay({ ...day, exerciseIntensity: v })}
+            />
+          </FieldRow>
+        )}
+        <FieldRow label="Alkohol">
+          <CompactNumberInput
+            value={day.alcoholUnits === null ? "" : String(day.alcoholUnits)}
+            onChange={(v) => {
+              const t = v.trim();
+              if (t === "") return setDay({ ...day, alcoholUnits: null });
+              const n = Number(t);
+              if (Number.isFinite(n) && n >= 0 && n <= 50) {
+                setDay({ ...day, alcoholUnits: Math.floor(n) });
+              }
+            }}
+            unit="×"
+            placeholder="0"
+          />
+        </FieldRow>
+      </FieldSection>
 
-      </div>
+      {customParameters.length > 0 && (
+        <FieldSection
+          icon={<Sparkles className="size-3.5" />}
+          title="Mine parametre"
+          aiPill
+        >
+          <CustomParametersSection
+            parameters={customParameters}
+            date={date}
+            initialValues={customValues}
+          />
+        </FieldSection>
+      )}
 
-      <div>
-        <Label>
-          Helbredsnoter <span className="ml-1 italic text-dim">— valgfri</span>
-        </Label>
+      <FieldSection icon={<Pencil className="size-3.5" />} title="Helbredsnoter">
         <textarea
           value={day.healthNotes}
           onChange={(e) => setDay({ ...day, healthNotes: e.target.value })}
           rows={3}
           placeholder="Symptomer, medicin, observationer..."
+          className="!text-[13px]"
         />
-      </div>
+      </FieldSection>
 
-      <CustomParametersSection
-        parameters={customParameters}
-        date={date}
-        initialValues={customValues}
-      />
-
-      <TrackerPhotoAdd date={date} trackers={trackers} />
+      <FieldSection icon={<Camera className="size-3.5" />} title="Fotos">
+        <TrackerPhotoAdd date={date} trackers={trackers} />
+      </FieldSection>
     </div>
   );
 }
