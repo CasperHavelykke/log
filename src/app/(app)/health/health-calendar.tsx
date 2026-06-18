@@ -569,8 +569,18 @@ function DayEditorPanel({
   const [healthNotes, setHealthNotes] = useState(entry?.healthNotes ?? "");
 
   const [customValues, setCustomValues] = useState<CustomValueRow[]>([]);
+  const [customValuesReady, setCustomValuesReady] = useState(false);
   useEffect(() => {
-    listCustomValuesForDate(date).then(setCustomValues);
+    let cancelled = false;
+    setCustomValuesReady(false);
+    listCustomValuesForDate(date).then((vals) => {
+      if (cancelled) return;
+      setCustomValues(vals);
+      setCustomValuesReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [date]);
 
   // Auto-save state
@@ -787,7 +797,7 @@ function DayEditorPanel({
         </Field>
       </Section>
 
-      {customParameters.length > 0 && (
+      {customParameters.length > 0 && customValuesReady && (
         <Section
           icon={<Sparkles className="size-3.5" />}
           title="Mine parametre"
