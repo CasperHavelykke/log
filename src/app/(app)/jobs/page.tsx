@@ -6,6 +6,9 @@ import { listDocuments } from "../documents/actions";
 import { JobsPage } from "./jobs-page";
 import { JobsPeriodHeader, type PeriodOption } from "./jobs-period-header";
 import { listJobSearchPeriods } from "./period-actions";
+import { WeekGoalCard } from "@/components/week-goal-card";
+import { getWeekGoal } from "@/lib/queries";
+import { mondayOf } from "@/lib/date";
 import type { JobStatus } from "@/db/schema";
 
 export const metadata = { title: "Job | Log" };
@@ -55,11 +58,13 @@ export default async function Jobs({
   const user = await requireUser();
   await flagStaleSentApplications(user.id);
 
-  const [apps, events, docs, periods] = await Promise.all([
+  const weekStart = mondayOf(new Date());
+  const [apps, events, docs, periods, weekGoal] = await Promise.all([
     getAllJobApplications(user.id),
     getAllApplicationEvents(user.id),
     listDocuments(),
     listJobSearchPeriods(),
+    getWeekGoal(user.id, weekStart),
   ]);
 
   const params = await searchParams;
@@ -140,6 +145,18 @@ export default async function Jobs({
         totalCount={filteredApps.length}
         statusCounts={statusCounts}
       />
+      <div className="mx-auto max-w-[1100px] px-4 pb-4">
+        <WeekGoalCard
+          weekStart={weekStart}
+          field="applications"
+          label="Ugens mål — ansøgninger sendt"
+          initialTarget={weekGoal?.applicationsTarget ?? null}
+          otherTarget={weekGoal?.focusHoursTargetX10 ?? null}
+          existingText={weekGoal?.text ?? ""}
+          unit="ansøg."
+          placeholder="fx 5"
+        />
+      </div>
       <JobsPage
         initial={filteredApps.map((a) => ({
           id: a.id,
