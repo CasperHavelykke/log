@@ -100,17 +100,30 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
   const [active, setActive] = useState(initial);
   const [showStart, setShowStart] = useState(false);
   const [name, setName] = useState("");
+  const [startDate, setStartDate] = useState(todayIso());
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
 
   function startNow() {
     setErr(null);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      setErr("Vælg en gyldig start-dato");
+      return;
+    }
     start(async () => {
-      const res = await startJobSearchPeriod({ name: name.trim() || null });
+      const res = await startJobSearchPeriod({
+        name: name.trim() || null,
+        startedAt: startDate,
+      });
       if (!res.ok) {
         setErr(res.error);
         return;
@@ -122,6 +135,7 @@ function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
       });
       setShowStart(false);
       setName("");
+      setStartDate(todayIso());
     });
   }
 
@@ -205,6 +219,22 @@ function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
               placeholder="Fx 'Sommer 2026' eller 'Efter studiet'"
               autoFocus
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-[12px] font-medium text-mid">
+              Start-dato
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              max={todayIso()}
+              className="!w-44"
+            />
+            <p className="mt-1 text-[11px] italic text-dim">
+              Vælg en tidligere dato hvis du allerede er begyndt at søge —
+              ansøgninger med sentAt i intervallet bliver automatisk talt med.
+            </p>
           </div>
           {err && <p className="text-[13px] text-danger">{err}</p>}
           <div className="flex gap-2">
