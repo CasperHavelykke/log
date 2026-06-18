@@ -92,16 +92,25 @@ export function MobileNav({ showJobs }: { showJobs: boolean }) {
         isActive={isActive}
       />
 
-      {/* Persistent bottom bar */}
+      {/* Persistent bottom bar — skjules når drawer er åben så det ikke ser ud
+          som to lag der overlapper. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border-strong bg-bg/95 backdrop-blur-lg md:hidden"
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-bg/95 backdrop-blur-lg transition-opacity md:hidden ${
+          open ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
+        {/* Subtil top-skygge i stedet for border — undgår dobbeltkant
+            sammen med drag-handle. */}
+        <div
+          className="pointer-events-none absolute -top-px left-0 right-0 h-px bg-gradient-to-b from-transparent to-black/20"
+          aria-hidden
+        />
         {/* drag handle */}
         <div
-          className="mx-auto mb-1 mt-1.5 h-1 w-9 rounded-full bg-border-strong"
+          className="mx-auto mb-1 mt-2 h-1 w-9 rounded-full bg-border-strong"
           aria-hidden
         />
         <div
