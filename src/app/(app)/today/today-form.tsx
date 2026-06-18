@@ -48,6 +48,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
+import { ElasticTimerBar } from "@/components/elastic-timer-bar";
 import {
   Section as FieldSection,
   Field as FieldRow,
@@ -1842,34 +1843,24 @@ function FastCard({
   if (active) {
     const mins = fastDurationMinutes(active.startedAt, null, now);
     const qualified = isQualifiedFast(mins);
-    const minsUntilQualified = Math.max(0, FAST_QUALIFIED_MINUTES - mins);
+    const hours = mins / 60;
     return (
       <div className="space-y-3">
         <div
-          className={`rounded-[4px] border px-4 py-3 ${
+          className={`rounded-[6px] border px-5 py-5 ${
             qualified
-              ? "border-success bg-[rgba(74,222,128,0.08)]"
+              ? "border-success bg-[rgba(74,222,128,0.06)]"
               : "border-accent-dim bg-accent-bg"
           }`}
         >
           <div className="flex items-baseline justify-between gap-2">
             <span
-              className={`flex items-center gap-1.5 font-serif text-[15px] ${qualified ? "text-success" : "text-accent-bright"}`}
+              className={`text-[10px] font-semibold uppercase tracking-[0.6px] ${qualified ? "text-success" : "text-accent-bright"}`}
             >
-              {qualified ? (
-                <>
-                  <Check className="size-4" />
-                  Du faster — kvalificeret (16t+)
-                </>
-              ) : (
-                <>
-                  <Hourglass className="size-4" />
-                  Du faster
-                </>
-              )}
+              {qualified ? "✓ Mål nået" : "Aktiv"}
             </span>
-            <span className="flex items-center gap-1.5 text-[12px] text-light">
-              startede {formatTimestampShort(active.startedAt)}
+            <span className="flex items-center gap-1.5 text-[11px] text-light">
+              siden {formatTimestampShort(active.startedAt)}
               {!editingStart && (
                 <button
                   type="button"
@@ -1910,13 +1901,13 @@ function FastCard({
               </button>
             </div>
           )}
-          <div className="mt-1 font-serif text-[24px] text-ink">
+          <div
+            className={`mt-2 text-center font-serif text-[44px] leading-none ${qualified ? "text-success" : "text-accent-bright"}`}
+          >
             {formatFastDuration(mins)}
-            {!qualified && (
-              <span className="ml-3 text-[12px] italic text-mid">
-                kvalificeret om {formatFastDuration(minsUntilQualified)}
-              </span>
-            )}
+          </div>
+          <div className="mt-3">
+            <ElasticTimerBar hours={hours} />
           </div>
         </div>
         {!manualEndMode ? (
