@@ -8,6 +8,9 @@ import { requireUser } from "@/lib/session";
 
 // --- import -----------------------------------------------------------------
 
+// dayEntryRow accepterer både v1 (med headache/iskiasPain osv.) og v2.
+// De gamle felter ignoreres ved insert siden de er flyttet til
+// custom_parameter_values.
 const dayEntryRow = z.object({
   id: z.number().int(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -15,25 +18,31 @@ const dayEntryRow = z.object({
   energy: z.number().int().nullable().optional(),
   sleepHours: z.number().int().nullable().optional(),
   sleepQuality: z.number().int().nullable().optional(),
-  headache: z.boolean().optional(),
-  headacheIntensity: z.number().int().nullable().optional(),
-  iskiasPain: z.number().int().nullable().optional(),
   alcoholUnits: z.number().int().nullable().optional(),
-  constipation: z.boolean().optional(),
-  constipationPain: z.number().int().nullable().optional(),
-  seborrheicDermatitis: z.number().int().nullable().optional(),
   didExercise: z.boolean().optional(),
   exerciseIntensity: z
     .enum(["light", "medium", "hard"])
     .nullable()
     .optional(),
+  didFast: z.boolean().optional(),
+  fastHoursX10: z.number().int().nullable().optional(),
+  fastBreakTime: z.string().nullable().optional(),
+  weightX10: z.number().int().nullable().optional(),
+  waistX10: z.number().int().nullable().optional(),
+  carbsG: z.number().int().nullable().optional(),
+  proteinG: z.number().int().nullable().optional(),
+  fatG: z.number().int().nullable().optional(),
   workNotes: z.string().nullable().optional(),
   healthNotes: z.string().nullable().optional(),
+  dayNotes: z.string().nullable().optional(),
   wentWell: z.string().nullable().optional(),
   nextStep: z.string().nullable().optional(),
+  applicationsTarget: z.number().int().nullable().optional(),
+  focusHoursTargetX10: z.number().int().nullable().optional(),
+  goalNote: z.string().nullable().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
-});
+}).passthrough(); // tillad legacy felter (headache, iskiasPain m.fl.) uden at fejle
 
 const projectRow = z.object({
   id: z.number().int(),
@@ -119,6 +128,93 @@ const fastRow = z.object({
   createdAt: z.string().optional(),
 });
 
+const sleepEntryRow = z.object({
+  id: z.number().int(),
+  date: z.string(),
+  source: z.string().optional(),
+  durationMin: z.number().int().nullable().optional(),
+  score: z.number().int().nullable().optional(),
+  qualityLabel: z.string().nullable().optional(),
+  deepMin: z.number().int().nullable().optional(),
+  lightMin: z.number().int().nullable().optional(),
+  remMin: z.number().int().nullable().optional(),
+  awakeMin: z.number().int().nullable().optional(),
+  avgStress: z.number().int().nullable().optional(),
+  breathingVariation: z.string().nullable().optional(),
+  restlessMoments: z.number().int().nullable().optional(),
+  avgHeartRate: z.number().int().nullable().optional(),
+  restingHeartRate: z.number().int().nullable().optional(),
+  bodyBatteryChange: z.number().int().nullable().optional(),
+  avgSpO2: z.number().int().nullable().optional(),
+  lowestSpO2: z.number().int().nullable().optional(),
+  avgBreathingX10: z.number().int().nullable().optional(),
+  lowestBreathingX10: z.number().int().nullable().optional(),
+  hrvMs: z.number().int().nullable().optional(),
+  hrv7dStatus: z.string().nullable().optional(),
+  rawSource: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+const customParameterRow = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  kind: z.string(),
+  unit: z.string().nullable().optional(),
+  archived: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  createdAt: z.string().optional(),
+});
+
+const customParameterValueRow = z.object({
+  id: z.number().int(),
+  parameterId: z.number().int(),
+  date: z.string(),
+  valueBool: z.boolean().nullable().optional(),
+  valueInt: z.number().int().nullable().optional(),
+  valueReal: z.number().nullable().optional(),
+  valueText: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+const trackerRow = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  kind: z.string(),
+  notes: z.string().nullable().optional(),
+  archived: z.boolean().optional(),
+  createdAt: z.string().optional(),
+});
+
+const photoRow = z.object({
+  id: z.number().int(),
+  trackerId: z.number().int().nullable().optional(),
+  category: z.string(),
+  bodyArea: z.string().nullable().optional(),
+  caption: z.string().nullable().optional(),
+  blobUrl: z.string(),
+  blobPathname: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int(),
+  takenAt: z.string(),
+  createdAt: z.string().optional(),
+});
+
+const documentRow = z.object({
+  id: z.number().int(),
+  kind: z.string(),
+  title: z.string(),
+  filename: z.string(),
+  blobUrl: z.string(),
+  blobPathname: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int(),
+  extractedText: z.string().nullable().optional(),
+  jobApplicationId: z.number().int().nullable().optional(),
+  createdAt: z.string().optional(),
+});
+
 const backupSchema = z.object({
   format: z.literal("log-backup"),
   version: z.number(),
@@ -132,6 +228,16 @@ const backupSchema = z.object({
     supplements: z.array(supplementRow).optional().default([]),
     supplementIntakes: z.array(supplementIntakeRow).optional().default([]),
     fasts: z.array(fastRow).optional().default([]),
+    // Nye i v2 — alle optional for backward compat med v1-backups
+    sleepEntries: z.array(sleepEntryRow).optional().default([]),
+    customParameters: z.array(customParameterRow).optional().default([]),
+    customParameterValues: z
+      .array(customParameterValueRow)
+      .optional()
+      .default([]),
+    trackers: z.array(trackerRow).optional().default([]),
+    photos: z.array(photoRow).optional().default([]),
+    documents: z.array(documentRow).optional().default([]),
   }),
 });
 
@@ -191,6 +297,7 @@ export async function importData(
   // Slet eksisterende data (børn før forældre).
   await db.delete(schema.applicationEvents).where(eq(schema.applicationEvents.userId, uid));
   await db.delete(schema.timeEntries).where(eq(schema.timeEntries.userId, uid));
+  await db.delete(schema.documents).where(eq(schema.documents.userId, uid));
   await db.delete(schema.jobApplications).where(eq(schema.jobApplications.userId, uid));
   await db.delete(schema.projects).where(eq(schema.projects.userId, uid));
   await db.delete(schema.dayEntries).where(eq(schema.dayEntries.userId, uid));
@@ -198,6 +305,11 @@ export async function importData(
   await db.delete(schema.supplementIntakes).where(eq(schema.supplementIntakes.userId, uid));
   await db.delete(schema.supplements).where(eq(schema.supplements.userId, uid));
   await db.delete(schema.fasts).where(eq(schema.fasts.userId, uid));
+  await db.delete(schema.sleepEntries).where(eq(schema.sleepEntries.userId, uid));
+  await db.delete(schema.customParameterValues).where(eq(schema.customParameterValues.userId, uid));
+  await db.delete(schema.customParameters).where(eq(schema.customParameters.userId, uid));
+  await db.delete(schema.photos).where(eq(schema.photos.userId, uid));
+  await db.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
 
   // Indsæt (forældre før børn).
   if (d.projects.length > 0) {
@@ -272,19 +384,25 @@ export async function importData(
           e.sleepQuality === null || e.sleepQuality === undefined
             ? null
             : Math.min(e.sleepQuality, 4),
-        headache: e.headache ?? false,
-        headacheIntensity: e.headacheIntensity ?? null,
-        iskiasPain: e.iskiasPain ?? null,
         alcoholUnits: e.alcoholUnits ?? null,
-        constipation: e.constipation ?? false,
-        constipationPain: e.constipationPain ?? null,
-        seborrheicDermatitis: e.seborrheicDermatitis ?? null,
         didExercise: e.didExercise ?? false,
         exerciseIntensity: e.exerciseIntensity ?? null,
+        didFast: e.didFast ?? false,
+        fastHoursX10: e.fastHoursX10 ?? null,
+        fastBreakTime: e.fastBreakTime ?? null,
+        weightX10: e.weightX10 ?? null,
+        waistX10: e.waistX10 ?? null,
+        carbsG: e.carbsG ?? null,
+        proteinG: e.proteinG ?? null,
+        fatG: e.fatG ?? null,
         workNotes: e.workNotes ?? null,
         healthNotes: e.healthNotes ?? null,
+        dayNotes: e.dayNotes ?? null,
         wentWell: e.wentWell ?? null,
         nextStep: e.nextStep ?? null,
+        applicationsTarget: e.applicationsTarget ?? null,
+        focusHoursTargetX10: e.focusHoursTargetX10 ?? null,
+        goalNote: e.goalNote ?? null,
         createdAt: e.createdAt ?? nowIso(),
         updatedAt: e.updatedAt ?? nowIso(),
       })),
@@ -348,7 +466,147 @@ export async function importData(
     );
   }
 
-  for (const path of ["/", "/today", "/jobs", "/projects", "/health", "/journal"]) {
+  // --- v2-tabeller ---
+  if (d.sleepEntries.length > 0) {
+    await db.insert(schema.sleepEntries).values(
+      d.sleepEntries.map((s) => ({
+        id: s.id,
+        userId: uid,
+        date: s.date,
+        source: s.source ?? "garmin",
+        durationMin: s.durationMin ?? null,
+        score: s.score ?? null,
+        qualityLabel: s.qualityLabel ?? null,
+        deepMin: s.deepMin ?? null,
+        lightMin: s.lightMin ?? null,
+        remMin: s.remMin ?? null,
+        awakeMin: s.awakeMin ?? null,
+        avgStress: s.avgStress ?? null,
+        breathingVariation: s.breathingVariation ?? null,
+        restlessMoments: s.restlessMoments ?? null,
+        avgHeartRate: s.avgHeartRate ?? null,
+        restingHeartRate: s.restingHeartRate ?? null,
+        bodyBatteryChange: s.bodyBatteryChange ?? null,
+        avgSpO2: s.avgSpO2 ?? null,
+        lowestSpO2: s.lowestSpO2 ?? null,
+        avgBreathingX10: s.avgBreathingX10 ?? null,
+        lowestBreathingX10: s.lowestBreathingX10 ?? null,
+        hrvMs: s.hrvMs ?? null,
+        hrv7dStatus: s.hrv7dStatus ?? null,
+        rawSource: s.rawSource ?? null,
+        createdAt: s.createdAt ?? nowIso(),
+        updatedAt: s.updatedAt ?? nowIso(),
+      })),
+    );
+  }
+  if (d.customParameters.length > 0) {
+    await db.insert(schema.customParameters).values(
+      d.customParameters.map((p) => ({
+        id: p.id,
+        userId: uid,
+        name: p.name,
+        kind: p.kind,
+        unit: p.unit ?? null,
+        archived: p.archived ?? false,
+        sortOrder: p.sortOrder ?? 0,
+        createdAt: p.createdAt ?? nowIso(),
+      })),
+    );
+  }
+  if (d.customParameterValues.length > 0) {
+    const paramIds = new Set(d.customParameters.map((p) => p.id));
+    const validValues = d.customParameterValues.filter((v) =>
+      paramIds.has(v.parameterId),
+    );
+    if (validValues.length > 0) {
+      await db.insert(schema.customParameterValues).values(
+        validValues.map((v) => ({
+          id: v.id,
+          userId: uid,
+          parameterId: v.parameterId,
+          date: v.date,
+          valueBool: v.valueBool ?? null,
+          valueInt: v.valueInt ?? null,
+          valueReal: v.valueReal ?? null,
+          valueText: v.valueText ?? null,
+          createdAt: v.createdAt ?? nowIso(),
+          updatedAt: v.updatedAt ?? nowIso(),
+        })),
+      );
+    }
+  }
+  if (d.trackers.length > 0) {
+    await db.insert(schema.trackers).values(
+      d.trackers.map((t) => ({
+        id: t.id,
+        userId: uid,
+        name: t.name,
+        kind: t.kind,
+        notes: t.notes ?? null,
+        archived: t.archived ?? false,
+        createdAt: t.createdAt ?? nowIso(),
+      })),
+    );
+  }
+  if (d.photos.length > 0) {
+    const trackerIds = new Set(d.trackers.map((t) => t.id));
+    await db.insert(schema.photos).values(
+      d.photos.map((p) => ({
+        id: p.id,
+        userId: uid,
+        // Hvis tracker-ID'et i backup'en ikke eksisterer, sæt til null
+        trackerId:
+          p.trackerId != null && trackerIds.has(p.trackerId)
+            ? p.trackerId
+            : null,
+        category: p.category,
+        bodyArea: p.bodyArea ?? null,
+        caption: p.caption ?? null,
+        blobUrl: p.blobUrl,
+        blobPathname: p.blobPathname,
+        mimeType: p.mimeType,
+        sizeBytes: p.sizeBytes,
+        takenAt: p.takenAt,
+        createdAt: p.createdAt ?? nowIso(),
+      })),
+    );
+  }
+  if (d.documents.length > 0) {
+    const appIdsSet = new Set(d.jobApplications.map((a) => a.id));
+    await db.insert(schema.documents).values(
+      d.documents.map((doc) => ({
+        id: doc.id,
+        userId: uid,
+        kind: doc.kind,
+        title: doc.title,
+        filename: doc.filename,
+        blobUrl: doc.blobUrl,
+        blobPathname: doc.blobPathname,
+        mimeType: doc.mimeType,
+        sizeBytes: doc.sizeBytes,
+        extractedText: doc.extractedText ?? null,
+        jobApplicationId:
+          doc.jobApplicationId != null && appIdsSet.has(doc.jobApplicationId)
+            ? doc.jobApplicationId
+            : null,
+        createdAt: doc.createdAt ?? nowIso(),
+      })),
+    );
+  }
+
+  for (const path of [
+    "/",
+    "/today",
+    "/jobs",
+    "/projects",
+    "/health",
+    "/health/photos",
+    "/health/trackere",
+    "/documents",
+    "/journal",
+    "/statistik",
+    "/settings",
+  ]) {
     revalidatePath(path);
   }
 
@@ -363,6 +621,13 @@ export async function importData(
       weekGoals: d.weekGoals.length,
       supplements: d.supplements.length,
       supplementIntakes: d.supplementIntakes.length,
+      fasts: d.fasts.length,
+      sleepEntries: d.sleepEntries.length,
+      customParameters: d.customParameters.length,
+      customParameterValues: d.customParameterValues.length,
+      trackers: d.trackers.length,
+      photos: d.photos.length,
+      documents: d.documents.length,
     },
   };
 }

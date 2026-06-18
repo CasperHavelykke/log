@@ -21,6 +21,12 @@ export async function GET() {
     supplements,
     supplementIntakes,
     sleepEntries,
+    fasts,
+    customParameters,
+    customParameterValues,
+    trackers,
+    photos,
+    documents,
   ] = await Promise.all([
     db.select().from(schema.dayEntries).where(eq(schema.dayEntries.userId, user.id)),
     db.select().from(schema.projects).where(eq(schema.projects.userId, user.id)),
@@ -40,19 +46,26 @@ export async function GET() {
       .from(schema.supplementIntakes)
       .where(eq(schema.supplementIntakes.userId, user.id)),
     db.select().from(schema.sleepEntries).where(eq(schema.sleepEntries.userId, user.id)),
+    db.select().from(schema.fasts).where(eq(schema.fasts.userId, user.id)),
+    db
+      .select()
+      .from(schema.customParameters)
+      .where(eq(schema.customParameters.userId, user.id)),
+    db
+      .select()
+      .from(schema.customParameterValues)
+      .where(eq(schema.customParameterValues.userId, user.id)),
+    db.select().from(schema.trackers).where(eq(schema.trackers.userId, user.id)),
+    db.select().from(schema.photos).where(eq(schema.photos.userId, user.id)),
+    db.select().from(schema.documents).where(eq(schema.documents.userId, user.id)),
   ]);
-
-  const fasts = await db
-    .select()
-    .from(schema.fasts)
-    .where(eq(schema.fasts.userId, user.id));
 
   const strip = <T extends { userId?: number }>(rows: T[]) =>
     rows.map(({ userId: _userId, ...rest }) => rest);
 
   const backup = {
     format: "log-backup",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     data: {
       dayEntries: strip(dayEntries),
@@ -65,6 +78,11 @@ export async function GET() {
       supplementIntakes: strip(supplementIntakes),
       sleepEntries: strip(sleepEntries),
       fasts: strip(fasts),
+      customParameters: strip(customParameters),
+      customParameterValues: strip(customParameterValues),
+      trackers: strip(trackers),
+      photos: strip(photos),
+      documents: strip(documents),
     },
   };
 
