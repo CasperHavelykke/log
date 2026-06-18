@@ -1,18 +1,55 @@
+import { and, eq, isNotNull } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
+import { db, schema } from "@/db";
 import { SettingsPage } from "./settings-page";
 import { listOAuthClients } from "./oauth-actions";
 import { listCustomParameters } from "@/lib/custom-parameters";
-import { getActiveJobSearchPeriod } from "../jobs/period-actions";
+import {
+  getActiveJobSearchPeriod,
+  listJobSearchPeriods,
+} from "../jobs/period-actions";
 
 export const metadata = { title: "Indstillinger | Log" };
 
 export default async function Settings() {
   const user = await requireUser();
-  const [clients, customParameters, activePeriod] = await Promise.all([
-    listOAuthClients(),
-    listCustomParameters(true),
-    getActiveJobSearchPeriod(),
-  ]);
+  const [clients, customParameters, activePeriod, allPeriods, allApps] =
+    await Promise.all([
+      listOAuthClients(),
+      listCustomParameters(true),
+      getActiveJobSearchPeriod(),
+      listJobSearchPeriods(),
+      db
+        .select({
+          id: schema.jobApplications.id,
+          sentAt: schema.jobApplications.sentAt,
+        })
+        .from(schema.jobApplications)
+        .where(
+          and(
+            eq(schema.jobApplications.userId, user.id),
+            isNotNull(schema.jobApplications.sentAt),
+          ),
+        ),
+    ]);
+
+  // Tæl ansøgninger per periode (fra sentAt inden for startedAt..endedAt).
+  const pastPeriods = allPeriods
+    .filter((p) => p.endedAt !== null)
+    .map((p) => {
+      const end = p.endedAt ?? "9999-12-31";
+      const count = allApps.filter(
+        (a) => a.sentAt !== null && a.sentAt >= p.startedAt && a.sentAt <= end,
+      ).length;
+      return {
+        id: p.id,
+        name: p.name,
+        startedAt: p.startedAt,
+        endedAt: p.endedAt!,
+        applicationCount: count,
+      };
+    });
+
   return (
     <SettingsPage
       username={user.name ?? user.email ?? ""}
@@ -33,6 +70,7 @@ export default async function Settings() {
             }
           : null
       }
+      initialPastPeriods={pastPeriods}
     />
   );
 }

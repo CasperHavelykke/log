@@ -32,16 +32,26 @@ type ActivePeriodRow = {
   startedAt: string;
 };
 
+type PastPeriodRow = {
+  id: number;
+  name: string | null;
+  startedAt: string;
+  endedAt: string;
+  applicationCount: number;
+};
+
 export function SettingsPage({
   username,
   initialClients,
   initialCustomParameters,
   initialActivePeriod,
+  initialPastPeriods,
 }: {
   username: string;
   initialClients: OAuthClientRow[];
   initialCustomParameters: CustomParamSummary[];
   initialActivePeriod: ActivePeriodRow | null;
+  initialPastPeriods: PastPeriodRow[];
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
@@ -66,7 +76,7 @@ export function SettingsPage({
       </header>
 
       <div className="space-y-4">
-        <JobSearchCard initial={initialActivePeriod} />
+        <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
         <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
         <ExportCard />
@@ -105,7 +115,13 @@ function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
+function JobSearchCard({
+  initial,
+  pastPeriods,
+}: {
+  initial: ActivePeriodRow | null;
+  pastPeriods: PastPeriodRow[];
+}) {
   const [active, setActive] = useState(initial);
   const [showStart, setShowStart] = useState(false);
   const [name, setName] = useState("");
@@ -268,6 +284,40 @@ function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
           <Briefcase className="size-4" />
           Start jobsøgningsperiode
         </button>
+      )}
+
+      {pastPeriods.length > 0 && (
+        <div className="mt-5 border-t border-border-light pt-4">
+          <div className="mb-2 text-[11px] uppercase tracking-[0.5px] text-light">
+            Afsluttede perioder
+          </div>
+          <div className="space-y-1.5">
+            {pastPeriods.map((p) => (
+              <a
+                key={p.id}
+                href={`/jobs?period=${p.id}`}
+                className="flex items-center justify-between gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[12px] transition hover:border-accent-bright"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-ink">
+                    {p.name || `Periode fra ${formatDanishDate(p.startedAt)}`}
+                  </div>
+                  <div className="text-[11px] text-light">
+                    {formatDanishDate(p.startedAt)} – {formatDanishDate(p.endedAt)}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-[13px] font-medium text-accent-bright">
+                    {p.applicationCount}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-[0.3px] text-light">
+                    ansøgn.
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
       )}
     </Card>
   );

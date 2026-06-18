@@ -1,6 +1,6 @@
 import { Nav } from "@/components/nav";
 import { requireUser } from "@/lib/session";
-import { listJobSearchPeriods } from "./jobs/period-actions";
+import { getActiveJobSearchPeriod } from "./jobs/period-actions";
 
 export default async function AppLayout({
   children,
@@ -8,15 +8,15 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   await requireUser();
-  // Defensiv: hvis job_search_periods-tabellen ikke eksisterer endnu
-  // (migration ikke kørt), så fald tilbage til at vise /jobs som vi
-  // gjorde før. Forhindrer at hele appen crasher i deployment-vinduet.
-  let showJobs = true;
+  // Nav viser /jobs kun når der er en aktiv periode. Historiske perioder
+  // tilgås via /settings → Jobsøgning. Defensiv catch for tilfælde hvor
+  // tabellen endnu ikke eksisterer.
+  let showJobs = false;
   try {
-    const periods = await listJobSearchPeriods();
-    showJobs = periods.length > 0;
+    const active = await getActiveJobSearchPeriod();
+    showJobs = active !== null;
   } catch {
-    showJobs = true;
+    showJobs = false;
   }
   return (
     <div className="flex min-h-screen flex-col">
