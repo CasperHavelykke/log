@@ -29,6 +29,14 @@ export default async function Projects() {
 
   return (
     <div className="space-y-6">
+      <div className="mx-auto max-w-[1100px] px-4 pt-4">
+        <ReflectionCard
+          date={date}
+          initialWorkNotes={todayEntry?.workNotes ?? ""}
+          initialWentWell={todayEntry?.wentWell ?? ""}
+          initialNextStep={todayEntry?.nextStep ?? ""}
+        />
+      </div>
       <ProjectsPage
         focusProjectId={user.focusProjectId}
         projects={projects.map((p) => ({
@@ -44,14 +52,6 @@ export default async function Projects() {
           notes: t.notes ?? "",
         }))}
       />
-      <div className="mx-auto max-w-[1100px] px-4">
-        <ReflectionCard
-          date={date}
-          initialWorkNotes={todayEntry?.workNotes ?? ""}
-          initialWentWell={todayEntry?.wentWell ?? ""}
-          initialNextStep={todayEntry?.nextStep ?? ""}
-        />
-      </div>
     </div>
   );
 }
