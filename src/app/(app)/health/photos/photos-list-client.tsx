@@ -43,9 +43,23 @@ export function PhotosListClient({
     <div className="mx-auto max-w-[1100px] px-4 py-6 sm:py-10">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
         <div>
-          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
-            Fotos
-          </h1>
+          <div className="flex flex-wrap items-baseline gap-4">
+            <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
+              Fotos
+            </h1>
+            <Link
+              href="/health/trackere"
+              className="text-[12px] text-accent-bright hover:underline"
+            >
+              Trackere →
+            </Link>
+            <Link
+              href="/health"
+              className="text-[12px] text-accent-bright hover:underline"
+            >
+              Helbred →
+            </Link>
+          </div>
           <p className="mt-1 font-serif text-sm italic text-mid">
             {photos.length} fotos · {orphanCount} uden tracker
           </p>
@@ -107,7 +121,7 @@ export function PhotosListClient({
         </div>
       )}
 
-      <p className="mt-8 text-center text-[12px] text-light">
+      <p className="mt-8 text-center text-[12px] text-light hidden">
         <Link href="/health/trackere" className="underline">
           Gå til trackere →
         </Link>
