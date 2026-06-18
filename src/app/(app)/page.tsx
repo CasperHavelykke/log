@@ -84,7 +84,7 @@ export default async function Dashboard() {
             between(schema.sleepEntries.date, sevenAgo, today),
           ),
         ),
-      getActiveJobSearchPeriod(),
+      getActiveJobSearchPeriod().catch(() => null),
     ]);
   const sleepByDate = new Map(weekSleep.map((s) => [s.date, s]));
 
