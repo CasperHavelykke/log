@@ -6,13 +6,11 @@ export function Section({
   icon,
   title,
   meta,
-  aiPill,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   meta?: string;
-  aiPill?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -20,11 +18,6 @@ export function Section({
       <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
         <span className="text-mid">{icon}</span>
         <span>{title}</span>
-        {aiPill && (
-          <span className="ml-auto rounded-full bg-accent-bg px-1.5 py-0.5 text-[8px] tracking-[0.3px] text-accent-bright">
-            AI
-          </span>
-        )}
         {meta && (
           <span className="ml-auto text-[10px] text-accent-bright">{meta}</span>
         )}

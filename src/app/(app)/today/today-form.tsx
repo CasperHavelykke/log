@@ -1599,7 +1599,6 @@ function HealthBody({
         <FieldSection
           icon={<Sparkles className="size-3.5" />}
           title="Mine parametre"
-          aiPill
         >
           <CustomParametersSection
             parameters={customParameters}

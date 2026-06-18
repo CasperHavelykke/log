@@ -801,7 +801,6 @@ function DayEditorPanel({
         <Section
           icon={<Sparkles className="size-3.5" />}
           title="Mine parametre"
-          aiPill
         >
           <CustomParametersSection
             date={date}
