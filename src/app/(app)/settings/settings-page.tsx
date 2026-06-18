@@ -145,11 +145,31 @@ function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
 
   return (
     <Card title="Jobsøgning">
-      <p className="mb-3 text-[13px] text-mid">
-        Aktivér en jobsøgningsperiode når du leder efter job. Sektionen
-        &quot;Jobsøgning&quot; vises på /today og /jobs så længe perioden er aktiv.
-        Når du afslutter, gemmes ansøgninger + statistik som historik.
-      </p>
+      <div className="mb-3 space-y-2 text-[13px] text-mid">
+        <p>
+          Aktivér en jobsøgningsperiode når du leder efter job. Når perioden
+          kører, kan du:
+        </p>
+        <ul className="ml-4 list-disc space-y-1 text-[12px]">
+          <li>
+            Gemme jobopslag, ansøgninger og tilhørende materiale (CV, den
+            ansøgning du sendte, kontaktpersoner, noter)
+          </li>
+          <li>
+            Lade AI bruge tidligere ansøgninger som inspiration når du skal
+            skrive nye — så de matcher din stil og dine erfaringer
+          </li>
+          <li>
+            Følge statistik for perioden: antal sendt, svar modtaget,
+            interviews, afvisninger og tilbud — samlet ét sted
+          </li>
+        </ul>
+        <p className="text-[12px] italic text-light">
+          Når du afslutter perioden, gemmes alt som historik. Næste gang du
+          starter en ny periode er det &quot;ren tavle&quot;, men du kan altid
+          kigge tilbage.
+        </p>
+      </div>
 
       {active ? (
         <div className="rounded-[3px] border border-success bg-[rgba(74,222,128,0.06)] p-3">
