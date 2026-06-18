@@ -4,16 +4,12 @@ import { requireUser } from "@/lib/session";
 import { getAllApplicationEvents, getAllJobApplications } from "@/lib/queries";
 import { listDocuments } from "../documents/actions";
 import { JobsPage } from "./jobs-page";
+import { JobsPeriodHeader, type PeriodOption } from "./jobs-period-header";
+import { listJobSearchPeriods } from "./period-actions";
 import type { JobStatus } from "@/db/schema";
 
 export const metadata = { title: "Job | Log" };
 
-/**
- * Markerer "Sendt"-ansøgninger som "Intet svar" hvis de ikke er rørt i en uge.
- * Kører hver gang /jobs indlæses. Et event tilføjes så tidslinjen viser
- * overgangen. Tidsgrundlag: applikationens updatedAt (så manuelle ændringer
- * tilbage til 'sent' nulstiller uret indtil næste uge).
- */
 async function flagStaleSentApplications(userId: number) {
   const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const cutoffIso = new Date(cutoffMs).toISOString();
@@ -49,14 +45,58 @@ async function flagStaleSentApplications(userId: number) {
   }
 }
 
-export default async function Jobs() {
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+export default async function Jobs({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const user = await requireUser();
   await flagStaleSentApplications(user.id);
-  const [apps, events, docs] = await Promise.all([
+
+  const [apps, events, docs, periods] = await Promise.all([
     getAllJobApplications(user.id),
     getAllApplicationEvents(user.id),
     listDocuments(),
+    listJobSearchPeriods(),
   ]);
+
+  const params = await searchParams;
+  const periodParam =
+    typeof params.period === "string" ? params.period : undefined;
+
+  // Selected period:
+  //   - "all" → no filter
+  //   - matches a period ID → that period
+  //   - else → active period (if any), else no filter
+  let selectedPeriod: typeof periods[number] | null = null;
+  let showAll = false;
+  if (periodParam === "all") {
+    showAll = true;
+  } else if (periodParam) {
+    const id = Number(periodParam);
+    selectedPeriod = periods.find((p) => p.id === id) ?? null;
+  } else {
+    selectedPeriod = periods.find((p) => p.endedAt === null) ?? null;
+  }
+
+  // Filtrer apps efter periodens dato-interval (sentAt within).
+  const filteredApps = (() => {
+    if (showAll || !selectedPeriod) return apps;
+    const end = selectedPeriod.endedAt ?? "9999-12-31";
+    return apps.filter(
+      (a) =>
+        a.sentAt !== null &&
+        a.sentAt >= selectedPeriod.startedAt &&
+        a.sentAt <= end,
+    );
+  })();
+
+  const filteredAppIds = new Set(filteredApps.map((a) => a.id));
+  const filteredEvents = events.filter((e) =>
+    filteredAppIds.has(e.applicationId),
+  );
 
   const docsByApp = new Map<number, typeof docs>();
   for (const d of docs) {
@@ -76,35 +116,59 @@ export default async function Jobs() {
       mimeType: d.mimeType,
     }));
 
+  // Build period options for selector
+  const periodOptions: PeriodOption[] = periods.map((p) => ({
+    id: p.id,
+    name: p.name,
+    startedAt: p.startedAt,
+    endedAt: p.endedAt,
+    isActive: p.endedAt === null,
+  }));
+
+  // Statusoptælling for filteredApps
+  const statusCounts: Record<string, number> = {};
+  for (const a of filteredApps) {
+    statusCounts[a.status] = (statusCounts[a.status] ?? 0) + 1;
+  }
+
   return (
-    <JobsPage
-      initial={apps.map((a) => ({
-        id: a.id,
-        company: a.company,
-        role: a.role ?? "",
-        status: a.status as JobStatus,
-        files: a.files ?? "",
-        url: a.url ?? "",
-        contactPerson: a.contactPerson ?? "",
-        notes: a.notes ?? "",
-        applicationText: a.applicationText ?? "",
-        sentAt: a.sentAt ?? "",
-        updatedAt: a.updatedAt,
-        documents: (docsByApp.get(a.id) ?? []).map((d) => ({
-          id: d.id,
-          title: d.title,
-          kind: d.kind,
-          filename: d.filename,
-          mimeType: d.mimeType,
-        })),
-      }))}
-      events={events.map((e) => ({
-        id: e.id,
-        applicationId: e.applicationId,
-        status: e.status as JobStatus,
-        occurredAt: e.occurredAt,
-      }))}
-      unattached={unattached}
-    />
+    <div>
+      <JobsPeriodHeader
+        periods={periodOptions}
+        selectedPeriodId={selectedPeriod?.id ?? null}
+        showingAll={showAll}
+        totalCount={filteredApps.length}
+        statusCounts={statusCounts}
+      />
+      <JobsPage
+        initial={filteredApps.map((a) => ({
+          id: a.id,
+          company: a.company,
+          role: a.role ?? "",
+          status: a.status as JobStatus,
+          files: a.files ?? "",
+          url: a.url ?? "",
+          contactPerson: a.contactPerson ?? "",
+          notes: a.notes ?? "",
+          applicationText: a.applicationText ?? "",
+          sentAt: a.sentAt ?? "",
+          updatedAt: a.updatedAt,
+          documents: (docsByApp.get(a.id) ?? []).map((d) => ({
+            id: d.id,
+            title: d.title,
+            kind: d.kind,
+            filename: d.filename,
+            mimeType: d.mimeType,
+          })),
+        }))}
+        events={filteredEvents.map((e) => ({
+          id: e.id,
+          applicationId: e.applicationId,
+          status: e.status as JobStatus,
+          occurredAt: e.occurredAt,
+        }))}
+        unattached={unattached}
+      />
+    </div>
   );
 }
