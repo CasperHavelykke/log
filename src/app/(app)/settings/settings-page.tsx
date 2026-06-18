@@ -11,6 +11,12 @@ import {
 } from "./oauth-actions";
 import { CustomParametersCard } from "./custom-parameters-card";
 import type { CustomParamSummary } from "@/lib/custom-parameters";
+import {
+  startJobSearchPeriod,
+  endJobSearchPeriod,
+} from "../jobs/period-actions";
+import { Briefcase } from "lucide-react";
+import { formatDanishDate } from "@/lib/date";
 
 type OAuthClientRow = {
   id: number;
@@ -20,14 +26,22 @@ type OAuthClientRow = {
   createdAt: string;
 };
 
+type ActivePeriodRow = {
+  id: number;
+  name: string | null;
+  startedAt: string;
+};
+
 export function SettingsPage({
   username,
   initialClients,
   initialCustomParameters,
+  initialActivePeriod,
 }: {
   username: string;
   initialClients: OAuthClientRow[];
   initialCustomParameters: CustomParamSummary[];
+  initialActivePeriod: ActivePeriodRow | null;
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
@@ -52,6 +66,7 @@ export function SettingsPage({
       </header>
 
       <div className="space-y-4">
+        <JobSearchCard initial={initialActivePeriod} />
         <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
         <ExportCard />
@@ -82,6 +97,129 @@ function Card({
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label className="mb-1.5 block text-[13px] font-medium text-mid">{children}</label>
+  );
+}
+
+function JobSearchCard({ initial }: { initial: ActivePeriodRow | null }) {
+  const [active, setActive] = useState(initial);
+  const [showStart, setShowStart] = useState(false);
+  const [name, setName] = useState("");
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+
+  function startNow() {
+    setErr(null);
+    start(async () => {
+      const res = await startJobSearchPeriod({ name: name.trim() || null });
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      setActive({
+        id: res.period.id,
+        name: res.period.name,
+        startedAt: res.period.startedAt,
+      });
+      setShowStart(false);
+      setName("");
+    });
+  }
+
+  function endNow() {
+    if (
+      !confirm(
+        "Afslut den aktive jobsøgningsperiode? Du kan altid se den i historikken bagefter.",
+      )
+    ) {
+      return;
+    }
+    start(async () => {
+      const res = await endJobSearchPeriod();
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      setActive(null);
+    });
+  }
+
+  return (
+    <Card title="Jobsøgning">
+      <p className="mb-3 text-[13px] text-mid">
+        Aktivér en jobsøgningsperiode når du leder efter job. Sektionen
+        &quot;Jobsøgning&quot; vises på /today og /jobs så længe perioden er aktiv.
+        Når du afslutter, gemmes ansøgninger + statistik som historik.
+      </p>
+
+      {active ? (
+        <div className="rounded-[3px] border border-success bg-[rgba(74,222,128,0.06)] p-3">
+          <div className="mb-2 flex items-center gap-2 text-[13px]">
+            <Briefcase className="size-4 text-success" />
+            <span className="font-medium text-ink">
+              {active.name || "Aktiv jobsøgningsperiode"}
+            </span>
+          </div>
+          <p className="mb-3 text-[12px] text-mid">
+            Startet {formatDanishDate(active.startedAt)}
+          </p>
+          <button
+            type="button"
+            onClick={endNow}
+            disabled={pending}
+            className="cursor-pointer rounded-[3px] border border-danger bg-transparent px-3 py-1.5 text-[12px] font-medium text-danger hover:bg-[rgba(248,113,113,0.08)] disabled:opacity-50"
+          >
+            {pending ? "Afslutter..." : "Afslut periode"}
+          </button>
+        </div>
+      ) : showStart ? (
+        <div className="space-y-3 rounded-[3px] border border-border-light bg-bg p-3">
+          <div>
+            <label className="mb-1 block text-[12px] font-medium text-mid">
+              Navn på perioden{" "}
+              <span className="text-[10px] italic text-dim">— valgfri</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Fx 'Sommer 2026' eller 'Efter studiet'"
+              autoFocus
+            />
+          </div>
+          {err && <p className="text-[13px] text-danger">{err}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={startNow}
+              disabled={pending}
+              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+            >
+              {pending ? "Starter..." : "Start"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowStart(false);
+                setName("");
+                setErr(null);
+              }}
+              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+            >
+              Annullér
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowStart(true)}
+          className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
+        >
+          <Briefcase className="size-4" />
+          Start jobsøgningsperiode
+        </button>
+      )}
+    </Card>
   );
 }
 

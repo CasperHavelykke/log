@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
+import { getActiveJobSearchPeriod } from "./jobs/period-actions";
 import { and, between, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
@@ -66,7 +67,7 @@ export default async function Dashboard() {
   const weekEnd = toIsoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - ((now.getDay() || 7)))));
   const sevenAgo = toIsoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
 
-  const [weekGoal, todayEntry, weekDays, weekTime, projects, allApps, weekSleep] =
+  const [weekGoal, todayEntry, weekDays, weekTime, projects, allApps, weekSleep, activeJobPeriod] =
     await Promise.all([
       getWeekGoal(user.id, weekStart),
       getDayEntry(user.id, today),
@@ -83,6 +84,7 @@ export default async function Dashboard() {
             between(schema.sleepEntries.date, sevenAgo, today),
           ),
         ),
+      getActiveJobSearchPeriod(),
     ]);
   const sleepByDate = new Map(weekSleep.map((s) => [s.date, s]));
 
@@ -229,34 +231,36 @@ export default async function Dashboard() {
           )}
         </Card>
 
-        {/* Jobsøgning */}
-        <Card title="Jobsøgning" href="/jobs">
-          <p className="mb-3 text-[13px] text-mid">
-            <span className="text-[20px] font-medium text-accent-bright">
-              {sentThisWeek}
-            </span>{" "}
-            sendt denne uge · {allApps.length} i alt
-          </p>
-          {recentApps.length === 0 ? (
-            <p className="text-[13px] italic text-light">Ingen ansøgninger endnu.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {recentApps.map((a) => (
-                <div key={a.id} className="flex items-center gap-2 text-[13px]">
-                  <span className="min-w-0 flex-1 truncate text-ink">
-                    {a.company}
-                    {a.role && <span className="text-mid"> · {a.role}</span>}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.3px] ${STATUS_CLASSES[a.status as Status]}`}
-                  >
-                    {STATUS_LABELS[a.status as Status]}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+        {/* Jobsøgning — kun når en jobsøgningsperiode er aktiv */}
+        {activeJobPeriod && (
+          <Card title="Jobsøgning" href="/jobs">
+            <p className="mb-3 text-[13px] text-mid">
+              <span className="text-[20px] font-medium text-accent-bright">
+                {sentThisWeek}
+              </span>{" "}
+              sendt denne uge · {allApps.length} i alt
+            </p>
+            {recentApps.length === 0 ? (
+              <p className="text-[13px] italic text-light">Ingen ansøgninger endnu.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {recentApps.map((a) => (
+                  <div key={a.id} className="flex items-center gap-2 text-[13px]">
+                    <span className="min-w-0 flex-1 truncate text-ink">
+                      {a.company}
+                      {a.role && <span className="text-mid"> · {a.role}</span>}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.3px] ${STATUS_CLASSES[a.status as Status]}`}
+                    >
+                      {STATUS_LABELS[a.status as Status]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     </div>
   );

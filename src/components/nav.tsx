@@ -13,19 +13,20 @@ import {
   Settings,
 } from "lucide-react";
 
-const items = [
-  { href: "/today", label: "I dag", icon: CalendarDays },
-  { href: "/jobs", label: "Job", icon: Briefcase },
-  { href: "/projects", label: "Projekter", icon: FolderKanban },
-  { href: "/health", label: "Helbred", icon: HeartPulse },
-  { href: "/statistik", label: "Statistik", icon: LineChart },
-  { href: "/documents", label: "Dokumenter", icon: FileText },
-  { href: "/journal", label: "Journal", icon: NotebookPen },
-  { href: "/settings", label: "Indstillinger", icon: Settings },
+const allItems = [
+  { href: "/today", label: "I dag", icon: CalendarDays, key: "today" },
+  { href: "/jobs", label: "Job", icon: Briefcase, key: "jobs" },
+  { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
+  { href: "/health", label: "Helbred", icon: HeartPulse, key: "health" },
+  { href: "/statistik", label: "Statistik", icon: LineChart, key: "statistik" },
+  { href: "/documents", label: "Dokumenter", icon: FileText, key: "documents" },
+  { href: "/journal", label: "Journal", icon: NotebookPen, key: "journal" },
+  { href: "/settings", label: "Indstillinger", icon: Settings, key: "settings" },
 ];
 
-export function Nav() {
+export function Nav({ showJobs = true }: { showJobs?: boolean }) {
   const pathname = usePathname();
+  const items = allItems.filter((i) => (i.key === "jobs" ? showJobs : true));
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto max-w-5xl px-3 py-2 sm:px-4 sm:py-3">

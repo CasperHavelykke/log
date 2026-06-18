@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Helbred v2 – Mockup</title>
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --card: #1a2436;
+    --card-2: #1e2a40;
+    --border: #2a3654;
+    --border-light: #1f2a3f;
+    --ink: #e8ecf3;
+    --mid: #a0aec0;
+    --light: #6b7a92;
+    --dim: #4a5568;
+    --accent: #4a90e2;
+    --accent-bright: #5fa3f0;
+    --accent-bg: rgba(74, 144, 226, 0.1);
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+    --orange: #f97316;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+  input, select, textarea {
+    font-family: inherit;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    padding: 8px 11px;
+    border-radius: 3px;
+    width: 100%;
+    font-size: 14px;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+  .icon-sm { width: 14px; height: 14px; }
+  .icon-md { width: 18px; height: 18px; }
+  .icon-lg { width: 22px; height: 22px; }
+
+  /* --- TOP --- */
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 16px 16px 64px;
+  }
+  .page-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .page-title-block { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .page-title {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 30px; font-weight: 500; margin: 0;
+  }
+  .month-nav {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--card); border: 1px solid var(--border-light); border-radius: 4px;
+    padding: 2px;
+  }
+  .month-nav button {
+    background: none; border: none; color: var(--mid);
+    padding: 6px 10px; border-radius: 3px;
+    display: inline-flex; align-items: center;
+    min-height: 32px;
+  }
+  .month-nav button:hover { background: rgba(255,255,255,0.04); color: var(--ink); }
+  .month-nav .label {
+    padding: 6px 14px; font-family: 'EB Garamond', Georgia, serif;
+    font-size: 18px; color: var(--ink); white-space: nowrap;
+  }
+  .btn-secondary {
+    background: transparent; color: var(--mid);
+    border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 4px;
+    font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 32px;
+  }
+  .btn-secondary:hover { color: var(--ink); border-color: var(--accent-bright); }
+
+  /* --- Quick stats row --- */
+  .stat-row {
+    display: flex; flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .stat-row .stat {
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .stat-row .stat-label {
+    text-transform: uppercase; letter-spacing: 0.4px;
+    color: var(--light); font-size: 10px;
+  }
+  .stat-row .stat-value { color: var(--ink); font-weight: 500; }
+  .stat-row .stat-value strong { font-weight: 600; }
+
+  /* --- Split layout --- */
+  .grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: minmax(0, 1fr) 380px; }
+  }
+
+  /* --- Calendar --- */
+  .calendar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .weekdays span {
+    text-align: center;
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .day {
+    aspect-ratio: 1;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    position: relative;
+    transition: border-color 0.12s, transform 0.08s;
+    min-height: 44px;
+  }
+  .day:hover { border-color: var(--accent-bright); }
+  .day.outside { opacity: 0.25; cursor: default; }
+  .day.today { border-color: var(--accent); }
+  .day.selected {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    transform: scale(1.02);
+  }
+  .day .num {
+    font-size: 11px;
+    color: var(--mid);
+    font-weight: 500;
+  }
+  .day.today .num { color: var(--accent-bright); }
+  .day .score {
+    position: absolute;
+    top: 3px; right: 3px;
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: 500;
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--success);
+  }
+  .day .score.score-mid { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+  .day .score.score-low { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+  .day .mood-bar {
+    margin-top: auto;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+  }
+  .day .mood-bar.good { background: var(--success); }
+  .day .mood-bar.ok { background: var(--warning); }
+  .day .mood-bar.low { background: var(--danger); }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border-light);
+    font-size: 10px; color: var(--dim);
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success);
+  }
+
+  /* --- Day editor side panel --- */
+  .editor {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    height: fit-content;
+  }
+  @media (min-width: 900px) {
+    .editor {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+    }
+  }
+  .editor-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .editor-head .date {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 18px; color: var(--accent-bright);
+  }
+  .editor-head .day-of-week {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--light);
+  }
+  .editor-head .saved {
+    font-size: 10px;
+    color: var(--success);
+    font-style: italic;
+  }
+
+  /* --- Section in editor --- */
+  .section {
+    margin-bottom: 14px;
+  }
+  .section-head {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 7px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--light);
+  }
+  .section-head .icon { color: var(--mid); }
+
+  /* --- Field row --- */
+  .field {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+  }
+  .field .field-label {
+    font-size: 13px;
+    color: var(--ink);
+    flex: 1;
+  }
+  .field .field-sub {
+    font-size: 11px;
+    color: var(--dim);
+    margin-left: 4px;
+  }
+  .field .garmin-badge {
+    font-size: 9px;
+    background: var(--accent-bg);
+    color: var(--accent-bright);
+    padding: 1px 5px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-left: 6px;
+  }
+
+  /* --- Scale buttons (compact) --- */
+  .scale {
+    display: flex; gap: 3px;
+  }
+  .scale button {
+    min-width: 28px; min-height: 28px;
+    padding: 3px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    color: var(--mid);
+    border-radius: 3px;
+    font-size: 11px;
+    line-height: 1;
+  }
+  .scale button:hover { border-color: var(--accent-bright); color: var(--ink); }
+  .scale button.on {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent-bright);
+  }
+
+  /* --- Yes/No toggle --- */
+  .yesno {
+    display: flex; gap: 3px;
+  }
+  .yesno button {
+    min-width: 44px; min-height: 28px;
+    padding: 4px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    color: var(--mid);
+    border-radius: 3px;
+    font-size: 11px;
+  }
+  .yesno button.yes.on {
+    background: rgba(74, 222, 128, 0.12);
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .yesno button.no.on {
+    border-color: var(--mid); color: var(--ink);
+  }
+
+  /* --- Number input (compact) --- */
+  .num-input {
+    position: relative;
+    width: 90px;
+  }
+  .num-input input {
+    padding: 4px 30px 4px 8px;
+    font-size: 12px;
+    height: 28px;
+    border-color: var(--border-light);
+  }
+  .num-input .unit {
+    position: absolute;
+    right: 8px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--dim);
+    pointer-events: none;
+  }
+
+  /* --- Textarea --- */
+  .notes-area {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    color: var(--ink);
+    padding: 8px 11px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    min-height: 64px;
+  }
+  .notes-area:focus { outline: none; border-color: var(--accent); }
+
+  /* --- Foto preview area --- */
+  .photo-strip {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 4px 0;
+  }
+  .photo-strip .ph {
+    width: 60px; height: 60px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: 3px;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  .photo-strip .add {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--dim);
+    cursor: pointer;
+  }
+  .photo-strip .add:hover { color: var(--accent-bright); border-color: var(--accent); }
+
+  /* --- Garmin sleep banner --- */
+  .garmin-banner {
+    background: linear-gradient(90deg, var(--accent-bg), transparent);
+    border: 1px solid rgba(74, 144, 226, 0.2);
+    border-radius: 4px;
+    padding: 8px 11px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--mid);
+  }
+  .garmin-banner strong { color: var(--ink); font-weight: 500; }
+  .garmin-banner .score {
+    margin-left: auto;
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--success);
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  /* --- AI pill --- */
+  .ai-pill {
+    font-size: 8px;
+    color: var(--accent-bright);
+    background: var(--accent-bg);
+    padding: 1px 5px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-left: auto;
+  }
+
+  /* --- Mobile editor close --- */
+  .editor-close { display: none; background: none; border: none; color: var(--dim); padding: 4px; }
+  @media (max-width: 899px) {
+    .editor-close { display: inline-flex; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="page-head">
+    <div class="page-title-block">
+      <h1 class="page-title">Helbred</h1>
+      <div class="month-nav">
+        <button id="prev-month"></button>
+        <span class="label" id="month-label">Juni 2026</span>
+        <button id="next-month"></button>
+      </div>
+    </div>
+    <button class="btn-secondary" id="import-btn"></button>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat"><span class="stat-label">Logget</span><span class="stat-value"><strong>14</strong>/30</span></div>
+    <div class="stat"><span class="stat-label">Humør Ø</span><span class="stat-value"><strong>4.2</strong></span></div>
+    <div class="stat"><span class="stat-label">Energi Ø</span><span class="stat-value"><strong>3.8</strong></span></div>
+    <div class="stat"><span class="stat-label">Søvn Ø</span><span class="stat-value"><strong>7,1</strong> t</span></div>
+    <div class="stat"><span class="stat-label">Træning</span><span class="stat-value"><strong>8</strong> dage</span></div>
+    <div class="stat"><span class="stat-label">Vægt</span><span class="stat-value"><strong>78,4</strong> kg <span style="color:var(--success); font-size:10px;">↓ 0,4</span></span></div>
+  </div>
+
+  <div class="grid">
+    <!-- CALENDAR -->
+    <div class="calendar">
+      <div class="weekdays">
+        <span>Man</span><span>Tir</span><span>Ons</span>
+        <span>Tor</span><span>Fre</span><span>Lør</span><span>Søn</span>
+      </div>
+      <div class="days" id="days"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--success);"></span> Godt humør</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--warning);"></span> Neutralt</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--danger);"></span> Lavt</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--success); opacity:0.4;"></span> Garmin søvn-score</span>
+      </div>
+    </div>
+
+    <!-- EDITOR -->
+    <aside class="editor" id="editor">
+      <div class="editor-head">
+        <div>
+          <div class="day-of-week" id="ed-weekday">tirsdag</div>
+          <div class="date" id="ed-date">16. juni 2026</div>
+        </div>
+        <span class="saved" id="ed-saved">Gemt 09:42</span>
+      </div>
+
+      <div class="garmin-banner" id="garmin-banner">
+        <span id="garmin-icon"></span>
+        <span><strong>Garmin søvn</strong> · 7t 12m · god kvalitet</span>
+        <span class="score">82</span>
+      </div>
+
+      <!-- Søvn -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-sleep"></span> Søvn
+        </div>
+        <div class="field">
+          <span class="field-label">Varighed <span class="garmin-badge">Garmin</span></span>
+          <span style="color: var(--mid); font-size: 13px;">7t 12m</span>
+        </div>
+        <div class="field">
+          <span class="field-label">Kvalitet <span class="garmin-badge">Garmin</span></span>
+          <span style="color: var(--mid); font-size: 13px;">God</span>
+        </div>
+      </div>
+
+      <!-- Stemning -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-mood"></span> Stemning
+        </div>
+        <div class="field">
+          <span class="field-label">Humør</span>
+          <div class="scale" data-scale="mood">
+            <button>1</button><button>2</button><button>3</button>
+            <button class="on">4</button><button>5</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Energi</span>
+          <div class="scale" data-scale="energy">
+            <button>1</button><button>2</button>
+            <button class="on">3</button><button>4</button><button>5</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Krop -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-body"></span> Krop
+        </div>
+        <div class="field">
+          <span class="field-label">Vægt</span>
+          <div class="num-input">
+            <input type="text" inputmode="decimal" value="78,4" />
+            <span class="unit">kg</span>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Livvidde</span>
+          <div class="num-input">
+            <input type="text" inputmode="decimal" value="89,5" />
+            <span class="unit">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ernæring -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-food"></span> Ernæring
+          <span style="color: var(--accent-bright); font-size:10px; margin-left:auto;">1842 kcal</span>
+        </div>
+        <div class="field">
+          <span class="field-label">Kulhydrat</span>
+          <div class="num-input"><input type="text" inputmode="decimal" value="180" /><span class="unit">g</span></div>
+        </div>
+        <div class="field">
+          <span class="field-label">Protein</span>
+          <div class="num-input"><input type="text" inputmode="decimal" value="120" /><span class="unit">g</span></div>
+        </div>
+        <div class="field">
+          <span class="field-label">Fedt</span>
+          <div class="num-input"><input type="text" inputmode="decimal" value="68" /><span class="unit">g</span></div>
+        </div>
+      </div>
+
+      <!-- Aktivitet -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-activity"></span> Aktivitet
+        </div>
+        <div class="field">
+          <span class="field-label">Træning</span>
+          <div class="yesno">
+            <button class="yes on">Ja</button>
+            <button class="no">Nej</button>
+          </div>
+        </div>
+        <div class="field" style="margin-left: 12px;">
+          <span class="field-label" style="font-size:12px; color:var(--mid);">— Intensitet</span>
+          <div class="scale">
+            <button>Let</button><button class="on">Mellem</button><button>Hård</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Genstande (alkohol)</span>
+          <div class="num-input"><input type="text" inputmode="numeric" value="0" /><span class="unit">×</span></div>
+        </div>
+      </div>
+
+      <!-- Mine parametre -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-custom"></span> Mine parametre
+          <span class="ai-pill">AI</span>
+        </div>
+        <div class="field">
+          <span class="field-label">Hovedpine?</span>
+          <div class="yesno">
+            <button class="yes">Ja</button>
+            <button class="no on">Nej</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Iskias-smerte</span>
+          <div class="scale">
+            <button class="on">1</button><button>2</button><button>3</button>
+            <button>4</button><button>5</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Skæleksem</span>
+          <div class="scale">
+            <button>1</button><button class="on">2</button><button>3</button>
+            <button>4</button><button>5</button>
+          </div>
+        </div>
+        <button style="background:transparent; border:1px dashed var(--border-light); color:var(--light); padding:6px; width:100%; border-radius:3px; font-size:11px; margin-top:6px;">
+          + Tilføj parameter
+        </button>
+      </div>
+
+      <!-- Noter -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-notes"></span> Helbredsnoter
+        </div>
+        <textarea class="notes-area" placeholder="Symptomer, medicin, observationer...">Lidt forkølet stadig. Tog en magnesium-tablet.</textarea>
+      </div>
+
+      <!-- Fotos -->
+      <div class="section">
+        <div class="section-head">
+          <span id="ic-photo"></span> Fotos
+          <span style="color: var(--light); font-size: 10px; margin-left: auto;">2 i dag</span>
+        </div>
+        <div class="photo-strip">
+          <div class="ph" style="background-image: linear-gradient(135deg, #5fa3f0, #a78bfa);"></div>
+          <div class="ph" style="background-image: linear-gradient(135deg, #fbbf24, #f87171);"></div>
+          <div class="ph add" id="add-photo"></div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</main>
+
+<script>
+  // Inline Lucide icon paths (subset)
+  const ICONS = {
+    'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+    'upload': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    'smile': '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+    'scale': '<path d="M3 21h18"/><path d="m12 3-4 6h8z"/><path d="M12 9v12"/><path d="M8 9a4 4 0 0 0 8 0"/>',
+    'apple': '<path d="M19 11.5c0 5-2.5 8.5-7 8.5s-7-3.5-7-8.5C5 8.46 7.46 6 10.5 6c1 0 1.5.5 1.5.5s.5-.5 1.5-.5C16.54 6 19 8.46 19 11.5z"/><path d="M12 6.5c0-3 2.5-3.5 2.5-3.5"/>',
+    'dumbbell': '<path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 21.5-1.4-1.4"/><path d="M3.9 3.9 2.5 2.5"/><path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"/>',
+    'sparkles': '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+    'pencil': '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    'camera': '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    'plus': '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    'activity': '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.68 3.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4.45 13H2"/>',
+    'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
+  };
+  function icon(name, cls = 'icon-md') {
+    return `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ''}</svg>`;
+  }
+
+  // Static icon injections
+  document.getElementById('prev-month').innerHTML = icon('chevron-left', 'icon-sm');
+  document.getElementById('next-month').innerHTML = icon('chevron-right', 'icon-sm');
+  document.getElementById('import-btn').innerHTML = `${icon('upload', 'icon-sm')}<span>Garmin søvn</span>`;
+  document.getElementById('garmin-icon').innerHTML = icon('moon', 'icon-sm');
+  document.getElementById('ic-sleep').innerHTML = icon('moon', 'icon-sm');
+  document.getElementById('ic-mood').innerHTML = icon('smile', 'icon-sm');
+  document.getElementById('ic-body').innerHTML = icon('scale', 'icon-sm');
+  document.getElementById('ic-food').innerHTML = icon('apple', 'icon-sm');
+  document.getElementById('ic-activity').innerHTML = icon('activity', 'icon-sm');
+  document.getElementById('ic-custom').innerHTML = icon('sparkles', 'icon-sm');
+  document.getElementById('ic-notes').innerHTML = icon('pencil', 'icon-sm');
+  document.getElementById('ic-photo').innerHTML = icon('camera', 'icon-sm');
+  document.getElementById('add-photo').innerHTML = icon('plus', 'icon-md');
+
+  // Calendar generation — June 2026 mock
+  const daysEl = document.getElementById('days');
+  const MONTHS = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+  const WEEKDAYS = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+
+  let currentYear = 2026;
+  let currentMonth = 5; // June
+  let selectedDay = 16;
+  const TODAY = 16;
+
+  // Mock data per day
+  function mockMood(d) {
+    const seed = (d * 31 + currentMonth * 7) % 100;
+    if (seed < 20) return 'low';
+    if (seed < 50) return 'ok';
+    if (seed < 90) return 'good';
+    return null;
+  }
+  function mockSleepScore(d) {
+    const seed = (d * 17 + 13) % 100;
+    if (seed < 25) return null;
+    if (seed < 50) return { v: 60 + (seed % 15), cls: 'score-mid' };
+    if (seed < 90) return { v: 75 + (seed % 20), cls: '' };
+    return { v: 50 + (seed % 10), cls: 'score-low' };
+  }
+
+  function renderCalendar() {
+    document.getElementById('month-label').textContent = `${MONTHS[currentMonth].charAt(0).toUpperCase() + MONTHS[currentMonth].slice(1)} ${currentYear}`;
+    daysEl.innerHTML = '';
+    const first = new Date(currentYear, currentMonth, 1);
+    const startWeekday = (first.getDay() + 6) % 7; // Mon=0
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const prevDays = new Date(currentYear, currentMonth, 0).getDate();
+
+    // Leading outside days
+    for (let i = startWeekday - 1; i >= 0; i--) {
+      const cell = document.createElement('div');
+      cell.className = 'day outside';
+      cell.innerHTML = `<div class="num">${prevDays - i}</div>`;
+      daysEl.appendChild(cell);
+    }
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'day';
+      if (d === TODAY && currentMonth === 5) cell.classList.add('today');
+      if (d === selectedDay && currentMonth === 5) cell.classList.add('selected');
+      const mood = mockMood(d);
+      const score = mockSleepScore(d);
+      let html = `<div class="num">${d}</div>`;
+      if (score) html += `<span class="score ${score.cls}">${score.v}</span>`;
+      html += `<div class="mood-bar ${mood ?? ''}"></div>`;
+      cell.innerHTML = html;
+      cell.addEventListener('click', () => {
+        selectedDay = d;
+        renderCalendar();
+        updateEditorDate();
+      });
+      daysEl.appendChild(cell);
+    }
+    // Trailing outside days
+    const totalCells = startWeekday + daysInMonth;
+    const trailing = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= trailing; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'day outside';
+      cell.innerHTML = `<div class="num">${i}</div>`;
+      daysEl.appendChild(cell);
+    }
+  }
+
+  function updateEditorDate() {
+    const d = new Date(currentYear, currentMonth, selectedDay);
+    document.getElementById('ed-weekday').textContent = WEEKDAYS[d.getDay()];
+    document.getElementById('ed-date').textContent = `${selectedDay}. ${MONTHS[currentMonth]} ${currentYear}`;
+  }
+
+  document.getElementById('prev-month').addEventListener('click', () => {
+    currentMonth--;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    renderCalendar();
+  });
+  document.getElementById('next-month').addEventListener('click', () => {
+    currentMonth++;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    renderCalendar();
+  });
+
+  // Scale button toggle
+  document.querySelectorAll('.scale').forEach((g) => {
+    g.querySelectorAll('button').forEach((b) => {
+      b.addEventListener('click', () => {
+        g.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+        b.classList.add('on');
+      });
+    });
+  });
+  document.querySelectorAll('.yesno').forEach((g) => {
+    g.querySelectorAll('button').forEach((b) => {
+      b.addEventListener('click', () => {
+        g.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+        b.classList.add('on');
+      });
+    });
+  });
+
+  renderCalendar();
+  updateEditorDate();
+</script>
+
+</body>
+</html>

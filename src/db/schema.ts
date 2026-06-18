@@ -171,6 +171,29 @@ export const jobApplications = sqliteTable("job_applications", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+export const jobSearchPeriods = sqliteTable(
+  "job_search_periods",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name"),
+    startedAt: text("started_at").notNull(),
+    endedAt: text("ended_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [
+    index("job_search_periods_user").on(t.userId, t.startedAt),
+    index("job_search_periods_active").on(t.userId, t.endedAt),
+  ],
+);
+
+export type JobSearchPeriod = typeof jobSearchPeriods.$inferSelect;
+export type NewJobSearchPeriod = typeof jobSearchPeriods.$inferInsert;
+
 export const applicationEvents = sqliteTable(
   "application_events",
   {
