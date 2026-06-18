@@ -49,6 +49,8 @@ import {
   X,
 } from "lucide-react";
 import { ElasticTimerBar } from "@/components/elastic-timer-bar";
+import { WeekStrip } from "./week-strip";
+import { DayIntention } from "./day-intention";
 import {
   Section as FieldSection,
   Field as FieldRow,
@@ -308,22 +310,15 @@ export function TodayPage(props: {
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
       <PageHeader date={props.date} />
-      <WeekStatsCard
-        weekStart={props.weekStart}
-        weekGoal={weekGoal}
-        onWeekGoalChange={setWeekGoalState}
-        appsToday={apps.length}
+      <WeekStrip
         appsThisWeek={props.weekAppsCount}
-        todayHoursX10={todayHoursX10}
         weekHoursX10={props.weekHoursX10}
+        applicationsTarget={weekGoal.applicationsTarget}
+        focusHoursTargetX10={weekGoal.focusHoursTargetX10}
       />
-      <DayGoalsCard
+      <DayIntention
         date={props.date}
-        value={dayGoals}
-        onChange={setDayGoalsState}
-        appsToday={apps.length}
-        todayHoursX10={todayHoursX10}
-        yesterdayNextStep={props.yesterdayNextStep}
+        initialNote={dayGoals.goalNote ?? ""}
       />
 
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
