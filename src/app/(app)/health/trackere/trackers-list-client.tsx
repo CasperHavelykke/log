@@ -57,9 +57,23 @@ export function TrackersListClient({
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <h1 className="font-serif text-[32px] font-medium leading-none text-ink">
-          Trackere
-        </h1>
+        <div className="flex flex-wrap items-baseline gap-4">
+          <h1 className="font-serif text-[32px] font-medium leading-none text-ink">
+            Trackere
+          </h1>
+          <Link
+            href="/health/photos"
+            className="text-[12px] text-accent-bright hover:underline"
+          >
+            Fotos →
+          </Link>
+          <Link
+            href="/health"
+            className="text-[12px] text-accent-bright hover:underline"
+          >
+            Helbred →
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           <label className="flex cursor-pointer items-center gap-1.5 text-[12px] text-mid">
             <input
