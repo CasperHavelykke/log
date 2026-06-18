@@ -99,11 +99,16 @@ export function TrackerPhotoSection({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <p className="text-[12px] italic leading-snug text-light">
+        Følg et område med billeder over tid — fx en plet eller eksem du
+        vil holde øje med. Tilføj et nyt billede når du tjekker det.
+      </p>
+
       {trackers.length > 0 && (
         <div>
-          <div className="mb-1 text-[10px] uppercase tracking-[0.5px] text-light">
-            Vælg tracker
+          <div className="mb-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
+            Fortsæt opfølgning
           </div>
           <div className="flex flex-wrap gap-1.5">
             {trackers.map((t) => (
@@ -111,8 +116,9 @@ export function TrackerPhotoSection({
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedId(t.id)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border-light bg-bg px-2.5 py-1 text-[11px] text-ink transition hover:border-accent hover:text-accent-bright"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-accent-dim bg-accent-bg px-3 py-1 text-[12px] font-medium text-accent-bright transition hover:border-accent"
               >
+                <Camera className="size-3" />
                 {t.name}
               </button>
             ))}
@@ -121,8 +127,8 @@ export function TrackerPhotoSection({
       )}
 
       <div>
-        <div className="mb-1 text-[10px] uppercase tracking-[0.5px] text-light">
-          {trackers.length > 0 ? "Opret ny" : "Vælg type"}
+        <div className="mb-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
+          {trackers.length > 0 ? "Start ny opfølgning" : "Start en opfølgning"}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {PRESETS.map((p) => {
@@ -137,9 +143,13 @@ export function TrackerPhotoSection({
                 className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition ${
                   already
                     ? "cursor-not-allowed border-border-light bg-bg text-dim"
-                    : "border-border bg-card text-mid hover:border-accent hover:text-accent-bright"
+                    : "border-border-light bg-bg text-mid hover:border-accent hover:text-accent-bright"
                 } ${creating ? "cursor-not-allowed opacity-60" : ""}`}
-                title={already ? "Du har allerede en tracker med dette navn" : undefined}
+                title={
+                  already
+                    ? "Du har allerede en opfølgning med dette navn"
+                    : `Opret en opfølgning af ${p.label.toLowerCase()}`
+                }
               >
                 {loading ? (
                   <Loader2 className="size-3 animate-spin" />
@@ -154,10 +164,10 @@ export function TrackerPhotoSection({
             type="button"
             onClick={() => setShowCustom(true)}
             disabled={creating !== null}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-mid transition hover:border-accent hover:text-accent-bright"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border-light bg-bg px-2.5 py-1 text-[11px] text-mid transition hover:border-accent hover:text-accent-bright"
           >
             <Plus className="size-3" />
-            Andet
+            Andet område
           </button>
         </div>
         {showCustom && (
