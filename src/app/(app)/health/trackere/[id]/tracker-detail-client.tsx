@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   ArrowLeft,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   ImagePlus,
   Trash2,
   X,
@@ -81,7 +83,7 @@ export function TrackerDetailClient({
 }) {
   const [photos, setPhotos] = useState(initialPhotos);
   const [showUpload, setShowUpload] = useState(false);
-  const [viewerPhoto, setViewerPhoto] = useState<Photo | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [, startDelete] = useTransition();
 
   const hasMetric = metricData.length > 0;
@@ -250,11 +252,11 @@ export function TrackerDetailClient({
           </p>
         ) : (
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {photos.map((p) => (
+            {photos.map((p, i) => (
               <PhotoCard
                 key={p.id}
                 photo={p}
-                onPick={() => setViewerPhoto(p)}
+                onPick={() => setViewerIndex(i)}
                 onDeleted={() =>
                   setPhotos((prev) => prev.filter((x) => x.id !== p.id))
                 }
@@ -269,14 +271,21 @@ export function TrackerDetailClient({
           trackerId={tracker.id}
           onClose={() => setShowUpload(false)}
           onUploaded={(p) => {
-            setPhotos((prev) => [...prev, p].sort((a, b) => a.takenAt.localeCompare(b.takenAt)));
+            setPhotos((prev) =>
+              [...prev, p].sort((a, b) => b.takenAt.localeCompare(a.takenAt)),
+            );
             setShowUpload(false);
           }}
         />
       )}
 
-      {viewerPhoto && (
-        <PhotoViewer photo={viewerPhoto} onClose={() => setViewerPhoto(null)} />
+      {viewerIndex !== null && photos[viewerIndex] && (
+        <PhotoViewer
+          photos={photos}
+          index={viewerIndex}
+          onChangeIndex={setViewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
       )}
     </div>
   );
@@ -332,12 +341,37 @@ function PhotoCard({
 }
 
 function PhotoViewer({
-  photo,
+  photos,
+  index,
+  onChangeIndex,
   onClose,
 }: {
-  photo: Photo;
+  photos: Photo[];
+  index: number;
+  onChangeIndex: (i: number) => void;
   onClose: () => void;
 }) {
+  const photo = photos[index];
+  const hasPrev = index > 0;
+  const hasNext = index < photos.length - 1;
+
+  function go(delta: number) {
+    const next = index + delta;
+    if (next < 0 || next >= photos.length) return;
+    onChangeIndex(next);
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, photos.length]);
+
   return (
     <div
       className="fixed inset-0 z-20 flex items-center justify-center bg-black/85 p-4"
@@ -350,16 +384,50 @@ function PhotoViewer({
       >
         <X className="size-5" />
       </button>
+
+      {hasPrev && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            go(-1);
+          }}
+          className="absolute left-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-light hover:text-ink sm:left-6"
+          title="Forrige (← pil)"
+        >
+          <ChevronLeft className="size-6" />
+        </button>
+      )}
+      {hasNext && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            go(1);
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-light hover:text-ink sm:right-6"
+          title="Næste (→ pil)"
+        >
+          <ChevronRight className="size-6" />
+        </button>
+      )}
+
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/api/files/photo/${photo.id}`}
         alt={photo.caption ?? ""}
-        className="max-h-[90vh] max-w-full object-contain"
+        className="max-h-[85vh] max-w-full object-contain"
         onClick={(e) => e.stopPropagation()}
       />
+
       <div className="absolute bottom-4 left-4 right-4 text-center text-[13px] text-mid">
-        {fmtDate(photo.takenAt)}
-        {photo.caption && <span> · {photo.caption}</span>}
+        <div>
+          {fmtDate(photo.takenAt)}
+          {photo.caption && <span> · {photo.caption}</span>}
+        </div>
+        <div className="mt-1 text-[11px] text-dim">
+          {index + 1} / {photos.length}
+        </div>
       </div>
     </div>
   );

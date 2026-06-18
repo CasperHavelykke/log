@@ -147,7 +147,7 @@ export async function listTrackerPhotos(trackerId: number) {
         eq(schema.photos.userId, user.id),
       ),
     )
-    .orderBy(asc(schema.photos.takenAt));
+    .orderBy(desc(schema.photos.takenAt));
 }
 
 const uploadSchema = z.object({
