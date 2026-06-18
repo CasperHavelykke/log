@@ -15,8 +15,9 @@ import {
   startJobSearchPeriod,
   endJobSearchPeriod,
 } from "../jobs/period-actions";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Clock } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
+import { setFasteEnabled } from "@/lib/user-prefs";
 
 type OAuthClientRow = {
   id: number;
@@ -46,12 +47,14 @@ export function SettingsPage({
   initialCustomParameters,
   initialActivePeriod,
   initialPastPeriods,
+  initialFasteEnabled,
 }: {
   username: string;
   initialClients: OAuthClientRow[];
   initialCustomParameters: CustomParamSummary[];
   initialActivePeriod: ActivePeriodRow | null;
   initialPastPeriods: PastPeriodRow[];
+  initialFasteEnabled: boolean;
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
@@ -76,6 +79,7 @@ export function SettingsPage({
       </header>
 
       <div className="space-y-4">
+        <FeaturesCard initialFasteEnabled={initialFasteEnabled} />
         <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
         <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
@@ -113,6 +117,53 @@ function Label({ children }: { children: React.ReactNode }) {
 function todayIso(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function FeaturesCard({ initialFasteEnabled }: { initialFasteEnabled: boolean }) {
+  const [fasteEnabled, setFastEnabledState] = useState(initialFasteEnabled);
+  const [, start] = useTransition();
+
+  function toggleFaste() {
+    const next = !fasteEnabled;
+    setFastEnabledState(next);
+    start(async () => {
+      await setFasteEnabled(next);
+    });
+  }
+
+  return (
+    <Card title="Funktioner">
+      <p className="mb-4 text-[13px] text-mid">
+        Slå funktioner til/fra. Du kan altid komme tilbage og ændre det.
+      </p>
+
+      <div className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-4 py-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent-bright">
+          <Clock className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-medium text-ink">Faste-tracking</div>
+          <div className="text-[12px] text-mid">
+            Faste-timer på /today + historik på /helbred
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={toggleFaste}
+          className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition ${
+            fasteEnabled ? "bg-accent" : "bg-bg"
+          } border ${fasteEnabled ? "border-accent" : "border-border-light"}`}
+          aria-pressed={fasteEnabled}
+        >
+          <span
+            className={`absolute top-0.5 inline-block size-5 rounded-full bg-white shadow transition-transform ${
+              fasteEnabled ? "translate-x-[22px]" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </div>
+    </Card>
+  );
 }
 
 function JobSearchCard({

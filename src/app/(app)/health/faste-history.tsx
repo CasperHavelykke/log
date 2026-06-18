@@ -1,5 +1,5 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import { Check, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 
@@ -52,10 +52,20 @@ export async function FasteHistory() {
   }
 
   const durations = fasts.map((f) => durationMinutes(f.startedAt, f.endedAt!));
-  const reachedTarget = durations.filter((d) => d >= 16 * 60).length;
-  const avgMins = Math.round(
-    durations.reduce((a, b) => a + b, 0) / durations.length,
-  );
+  // Stats tæller kun faster ≥16t — korte faster er stadig synlige i listen
+  // men inkluderes ikke i snit/længste, så tal ikke trækkes ned af glemte
+  // morgenmads-vinduer eller afbrudte forsøg.
+  const qualifiedDurations = durations.filter((d) => d >= 16 * 60);
+  const shortCount = durations.length - qualifiedDurations.length;
+  const qualifiedAvg =
+    qualifiedDurations.length > 0
+      ? Math.round(
+          qualifiedDurations.reduce((a, b) => a + b, 0) /
+            qualifiedDurations.length,
+        )
+      : null;
+  const qualifiedLongest =
+    qualifiedDurations.length > 0 ? Math.max(...qualifiedDurations) : null;
 
   return (
     <section className="rounded-md border border-border bg-card px-5 py-5">
@@ -69,15 +79,23 @@ export async function FasteHistory() {
       </div>
 
       <div className="mb-5 grid grid-cols-3 gap-3">
-        <Stat label="Faster" value={fasts.length} />
-        <Stat label="Nået mål" value={`${reachedTarget}/${fasts.length}`} />
-        <Stat label="Snit" value={fmtDuration(avgMins)} />
+        <Stat label="Faster" value={qualifiedDurations.length} />
+        <Stat
+          label="Snit"
+          value={qualifiedAvg !== null ? fmtDuration(qualifiedAvg) : "–"}
+        />
+        <Stat
+          label="Længste"
+          value={
+            qualifiedLongest !== null ? fmtDuration(qualifiedLongest) : "–"
+          }
+        />
       </div>
 
       <div className="space-y-2">
         {fasts.slice(0, 10).map((f) => {
           const mins = durationMinutes(f.startedAt, f.endedAt!);
-          const hit16 = mins >= 16 * 60;
+          const qualified = mins >= 16 * 60;
           return (
             <div
               key={f.id}
@@ -85,19 +103,17 @@ export async function FasteHistory() {
             >
               <span
                 className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
-                  hit16
+                  qualified
                     ? "bg-[rgba(74,222,128,0.12)] text-success"
                     : "bg-[rgba(245,185,66,0.12)] text-warning"
                 }`}
               >
-                {hit16 ? (
-                  <Check className="size-3.5" />
-                ) : (
-                  <Clock className="size-3.5" />
-                )}
+                <Clock className="size-3.5" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium text-ink">
+                <div
+                  className={`text-[13px] font-medium ${qualified ? "text-ink" : "text-warning"}`}
+                >
                   {fmtDuration(mins)}
                 </div>
                 <div className="text-[11px] text-mid">
@@ -105,23 +121,20 @@ export async function FasteHistory() {
                   {fmtTime(f.endedAt!)}
                 </div>
               </div>
-              <span
-                className={`shrink-0 rounded-[3px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.4px] ${
-                  hit16
-                    ? "bg-[rgba(74,222,128,0.12)] text-success"
-                    : "bg-[rgba(245,185,66,0.12)] text-warning"
-                }`}
-              >
-                {hit16
-                  ? mins > 16 * 60
-                    ? `+${Math.round((mins - 16 * 60) / 60)}t`
-                    : "mål"
-                  : "kort"}
-              </span>
             </div>
           );
         })}
       </div>
+
+      {shortCount > 0 && (
+        <p className="mt-4 flex items-start gap-1.5 text-[11px] italic text-mid">
+          <span className="mt-0.5 inline-block size-2 shrink-0 rounded-full bg-warning" />
+          <span>
+            {shortCount} {shortCount === 1 ? "faste varede" : "faster varede"}{" "}
+            under 16 timer og tæller ikke med i snit eller længste.
+          </span>
+        </p>
+      )}
 
       {fasts.length > 10 && (
         <div className="mt-4 text-center text-[12px] text-light">

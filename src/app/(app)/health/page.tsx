@@ -3,7 +3,6 @@ import { getAllDayEntries, getAllSleepEntries } from "@/lib/queries";
 import { listTrackers } from "./trackere/actions";
 import { listCustomParameters } from "@/lib/custom-parameters";
 import { HealthCalendar } from "./health-calendar";
-import { FasteToggle } from "./faste-toggle";
 import { FasteHistory } from "./faste-history";
 
 export const metadata = { title: "Helbred | Log" };
@@ -67,10 +66,11 @@ export default async function Health() {
         nextStep: e.nextStep ?? "",
       }))}
     />
-    <div className="mx-auto max-w-[1280px] space-y-5 px-4 pb-8">
-      <FasteToggle initialEnabled={fasteEnabled} />
-      {fasteEnabled && <FasteHistory />}
-    </div>
+    {fasteEnabled && (
+      <div className="mx-auto max-w-[1280px] px-4 pb-8">
+        <FasteHistory />
+      </div>
+    )}
     </>
   );
 }
