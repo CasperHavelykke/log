@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
-import { TrackerPhotoAdd } from "@/components/tracker-photo-add";
+import { TrackerPhotoSection } from "@/components/tracker-photo-section";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
 import {
   listCustomValuesForDate,
@@ -822,7 +822,7 @@ function DayEditorPanel({
       </Section>
 
       <Section icon={<Camera className="size-3.5" />} title="Fotos">
-        <TrackerPhotoAdd date={date} trackers={trackers} defaultExpanded={false} />
+        <TrackerPhotoSection date={date} trackers={trackers} />
       </Section>
     </aside>
   );

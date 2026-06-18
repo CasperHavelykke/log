@@ -24,9 +24,9 @@ import {
   type DocSummary,
 } from "@/components/application-documents";
 import {
-  TrackerPhotoAdd,
+  TrackerPhotoSection,
   type TrackerRef,
-} from "@/components/tracker-photo-add";
+} from "@/components/tracker-photo-section";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
 import type {
   CustomParamSummary,
@@ -1620,7 +1620,7 @@ function HealthBody({
       </FieldSection>
 
       <FieldSection icon={<Camera className="size-3.5" />} title="Fotos">
-        <TrackerPhotoAdd date={date} trackers={trackers} />
+        <TrackerPhotoSection date={date} trackers={trackers} />
       </FieldSection>
     </div>
   );
