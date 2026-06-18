@@ -1,4 +1,5 @@
 import { Nav } from "@/components/nav";
+import { MobileNav } from "@/components/mobile-nav";
 import { requireUser } from "@/lib/session";
 import { getActiveJobSearchPeriod } from "./jobs/period-actions";
 
@@ -8,9 +9,6 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   await requireUser();
-  // Nav viser /jobs kun når der er en aktiv periode. Historiske perioder
-  // tilgås via /settings → Jobsøgning. Defensiv catch for tilfælde hvor
-  // tabellen endnu ikke eksisterer.
   let showJobs = false;
   try {
     const active = await getActiveJobSearchPeriod();
@@ -21,9 +19,10 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Nav showJobs={showJobs} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-32 pt-4 sm:py-10 md:pb-10">
         {children}
       </main>
+      <MobileNav showJobs={showJobs} />
     </div>
   );
 }

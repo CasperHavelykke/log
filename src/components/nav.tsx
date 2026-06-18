@@ -28,7 +28,7 @@ export function Nav({ showJobs = true }: { showJobs?: boolean }) {
   const pathname = usePathname();
   const items = allItems.filter((i) => (i.key === "jobs" ? showJobs : true));
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-10 hidden border-b border-border bg-background/80 backdrop-blur md:block">
       <div className="mx-auto max-w-5xl px-3 py-2 sm:px-4 sm:py-3">
         <nav className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
           {items.map(({ href, label, icon: Icon }) => {

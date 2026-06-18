@@ -40,9 +40,9 @@ export function Field({
 }) {
   return (
     <div
-      className={`flex items-center justify-between gap-3 py-1 ${indent ? "ml-3" : ""}`}
+      className={`flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${indent ? "sm:ml-3" : ""}`}
     >
-      <span className="text-[13px] text-ink">
+      <span className="text-[14px] text-ink sm:text-[13px]">
         {label}
         {hint && (
           <span className="ml-1.5 rounded-[2px] bg-accent-bg px-1 py-0.5 text-[9px] uppercase tracking-[0.3px] text-accent-bright">
@@ -50,7 +50,7 @@ export function Field({
           </span>
         )}
       </span>
-      <div>{children}</div>
+      <div className="self-stretch sm:self-auto">{children}</div>
     </div>
   );
 }
@@ -63,7 +63,7 @@ export function Scale1to5({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="grid grid-cols-5 gap-1.5 sm:flex sm:gap-0.5">
       {[1, 2, 3, 4, 5].map((n) => {
         const active = value === n;
         return (
@@ -71,7 +71,7 @@ export function Scale1to5({
             key={n}
             type="button"
             onClick={() => onChange(active ? null : n)}
-            className={`min-h-[28px] min-w-[28px] cursor-pointer rounded-[3px] border text-[11px] transition ${
+            className={`min-h-[44px] cursor-pointer rounded-[6px] border text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:rounded-[3px] sm:text-[11px] sm:font-normal ${
               active
                 ? "border-accent bg-accent-bg text-accent-bright"
                 : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
@@ -93,7 +93,7 @@ export function YesNo({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="grid grid-cols-2 gap-1.5 sm:flex sm:gap-0.5">
       {[
         { label: "Ja", v: true, cls: "yes" as const },
         { label: "Nej", v: false, cls: "no" as const },
@@ -104,7 +104,7 @@ export function YesNo({
             key={label}
             type="button"
             onClick={() => onChange(v)}
-            className={`min-h-[28px] min-w-[44px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
+            className={`min-h-[44px] cursor-pointer rounded-[6px] border px-3 text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[44px] sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
               active
                 ? cls === "yes"
                   ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
@@ -128,7 +128,7 @@ export function IntensityPicker({
   onChange: (v: "light" | "medium" | "hard" | null) => void;
 }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-0.5">
       {(
         [
           { v: "light", label: "Let" },
@@ -142,7 +142,7 @@ export function IntensityPicker({
             key={v}
             type="button"
             onClick={() => onChange(active ? null : v)}
-            className={`min-h-[28px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
+            className={`min-h-[44px] cursor-pointer rounded-[6px] border px-3 text-[14px] font-medium transition sm:min-h-[28px] sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
               active
                 ? "border-accent bg-accent-bg text-accent-bright"
                 : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
@@ -168,18 +168,18 @@ export function CompactNumberInput({
   placeholder: string;
 }) {
   return (
-    <div className="relative w-[110px]">
+    <div className="relative w-full sm:w-[110px]">
       <input
         type="text"
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="!text-[12px]"
-        style={{ paddingRight: "32px", paddingTop: "5px", paddingBottom: "5px" }}
+        className="!text-[16px] sm:!text-[12px]"
+        style={{ paddingRight: "40px" }}
       />
       <span
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-dim"
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-dim sm:text-[10px]"
       >
         {unit}
       </span>
