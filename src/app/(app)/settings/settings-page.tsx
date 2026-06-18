@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import { importData } from "./actions";
@@ -265,12 +265,33 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
     });
   }
 
+  const [origin, setOrigin] = useState<string | null>(null);
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+  const mcpUrl = origin ? `${origin}/api/mcp` : null;
+
   return (
-    <Card title="OAuth-clients (Claude-integration)">
+    <Card title="Custom Connector">
       <p className="mb-4 text-[13px] text-mid">
-        Hver client har et Client ID og Client Secret. Indtast dem i Claude's
-        Custom Connector-dialog — så kan Claude læse og redigere din log via MCP.
+        Forbind appen til Claude, Mistral eller anden AI-assistent der
+        understøtter MCP. Brug URL'en nedenfor som server-adresse, og opret
+        derefter en client til at autentificere forbindelsen.
       </p>
+
+      {mcpUrl && (
+        <div className="mb-4 rounded-[3px] border border-border-light bg-bg p-3">
+          <div className="mb-1.5 text-[11px] uppercase tracking-[0.5px] text-light">
+            Server URL
+          </div>
+          <CredentialLine label="URL" value={mcpUrl} />
+          <p className="mt-2 text-[11px] italic text-dim">
+            Indtast denne URL i din AI-assistent under &quot;Custom Connector&quot; eller
+            &quot;MCP server URL&quot;. Du bliver derefter sendt tilbage til denne app
+            for at logge ind og godkende adgangen.
+          </p>
+        </div>
+      )}
 
       {created && (
         <div className="mb-4 rounded-[3px] border border-success bg-[rgba(74,222,128,0.08)] p-4">
