@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   createJobApplication,
   createProject,
@@ -256,43 +256,54 @@ export function TodayPage(props: {
   const [lastSaved, setLastSaved] = useState<string | null>(props.lastSavedAt);
   const [savingDay, startSaveDay] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isFirstSaveRender = useRef(true);
 
   const todayHoursX10 = useMemo(
     () => entries.reduce((s, e) => s + e.hoursX10, 0),
     [entries],
   );
 
-  function handleSaveDay() {
-    setError(null);
-    const dayInput = {
-      date: props.date,
-      mood: day.mood,
-      energy: day.energy,
-      sleepHoursX10: parseHours(sleepInput),
-      sleepQuality: day.sleepQuality,
-      alcoholUnits: day.alcoholUnits,
-      didExercise: day.didExercise,
-      exerciseIntensity: day.didExercise ? day.exerciseIntensity : null,
-      didFast: day.didFast,
-      fastHoursX10: day.didFast ? day.fastHoursX10 : null,
-      fastBreakTime: day.didFast ? day.fastBreakTime : null,
-      weightX10: day.weightX10,
-      waistX10: day.waistX10,
-      carbsG: day.carbsG,
-      proteinG: day.proteinG,
-      fatG: day.fatG,
-      workNotes: day.workNotes || null,
-      healthNotes: day.healthNotes || null,
-      dayNotes: day.dayNotes || null,
-      wentWell: day.wentWell || null,
-      nextStep: day.nextStep || null,
-    };
-    startSaveDay(async () => {
-      const res = await saveDayEntry(dayInput);
-      if (!res.ok) setError(res.error);
-      else setLastSaved(res.savedAt);
-    });
-  }
+  // Auto-save: 800ms debounce på alle day-felter. Samme mønster som
+  // /helbred's DayEditorPanel — Gem-knappen er væk.
+  useEffect(() => {
+    if (isFirstSaveRender.current) {
+      isFirstSaveRender.current = false;
+      return;
+    }
+    const handle = setTimeout(() => {
+      setError(null);
+      const dayInput = {
+        date: props.date,
+        mood: day.mood,
+        energy: day.energy,
+        sleepHoursX10: parseHours(sleepInput),
+        sleepQuality: day.sleepQuality,
+        alcoholUnits: day.alcoholUnits,
+        didExercise: day.didExercise,
+        exerciseIntensity: day.didExercise ? day.exerciseIntensity : null,
+        didFast: day.didFast,
+        fastHoursX10: day.didFast ? day.fastHoursX10 : null,
+        fastBreakTime: day.didFast ? day.fastBreakTime : null,
+        weightX10: day.weightX10,
+        waistX10: day.waistX10,
+        carbsG: day.carbsG,
+        proteinG: day.proteinG,
+        fatG: day.fatG,
+        workNotes: day.workNotes || null,
+        healthNotes: day.healthNotes || null,
+        dayNotes: day.dayNotes || null,
+        wentWell: day.wentWell || null,
+        nextStep: day.nextStep || null,
+      };
+      startSaveDay(async () => {
+        const res = await saveDayEntry(dayInput);
+        if (!res.ok) setError(res.error);
+        else setLastSaved(res.savedAt);
+      });
+    }, 800);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, sleepInput, props.date]);
 
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
@@ -408,30 +419,18 @@ export function TodayPage(props: {
         </Card>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
-        <div className="text-sm text-light">
-          {error ? (
-            <span className="text-danger">{error}</span>
-          ) : lastSaved ? (
-            <span>
-              Sidst gemt kl.{" "}
-              {new Date(lastSaved).toLocaleTimeString("da-DK", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          ) : (
-            <span>Ikke gemt endnu</span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleSaveDay}
-          disabled={savingDay}
-          className="cursor-pointer rounded-[3px] border border-accent bg-accent px-7 py-2.5 text-sm font-medium text-white transition hover:bg-accent-bright disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {savingDay ? "Gemmer..." : "Gem dagen"}
-        </button>
+      <div className="mt-6 flex items-center justify-center gap-2 border-t border-border pt-4 text-[12px] italic">
+        {error ? (
+          <span className="text-danger">{error}</span>
+        ) : savingDay ? (
+          <span className="text-light">Gemmer…</span>
+        ) : lastSaved ? (
+          <span className="text-success">
+            ✓ Gemt {new Date(lastSaved).toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        ) : (
+          <span className="text-light">Auto-gemmes mens du skriver</span>
+        )}
       </div>
     </div>
   );
