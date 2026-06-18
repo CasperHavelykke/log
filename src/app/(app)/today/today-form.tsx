@@ -343,6 +343,18 @@ export function TodayPage(props: {
         </Card>
       </div>
 
+      {props.fasteEnabled && (
+        <div className="mb-4">
+          <Card title="Faste" meta="live">
+            <FastCard
+              initialActive={props.activeFast}
+              initialRecent={props.recentFasts}
+              onError={setError}
+            />
+          </Card>
+        </div>
+      )}
+
       <div className="mb-4">
         <Card
           title={
@@ -365,18 +377,6 @@ export function TodayPage(props: {
           />
         </Card>
       </div>
-
-      {props.fasteEnabled && (
-        <div className="mb-4">
-          <Card title="Faste" meta="live">
-            <FastCard
-              initialActive={props.activeFast}
-              initialRecent={props.recentFasts}
-              onError={setError}
-            />
-          </Card>
-        </div>
-      )}
 
       <div className="mb-4">
         <Card title="Kosttilskud" meta="i dag">
