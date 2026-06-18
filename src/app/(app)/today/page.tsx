@@ -175,6 +175,7 @@ export default async function Today() {
         endedAt: f.endedAt,
         note: f.note,
       }))}
+      fasteEnabled={user.fasteEnabled ?? false}
       initialSupplementIntakes={todaysIntakes.map((i) => ({
         id: i.id,
         name: i.name,

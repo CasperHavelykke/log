@@ -232,6 +232,7 @@ export function TodayPage(props: {
   initialSupplementIntakes: SupplementIntake[];
   activeFast: ActiveFast;
   recentFasts: RecentFast[];
+  fasteEnabled: boolean;
   lastSavedAt: string | null;
 }) {
   const [day, setDay] = useState<DayState>(props.initialDay);
@@ -364,15 +365,17 @@ export function TodayPage(props: {
         </Card>
       </div>
 
-      <div className="mb-4">
-        <Card title="Faste" meta="live">
-          <FastCard
-            initialActive={props.activeFast}
-            initialRecent={props.recentFasts}
-            onError={setError}
-          />
-        </Card>
-      </div>
+      {props.fasteEnabled && (
+        <div className="mb-4">
+          <Card title="Faste" meta="live">
+            <FastCard
+              initialActive={props.activeFast}
+              initialRecent={props.recentFasts}
+              onError={setError}
+            />
+          </Card>
+        </div>
+      )}
 
       <div className="mb-4">
         <Card title="Kosttilskud" meta="i dag">
@@ -1097,39 +1100,6 @@ function FocusBody({
         </div>
       </div>
 
-      <div className="space-y-3 border-t border-border-light pt-4">
-        <div>
-          <Label>
-            Arbejdsnoter <span className="ml-1 italic text-dim">— valgfri</span>
-          </Label>
-          <textarea
-            value={day.workNotes}
-            onChange={(e) => setDay({ ...day, workNotes: e.target.value })}
-            rows={3}
-            placeholder="Hvad arbejdede du med? Detaljer, beslutninger, frustrationer."
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <Label>Gik godt</Label>
-            <textarea
-              value={day.wentWell}
-              onChange={(e) => setDay({ ...day, wentWell: e.target.value })}
-              rows={2}
-              placeholder="Selv små ting tæller."
-            />
-          </div>
-          <div>
-            <Label>Næste skridt</Label>
-            <textarea
-              value={day.nextStep}
-              onChange={(e) => setDay({ ...day, nextStep: e.target.value })}
-              rows={2}
-              placeholder="Hvad starter du med i morgen?"
-            />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1607,16 +1577,6 @@ function HealthBody({
           />
         </FieldSection>
       )}
-
-      <FieldSection icon={<Pencil className="size-3.5" />} title="Helbredsnoter">
-        <textarea
-          value={day.healthNotes}
-          onChange={(e) => setDay({ ...day, healthNotes: e.target.value })}
-          rows={3}
-          placeholder="Symptomer, medicin, observationer..."
-          className="!text-[13px]"
-        />
-      </FieldSection>
 
       <FieldSection icon={<Camera className="size-3.5" />} title="Fotos">
         <TrackerPhotoSection date={date} trackers={trackers} />

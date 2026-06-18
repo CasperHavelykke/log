@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Log v4 — /today fuld mockup</title>
+<style>
+  /* ============ DESIGN TOKENS ============ */
+  /* Dark mode (default) */
+  .theme-dark {
+    --bg: #0a0f1a;
+    --bg-elevated: #131c2c;
+    --bg-subtle: #1a2436;
+    --ink: #f0f3f8;
+    --mid: #aab4c5;
+    --light: #788396;
+    --dim: #4a5468;
+    --hair: rgba(255,255,255,0.06);
+    --hair-strong: rgba(255,255,255,0.10);
+    --accent: #6ea9f2;
+    --accent-soft: rgba(110, 169, 242, 0.14);
+    --accent-soft-strong: rgba(110, 169, 242, 0.22);
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.12);
+    --warning: #f5b942;
+    --warning-soft: rgba(245, 185, 66, 0.12);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.12);
+    --shadow-card: 0 1px 0 rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+  }
+  /* Light mode */
+  .theme-light {
+    --bg: #f4f6fa;
+    --bg-elevated: #ffffff;
+    --bg-subtle: #eef1f7;
+    --ink: #1a2436;
+    --mid: #4a5468;
+    --light: #788396;
+    --dim: #aab4c5;
+    --hair: rgba(0,0,0,0.06);
+    --hair-strong: rgba(0,0,0,0.10);
+    --accent: #2563eb;
+    --accent-soft: rgba(37, 99, 235, 0.10);
+    --accent-soft-strong: rgba(37, 99, 235, 0.18);
+    --success: #15803d;
+    --success-soft: rgba(21, 128, 61, 0.10);
+    --warning: #b45309;
+    --warning-soft: rgba(180, 83, 9, 0.10);
+    --danger: #b91c1c;
+    --danger-soft: rgba(185, 28, 28, 0.10);
+    --shadow-card: 0 1px 0 rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  /* ============ RESET ============ */
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.5;
+  }
+  body {
+    background: #050811;
+    color: #e8ecf3;
+    min-height: 100vh;
+    padding: 60px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 60px;
+  }
+
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; border: none; background: none; }
+  input, textarea {
+    font-family: inherit;
+    width: 100%;
+    font-size: 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--hair-strong);
+    color: var(--ink);
+    padding: 13px 14px;
+    border-radius: 12px;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+  /* ============ PHONE FRAME ============ */
+  .phone-wrap {
+    position: relative;
+    padding-top: 50px;
+    align-self: flex-start;
+  }
+  .phone-label {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #aab4c5;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 17px;
+    font-style: italic;
+    white-space: nowrap;
+  }
+  .phone {
+    width: 390px;
+    background: var(--bg);
+    border-radius: 44px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5),
+                0 0 0 2px #2a3654,
+                0 0 0 14px #050811,
+                0 0 0 16px #1f2a3f;
+    overflow: hidden;
+    position: relative;
+    color: var(--ink);
+  }
+
+  /* OS status bar */
+  .status-bar {
+    background: var(--bg);
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .status-bar .right { display: flex; gap: 4px; align-items: center; }
+  .status-bar svg { width: 16px; height: 11px; }
+
+  /* Content */
+  .content {
+    padding: 12px 20px 120px;
+  }
+
+  /* ============ PAGE HEADER ============ */
+  .page-head {
+    margin-bottom: 28px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .page-head .title-block { display: flex; flex-direction: column; }
+  .page-head .greeting {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 32px;
+    line-height: 1.05;
+    color: var(--ink);
+    margin: 0;
+  }
+  .page-head .day {
+    font-size: 13px;
+    color: var(--light);
+    margin-top: 4px;
+  }
+  .page-head .save {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--success);
+    background: var(--success-soft);
+    padding: 5px 9px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .page-head .save svg { width: 12px; height: 12px; }
+
+  /* ============ WEEK STATS — horizontal scroll ============ */
+  .weekstats {
+    display: flex;
+    gap: 10px;
+    margin: 0 -20px 28px;
+    padding: 0 20px 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .weekstats::-webkit-scrollbar { display: none; }
+  .stat {
+    flex-shrink: 0;
+    min-width: 110px;
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-card);
+  }
+  .stat .num {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 28px;
+    color: var(--ink);
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .stat .num small { font-size: 12px; color: var(--light); font-family: inherit; }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--mid);
+    margin-top: 4px;
+  }
+  .stat.success .num { color: var(--success); }
+  .stat.accent .num { color: var(--accent); }
+
+  /* ============ SECTION (used everywhere) ============ */
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .section-title .meta {
+    margin-left: auto;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    color: var(--light);
+    font-style: italic;
+  }
+
+  /* Subtle group within section */
+  .subsection {
+    margin-bottom: 22px;
+  }
+  .subsection-head {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--mid);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .subsection-head .icon svg { width: 14px; height: 14px; color: var(--light); }
+  .subsection-head .meta { margin-left: auto; color: var(--accent); font-weight: 500; }
+
+  /* Field row: label above on mobile */
+  .field { margin-bottom: 16px; }
+  .field .label {
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .field .label .hint {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+
+  /* ============ INPUTS ============ */
+  .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .scale.scale-10 { grid-template-columns: repeat(10, 1fr); }
+  .scale button {
+    min-height: 48px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--hair-strong);
+    color: var(--mid);
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .scale button.on {
+    background: var(--accent-soft-strong);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .scale.three-col { grid-template-columns: 1fr 1fr 1fr; }
+
+  .yesno { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .yesno button {
+    min-height: 48px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--hair-strong);
+    color: var(--mid);
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .yesno button.yes.on {
+    background: var(--success-soft);
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .yesno button.no.on {
+    background: var(--bg-elevated);
+    border-color: var(--mid);
+    color: var(--ink);
+  }
+
+  .num-input { position: relative; }
+  .num-input input { padding-right: 50px; }
+  .num-input .unit {
+    position: absolute;
+    right: 16px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--dim);
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .three-col-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  textarea.notes-area {
+    min-height: 90px;
+    resize: none;
+    line-height: 1.5;
+  }
+
+  /* ============ CARDS — banner style for high-prio items ============ */
+  .banner {
+    background: var(--bg-elevated);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .banner.accent {
+    background: linear-gradient(120deg, var(--accent-soft) 0%, var(--bg-elevated) 70%);
+    border: 1px solid var(--accent-soft-strong);
+  }
+  .banner.success {
+    background: linear-gradient(120deg, var(--success-soft) 0%, var(--bg-elevated) 70%);
+    border: 1px solid rgba(74, 222, 128, 0.18);
+  }
+  .banner .icon-circle {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .banner .icon-circle svg { width: 18px; height: 18px; }
+  .banner .body { flex: 1; min-width: 0; }
+  .banner .title { font-size: 13px; color: var(--ink); font-weight: 600; }
+  .banner .sub { font-size: 12px; color: var(--mid); margin-top: 2px; }
+  .banner .right { color: var(--accent); font-size: 18px; }
+
+  /* Mål for i dag — quick text */
+  .day-goal {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-card);
+  }
+  .day-goal .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--mid);
+    margin-bottom: 6px;
+  }
+  .day-goal .placeholder {
+    color: var(--light);
+    font-style: italic;
+    font-size: 14px;
+  }
+  .day-goal .text {
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Fokus — project + time */
+  .focus-row {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow-card);
+  }
+  .focus-row .icon-dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .focus-row .icon-dot svg { width: 16px; height: 16px; }
+  .focus-row .body { flex: 1; min-width: 0; }
+  .focus-row .name { font-size: 14px; color: var(--ink); font-weight: 500; }
+  .focus-row .time { font-size: 12px; color: var(--mid); margin-top: 2px; }
+  .focus-row .hours {
+    background: var(--bg-subtle);
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* Faste timer */
+  .fast-timer {
+    background: var(--bg-elevated);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 22px;
+    text-align: center;
+    box-shadow: var(--shadow-card);
+  }
+  .fast-timer .time {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 42px;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .fast-timer .status { font-size: 12px; color: var(--mid); margin-top: 6px; }
+  .fast-timer .progress {
+    height: 4px;
+    background: var(--bg-subtle);
+    border-radius: 2px;
+    margin: 14px 0 12px;
+    overflow: hidden;
+  }
+  .fast-timer .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; }
+  .fast-timer .actions { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  .fast-timer button {
+    background: var(--bg-subtle);
+    color: var(--ink);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 40px;
+  }
+  .fast-timer button.primary { background: var(--accent); color: white; }
+
+  /* Kosttilskud — checklist */
+  .supplement-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    margin-bottom: 6px;
+    box-shadow: var(--shadow-card);
+  }
+  .supplement-item .check {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--hair-strong);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .supplement-item.done .check {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+  .supplement-item.done .check svg { width: 14px; height: 14px; }
+  .supplement-item .name { font-size: 14px; color: var(--ink); flex: 1; }
+  .supplement-item .dose { font-size: 12px; color: var(--mid); }
+  .supplement-item.done .name { text-decoration: line-through; opacity: 0.6; }
+
+  /* Photo-opfølgning chips */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .chip {
+    background: var(--bg-elevated);
+    border: 1px solid var(--hair-strong);
+    color: var(--mid);
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip.active {
+    background: var(--accent-soft-strong);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .chip svg { width: 14px; height: 14px; }
+
+  /* Subtle add button */
+  .add-row {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: transparent;
+    border: 1px dashed var(--hair-strong);
+    color: var(--light);
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  /* Garmin banner */
+  .garmin {
+    background: var(--accent-soft);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--mid);
+    font-size: 13px;
+  }
+  .garmin svg { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; }
+  .garmin strong { color: var(--ink); font-weight: 600; }
+  .garmin .score {
+    margin-left: auto;
+    background: var(--success-soft);
+    color: var(--success);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  /* Section divider — used between major top-level sections */
+  .section-divider {
+    height: 1px;
+    background: var(--hair);
+    margin: 32px -20px;
+    border: 0;
+  }
+
+  /* ============ BOTTOM BAR ============ */
+  .bottom-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--hair);
+    padding: 6px 4px;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+    margin: 0 -20px -100px;
+  }
+  .bottom-bar::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px; height: 4px;
+    background: var(--hair-strong);
+    border-radius: 2px;
+  }
+  .bottom-bar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding-top: 12px;
+  }
+  .bottom-bar button {
+    color: var(--light);
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    border-radius: 10px;
+    min-height: 52px;
+  }
+  .bottom-bar button svg { width: 22px; height: 22px; }
+  .bottom-bar button.active { color: var(--accent); }
+
+  /* ============ NOTES at bottom ============ */
+  .design-note {
+    max-width: 420px;
+    color: #aab4c5;
+    font-size: 13px;
+    line-height: 1.65;
+    margin-top: 20px;
+  }
+  .design-note strong { color: #f0f3f8; }
+  .design-note ul { padding-left: 18px; margin: 8px 0; }
+  .design-note li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ============ LIGHT MODE PHONE ============ -->
+<div class="phone-wrap">
+  <div class="phone-label">/today — light mode</div>
+  <div class="phone theme-light">
+    <div class="status-bar">
+      <span>9:42</span>
+      <div class="right">
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M1 8h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z"/></svg>
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M8 4a8 8 0 0 1 6 2L8 11 2 6a8 8 0 0 1 6-2zm0-2a10 10 0 0 0-7.5 3L1 5a9 9 0 0 1 14 0l.5.5A10 10 0 0 0 8 2z"/></svg>
+        <span style="font-size: 11px; padding: 1px 4px; border: 1px solid currentColor; border-radius: 3px;">87</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Page Header -->
+      <div class="page-head">
+        <div class="title-block">
+          <h1 class="greeting">God morgen</h1>
+          <span class="day">tirsdag d. 16. juni</span>
+        </div>
+        <span class="save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          Gemt 09:42
+        </span>
+      </div>
+
+      <!-- Week stats: horizontal scroll -->
+      <div class="weekstats">
+        <div class="stat accent">
+          <div class="num">3<small>/5</small></div>
+          <div class="label">Ans. denne uge</div>
+        </div>
+        <div class="stat">
+          <div class="num">18<small>t</small></div>
+          <div class="label">Fokus denne uge</div>
+        </div>
+        <div class="stat success">
+          <div class="num">5<small>/7</small></div>
+          <div class="label">Træning</div>
+        </div>
+        <div class="stat">
+          <div class="num">6,9<small>t</small></div>
+          <div class="label">Søvn Ø</div>
+        </div>
+      </div>
+
+      <!-- Jobsøgning banner (når aktiv) -->
+      <div class="banner accent">
+        <span class="icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </span>
+        <div class="body">
+          <div class="title">3 ansøgninger denne uge</div>
+          <div class="sub">12 i alt i nuværende periode</div>
+        </div>
+        <span class="right">›</span>
+      </div>
+
+      <!-- Mål for i dag -->
+      <div class="day-goal">
+        <div class="label">Mål for i dag</div>
+        <div class="text">Færdiggør CV til Novo Nordisk, og kør 5 km.</div>
+      </div>
+
+      <!-- Fokus -->
+      <div class="section">
+        <h2 class="section-title">Fokus<span class="meta">i dag</span></h2>
+        <div class="focus-row">
+          <span class="icon-dot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>
+          </span>
+          <div class="body">
+            <div class="name">Log-appen</div>
+            <div class="time">primært projekt</div>
+          </div>
+          <span class="hours">2,5 t</span>
+        </div>
+        <button class="add-row">+ Skift projekt</button>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Helbred -->
+      <div class="section">
+        <h2 class="section-title">Helbred</h2>
+
+        <div class="garmin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <span><strong>Garmin søvn</strong> · 7t 12m · god kvalitet</span>
+          <span class="score">82</span>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
+            Stemning
+          </div>
+          <div class="field">
+            <div class="label">Humør</div>
+            <div class="scale">
+              <button>1</button><button>2</button><button>3</button>
+              <button class="on">4</button><button>5</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Energi</div>
+            <div class="scale">
+              <button>1</button><button>2</button>
+              <button class="on">3</button><button>4</button><button>5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="m12 3-4 6h8z"/><path d="M12 9v12"/></svg></span>
+            Krop
+          </div>
+          <div class="two-col">
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Vægt</div>
+              <div class="num-input">
+                <input type="text" value="78,4" />
+                <span class="unit">kg</span>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Livvidde</div>
+              <div class="num-input">
+                <input type="text" value="89,5" />
+                <span class="unit">cm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11.5c0 5-2.5 8.5-7 8.5s-7-3.5-7-8.5C5 8.46 7.46 6 10.5 6c1 0 1.5.5 1.5.5s.5-.5 1.5-.5C16.54 6 19 8.46 19 11.5z"/></svg></span>
+            Ernæring
+            <span class="meta">1842 kcal</span>
+          </div>
+          <div class="three-col-grid">
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Carbs</div>
+              <div class="num-input"><input type="text" value="180" /><span class="unit">g</span></div>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Protein</div>
+              <div class="num-input"><input type="text" value="120" /><span class="unit">g</span></div>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Fedt</div>
+              <div class="num-input"><input type="text" value="68" /><span class="unit">g</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.68 3.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4.45 13H2"/></svg></span>
+            Aktivitet
+          </div>
+          <div class="field">
+            <div class="label">Træning</div>
+            <div class="yesno">
+              <button class="yes on">Ja</button>
+              <button class="no">Nej</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Intensitet</div>
+            <div class="scale three-col">
+              <button>Let</button>
+              <button class="on">Mellem</button>
+              <button>Hård</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Alkohol</div>
+            <div class="num-input"><input type="text" value="0" /><span class="unit">×</span></div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg></span>
+            Mine parametre
+          </div>
+          <div class="field">
+            <div class="label">Hovedpine</div>
+            <div class="yesno"><button class="yes">Ja</button><button class="no on">Nej</button></div>
+          </div>
+          <div class="field">
+            <div class="label">Iskias-smerte</div>
+            <div class="scale">
+              <button class="on">1</button><button>2</button><button>3</button>
+              <button>4</button><button>5</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Skæleksem</div>
+            <div class="scale">
+              <button>1</button><button class="on">2</button><button>3</button>
+              <button>4</button><button>5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></span>
+            Helbredsnoter
+          </div>
+          <textarea class="notes-area" placeholder="Symptomer, medicin, observationer…"></textarea>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>
+            Foto-opfølgning
+          </div>
+          <div class="chip-row">
+            <span class="chip active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+              Skønhedsplet
+            </span>
+            <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5v14"/></svg> Skæleksem</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Faste -->
+      <div class="section">
+        <h2 class="section-title">Faste<span class="meta">live</span></h2>
+        <div class="fast-timer">
+          <div class="time">14:23</div>
+          <div class="status">Aktiv siden 19:00 i går · sluttetid 11:00</div>
+          <div class="progress"><div class="progress-bar" style="width: 89%;"></div></div>
+          <div class="actions">
+            <button>Pause</button>
+            <button class="primary">Afslut faste</button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Kosttilskud -->
+      <div class="section">
+        <h2 class="section-title">Kosttilskud<span class="meta">i dag</span></h2>
+        <div class="supplement-item done">
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="name">D-vitamin</span>
+          <span class="dose">25 µg · morgen</span>
+        </div>
+        <div class="supplement-item done">
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="name">Magnesium</span>
+          <span class="dose">350 mg · aften</span>
+        </div>
+        <div class="supplement-item">
+          <span class="check"></span>
+          <span class="name">Omega-3</span>
+          <span class="dose">2 g</span>
+        </div>
+        <button class="add-row" style="margin-top: 8px;">+ Tilføj kosttilskud</button>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Dagsnoter -->
+      <div class="section">
+        <h2 class="section-title">Dagsnoter</h2>
+        <textarea class="notes-area" style="min-height: 120px;" placeholder="Hvad skete der i dag? Tanker, observationer, …"></textarea>
+      </div>
+
+      <div class="bottom-bar">
+        <div class="bottom-bar-grid">
+          <button class="active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            I dag
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Helbred
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="13" width="4" height="5"/><rect x="13" y="9" width="4" height="9"/></svg>
+            Statistik
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            Mere
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="design-note">
+    <strong>Light mode:</strong> Hvidt bg (#f4f6fa), lette skygger og kraftigere
+    accent-blå (#2563eb) for kontrast. Card-elementer er rene hvide med subtil
+    skygge i stedet for borders — føles mere "iOS-native".
+  </div>
+</div>
+
+<!-- ============ DARK MODE PHONE ============ -->
+<div class="phone-wrap">
+  <div class="phone-label">/today — dark mode</div>
+  <div class="phone theme-dark">
+    <div class="status-bar">
+      <span>9:42</span>
+      <div class="right">
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M1 8h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z"/></svg>
+        <svg viewBox="0 0 16 11" fill="currentColor"><path d="M8 4a8 8 0 0 1 6 2L8 11 2 6a8 8 0 0 1 6-2zm0-2a10 10 0 0 0-7.5 3L1 5a9 9 0 0 1 14 0l.5.5A10 10 0 0 0 8 2z"/></svg>
+        <span style="font-size: 11px; padding: 1px 4px; border: 1px solid currentColor; border-radius: 3px;">87</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <div class="title-block">
+          <h1 class="greeting">God morgen</h1>
+          <span class="day">tirsdag d. 16. juni</span>
+        </div>
+        <span class="save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          Gemt 09:42
+        </span>
+      </div>
+
+      <div class="weekstats">
+        <div class="stat accent">
+          <div class="num">3<small>/5</small></div>
+          <div class="label">Ans. denne uge</div>
+        </div>
+        <div class="stat">
+          <div class="num">18<small>t</small></div>
+          <div class="label">Fokus denne uge</div>
+        </div>
+        <div class="stat success">
+          <div class="num">5<small>/7</small></div>
+          <div class="label">Træning</div>
+        </div>
+        <div class="stat">
+          <div class="num">6,9<small>t</small></div>
+          <div class="label">Søvn Ø</div>
+        </div>
+      </div>
+
+      <div class="banner accent">
+        <span class="icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </span>
+        <div class="body">
+          <div class="title">3 ansøgninger denne uge</div>
+          <div class="sub">12 i alt i nuværende periode</div>
+        </div>
+        <span class="right">›</span>
+      </div>
+
+      <div class="day-goal">
+        <div class="label">Mål for i dag</div>
+        <div class="text">Færdiggør CV til Novo Nordisk, og kør 5 km.</div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Fokus<span class="meta">i dag</span></h2>
+        <div class="focus-row">
+          <span class="icon-dot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>
+          </span>
+          <div class="body">
+            <div class="name">Log-appen</div>
+            <div class="time">primært projekt</div>
+          </div>
+          <span class="hours">2,5 t</span>
+        </div>
+        <button class="add-row">+ Skift projekt</button>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="section">
+        <h2 class="section-title">Helbred</h2>
+
+        <div class="garmin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <span><strong>Garmin søvn</strong> · 7t 12m · god kvalitet</span>
+          <span class="score">82</span>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
+            Stemning
+          </div>
+          <div class="field">
+            <div class="label">Humør</div>
+            <div class="scale">
+              <button>1</button><button>2</button><button>3</button>
+              <button class="on">4</button><button>5</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Energi</div>
+            <div class="scale">
+              <button>1</button><button>2</button>
+              <button class="on">3</button><button>4</button><button>5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="m12 3-4 6h8z"/><path d="M12 9v12"/></svg></span>
+            Krop
+          </div>
+          <div class="two-col">
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Vægt</div>
+              <div class="num-input">
+                <input type="text" value="78,4" />
+                <span class="unit">kg</span>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Livvidde</div>
+              <div class="num-input">
+                <input type="text" value="89,5" />
+                <span class="unit">cm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11.5c0 5-2.5 8.5-7 8.5s-7-3.5-7-8.5C5 8.46 7.46 6 10.5 6c1 0 1.5.5 1.5.5s.5-.5 1.5-.5C16.54 6 19 8.46 19 11.5z"/></svg></span>
+            Ernæring
+            <span class="meta">1842 kcal</span>
+          </div>
+          <div class="three-col-grid">
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Carbs</div>
+              <div class="num-input"><input type="text" value="180" /><span class="unit">g</span></div>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Protein</div>
+              <div class="num-input"><input type="text" value="120" /><span class="unit">g</span></div>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="label">Fedt</div>
+              <div class="num-input"><input type="text" value="68" /><span class="unit">g</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.68 3.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4.45 13H2"/></svg></span>
+            Aktivitet
+          </div>
+          <div class="field">
+            <div class="label">Træning</div>
+            <div class="yesno">
+              <button class="yes on">Ja</button>
+              <button class="no">Nej</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Intensitet</div>
+            <div class="scale three-col">
+              <button>Let</button>
+              <button class="on">Mellem</button>
+              <button>Hård</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Alkohol</div>
+            <div class="num-input"><input type="text" value="0" /><span class="unit">×</span></div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg></span>
+            Mine parametre
+          </div>
+          <div class="field">
+            <div class="label">Hovedpine</div>
+            <div class="yesno"><button class="yes">Ja</button><button class="no on">Nej</button></div>
+          </div>
+          <div class="field">
+            <div class="label">Iskias-smerte</div>
+            <div class="scale">
+              <button class="on">1</button><button>2</button><button>3</button>
+              <button>4</button><button>5</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="label">Skæleksem</div>
+            <div class="scale">
+              <button>1</button><button class="on">2</button><button>3</button>
+              <button>4</button><button>5</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></span>
+            Helbredsnoter
+          </div>
+          <textarea class="notes-area" placeholder="Symptomer, medicin, observationer…"></textarea>
+        </div>
+
+        <div class="subsection">
+          <div class="subsection-head">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>
+            Foto-opfølgning
+          </div>
+          <div class="chip-row">
+            <span class="chip active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+              Skønhedsplet
+            </span>
+            <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5v14"/></svg> Skæleksem</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="section">
+        <h2 class="section-title">Faste<span class="meta">live</span></h2>
+        <div class="fast-timer">
+          <div class="time">14:23</div>
+          <div class="status">Aktiv siden 19:00 i går · sluttetid 11:00</div>
+          <div class="progress"><div class="progress-bar" style="width: 89%;"></div></div>
+          <div class="actions">
+            <button>Pause</button>
+            <button class="primary">Afslut faste</button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="section">
+        <h2 class="section-title">Kosttilskud<span class="meta">i dag</span></h2>
+        <div class="supplement-item done">
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="name">D-vitamin</span>
+          <span class="dose">25 µg · morgen</span>
+        </div>
+        <div class="supplement-item done">
+          <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="name">Magnesium</span>
+          <span class="dose">350 mg · aften</span>
+        </div>
+        <div class="supplement-item">
+          <span class="check"></span>
+          <span class="name">Omega-3</span>
+          <span class="dose">2 g</span>
+        </div>
+        <button class="add-row" style="margin-top: 8px;">+ Tilføj kosttilskud</button>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="section">
+        <h2 class="section-title">Dagsnoter</h2>
+        <textarea class="notes-area" style="min-height: 120px;" placeholder="Hvad skete der i dag? Tanker, observationer, …"></textarea>
+      </div>
+
+      <div class="bottom-bar">
+        <div class="bottom-bar-grid">
+          <button class="active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            I dag
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Helbred
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="13" width="4" height="5"/><rect x="13" y="9" width="4" height="9"/></svg>
+            Statistik
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            Mere
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="design-note">
+    <strong>Dark mode:</strong> Mørkere base end før (#0a0f1a), let elevation
+    på cards (#131c2c). Accent-blå (#6ea9f2) afdæmpet for ikke at blænde.
+    Border-loose erstattes med hairlines på 6% opacity hvor det overhovedet
+    er nødvendigt.
+  </div>
+</div>
+
+</body>
+</html>

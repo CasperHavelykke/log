@@ -3,6 +3,7 @@ import { getAllDayEntries, getAllSleepEntries } from "@/lib/queries";
 import { listTrackers } from "./trackere/actions";
 import { listCustomParameters } from "@/lib/custom-parameters";
 import { HealthCalendar } from "./health-calendar";
+import { FasteToggle } from "./faste-toggle";
 
 export const metadata = { title: "Helbred | Log" };
 
@@ -14,8 +15,10 @@ export default async function Health() {
     listTrackers(false),
     listCustomParameters(false),
   ]);
+  const fasteEnabled = user.fasteEnabled ?? false;
 
   return (
+    <>
     <HealthCalendar
       trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
       customParameters={customParameters}
@@ -63,5 +66,9 @@ export default async function Health() {
         nextStep: e.nextStep ?? "",
       }))}
     />
+    <div className="mx-auto max-w-[1280px] px-4 pb-8">
+      <FasteToggle initialEnabled={fasteEnabled} />
+    </div>
+    </>
   );
 }

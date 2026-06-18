@@ -16,6 +16,10 @@ export const users = sqliteTable("users", {
   name: text("name"),
   image: text("image"),
   focusProjectId: integer("focus_project_id"),
+  // Brugerpræferencer: feature-flags der styrer hvilke sektioner der vises
+  fasteEnabled: integer("faste_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
