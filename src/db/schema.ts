@@ -280,6 +280,43 @@ export const fasts = sqliteTable(
   (t) => [index("fasts_user_started").on(t.userId, t.startedAt)],
 );
 
+// Genstande-tæller — én session pr. aften ude. Alle drinks bogføres på
+// session_date (typisk start-datoen) så krydsning af midnat ikke flytter
+// indtagene over på næste dag i dayEntries.alcoholUnits.
+export const drinkSessions = sqliteTable(
+  "drink_sessions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sessionDate: text("session_date").notNull(),
+    startedAt: text("started_at").notNull(),
+    endedAt: text("ended_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("drink_sessions_user_started").on(t.userId, t.startedAt)],
+);
+
+export const drinkLogs = sqliteTable(
+  "drink_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sessionId: integer("session_id")
+      .notNull()
+      .references(() => drinkSessions.id, { onDelete: "cascade" }),
+    unitCount: integer("unit_count").notNull(),
+    kind: text("kind").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+  },
+  (t) => [index("drink_logs_session_occurred").on(t.sessionId, t.occurredAt)],
+);
+
+export type DrinkSession = typeof drinkSessions.$inferSelect;
+export type DrinkLog = typeof drinkLogs.$inferSelect;
+
 export const supplements = sqliteTable("supplements", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")

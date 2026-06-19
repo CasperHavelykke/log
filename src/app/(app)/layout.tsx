@@ -1,7 +1,15 @@
+import { cookies } from "next/headers";
 import { Nav } from "@/components/nav";
 import { MobileNav } from "@/components/mobile-nav";
 import { requireUser } from "@/lib/session";
 import { getActiveJobSearchPeriod } from "./jobs/period-actions";
+import { getActiveSession } from "./drink-counter/actions";
+import {
+  CounterWrapper,
+  FloatingCounterBanner,
+} from "./drink-counter/counter-wrapper";
+
+const ESCAPE_COOKIE = "drink-counter-escape";
 
 export default async function AppLayout({
   children,
@@ -9,6 +17,16 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
+
+  const drinkSession = await getActiveSession();
+  if (drinkSession) {
+    const cookieStore = await cookies();
+    const escaped = cookieStore.get(ESCAPE_COOKIE)?.value === "1";
+    if (!escaped) {
+      return <CounterWrapper initial={drinkSession} />;
+    }
+  }
+
   let showJobs = false;
   try {
     const active = await getActiveJobSearchPeriod();
@@ -16,6 +34,7 @@ export default async function AppLayout({
   } catch {
     showJobs = false;
   }
+
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Nav showJobs={showJobs} email={user.email ?? null} />
@@ -23,6 +42,9 @@ export default async function AppLayout({
         {children}
       </main>
       <MobileNav showJobs={showJobs} />
+      {drinkSession && (
+        <FloatingCounterBanner totalUnits={drinkSession.totalUnits} />
+      )}
     </div>
   );
 }

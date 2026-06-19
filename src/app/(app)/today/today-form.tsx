@@ -49,6 +49,7 @@ import {
 import { ElasticTimerBar } from "@/components/elastic-timer-bar";
 import { WeekStrip } from "./week-strip";
 import { DayIntention } from "./day-intention";
+import { StartCounterTrigger } from "../drink-counter/start-trigger";
 import {
   Section as FieldSection,
   Field as FieldRow,
@@ -1270,6 +1271,9 @@ function HealthBody({
             placeholder="0"
           />
         </FieldRow>
+        <div className="pt-1">
+          <StartCounterTrigger />
+        </div>
       </FieldSection>
 
       {customParameters.length > 0 && (
