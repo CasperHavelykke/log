@@ -12,28 +12,14 @@ export type PeriodOption = {
   isActive: boolean;
 };
 
-const STATUS_ORDER: { key: string; label: string; tone?: string }[] = [
-  { key: "sent", label: "Sendt" },
-  { key: "no_response", label: "Intet svar", tone: "text-warning" },
-  { key: "replied", label: "Svar", tone: "text-accent-bright" },
-  { key: "interview", label: "Interview", tone: "text-accent-bright" },
-  { key: "offer", label: "Tilbud", tone: "text-success" },
-  { key: "rejected", label: "Afvist", tone: "text-danger" },
-  { key: "withdrawn", label: "Trukket" },
-];
-
 export function JobsPeriodHeader({
   periods,
   selectedPeriodId,
   showingAll,
-  totalCount,
-  statusCounts,
 }: {
   periods: PeriodOption[];
   selectedPeriodId: number | null;
   showingAll: boolean;
-  totalCount: number;
-  statusCounts: Record<string, number>;
 }) {
   const selected = selectedPeriodId
     ? periods.find((p) => p.id === selectedPeriodId)
@@ -41,7 +27,7 @@ export function JobsPeriodHeader({
 
   return (
     <div className="mb-6 rounded-md border border-border bg-card px-5 py-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[13px]">
           <Briefcase
             className={`size-4 ${selected?.isActive ? "text-success" : "text-mid"}`}
@@ -73,7 +59,7 @@ export function JobsPeriodHeader({
       </div>
 
       {periods.length > 1 && (
-        <div className="mb-3 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-1">
           {periods.map((p) => {
             const active = !showingAll && selectedPeriodId === p.id;
             const href = `/jobs?period=${p.id}`;
@@ -109,36 +95,6 @@ export function JobsPeriodHeader({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-border-light pt-3 text-[12px]">
-        <StatCount label="I alt" value={totalCount} tone="text-ink" />
-        {STATUS_ORDER.map((s) => (
-          <StatCount
-            key={s.key}
-            label={s.label}
-            value={statusCounts[s.key] ?? 0}
-            tone={s.tone}
-          />
-        ))}
-      </div>
     </div>
-  );
-}
-
-function StatCount({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: string;
-}) {
-  return (
-    <span className="inline-flex items-baseline gap-1">
-      <span className={`font-medium ${tone ?? "text-ink"}`}>{value}</span>
-      <span className="text-[10px] uppercase tracking-[0.3px] text-light">
-        {label}
-      </span>
-    </span>
   );
 }

@@ -130,20 +130,12 @@ export default async function Jobs({
     isActive: p.endedAt === null,
   }));
 
-  // Statusoptælling for filteredApps
-  const statusCounts: Record<string, number> = {};
-  for (const a of filteredApps) {
-    statusCounts[a.status] = (statusCounts[a.status] ?? 0) + 1;
-  }
-
   return (
     <div>
       <JobsPeriodHeader
         periods={periodOptions}
         selectedPeriodId={selectedPeriod?.id ?? null}
         showingAll={showAll}
-        totalCount={filteredApps.length}
-        statusCounts={statusCounts}
       />
       <div className="mx-auto max-w-[1100px] px-4 pb-4">
         <WeekGoalCard
