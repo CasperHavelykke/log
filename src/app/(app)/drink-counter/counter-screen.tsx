@@ -94,7 +94,6 @@ export function CounterScreen({
       className="flex min-h-[100dvh] flex-col bg-bg text-ink"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
       <header className="flex items-center justify-between px-5 pt-6 pb-3">
