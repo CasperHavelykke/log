@@ -170,11 +170,16 @@ function FeaturesCard({
         <FeatureToggle
           icon={<Moon className="size-4" />}
           title="Garmin søvndata"
-          description="Erstatter manuel søvnkvalitet med Garmin-søvnscore + viser HRV, hvilepuls, SpO₂ m.m. fra Garmin-upload"
+          description="Erstatter manuel søvnkvalitet med Garmin-søvnscore + viser HRV, hvilepuls, SpO₂ m.m. Data hentes fra Garmin Connect i browseren (CSV-eksport) og uploades på /helbred."
           enabled={garminEnabled}
           onToggle={toggleGarmin}
         />
       </div>
+
+      <p className="mt-3 text-[11px] italic text-dim">
+        Log er ikke tilknyttet Garmin Ltd. — Garmin og Garmin Connect er
+        varemærker tilhørende Garmin Ltd. eller dets datterselskaber.
+      </p>
     </Card>
   );
 }
