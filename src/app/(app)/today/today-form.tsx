@@ -1685,15 +1685,46 @@ function FastCard({
     );
   }
 
+  const lastFast = recent[0];
+  const lastSummary = lastFast ? summarizeLastFast(lastFast) : null;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {!manualMode ? (
-        <>
+        <div className="mx-auto max-w-[420px] rounded-[12px] bg-bg-subtle/40 px-5 py-6 text-center md:bg-bg-subtle/30">
+          <span className="mx-auto mb-3 inline-flex size-14 items-center justify-center rounded-full bg-accent-bg text-accent">
+            <Moon className="size-6" />
+          </span>
+          {lastSummary ? (
+            <div className="mb-5 text-[13px] text-mid">
+              Sidste faste:{" "}
+              <span className="font-semibold text-ink">
+                {lastSummary.duration}
+              </span>
+              <br />
+              <span className="text-[12px]">
+                {lastSummary.relative} ·{" "}
+                <span
+                  className={
+                    lastSummary.qualified
+                      ? "text-success"
+                      : "text-warning"
+                  }
+                >
+                  {lastSummary.qualified ? "gennemførte mål" : "under mål"}
+                </span>
+              </span>
+            </div>
+          ) : (
+            <p className="mb-5 text-[13px] italic text-light">
+              Ingen tidligere faster registreret endnu.
+            </p>
+          )}
           <button
             type="button"
             onClick={handleStartNow}
             disabled={pending}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2.5 text-[14px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-accent px-5 py-3.5 text-[15px] font-medium text-white transition hover:brightness-110 disabled:opacity-50"
           >
             <UtensilsCrossed className="size-4" />
             Stoppet med at spise nu
@@ -1704,13 +1735,13 @@ function FastCard({
               setManualStart(isoToDatetimeLocal(new Date().toISOString()));
               setManualMode(true);
             }}
-            className="cursor-pointer text-[12px] text-light hover:text-accent-bright"
+            className="mt-3 cursor-pointer text-[12px] text-light hover:text-accent-bright"
           >
             …eller indtast tidspunkt manuelt
           </button>
-        </>
+        </div>
       ) : (
-        <div className="rounded-[3px] border border-border-light bg-bg p-3">
+        <div className="rounded-[6px] border border-border-light bg-bg p-3">
           <label className="mb-1.5 block text-[12px] text-mid">
             Hvornår stoppede du med at spise?
           </label>
@@ -1741,13 +1772,59 @@ function FastCard({
           </div>
         </div>
       )}
-      <p className="text-[12px] italic text-dim">
+      <p className="text-center text-[12px] italic text-dim">
         En faste tæller som “kvalificeret” når du har fastet mindst 16 timer.
       </p>
       <RecentFasts list={recent} onDelete={handleDelete} />
     </div>
   );
 }
+
+function summarizeLastFast(fast: RecentFast): {
+  duration: string;
+  relative: string;
+  qualified: boolean;
+} | null {
+  if (!fast.endedAt) return null;
+  const startMs = new Date(fast.startedAt).getTime();
+  const endMs = new Date(fast.endedAt).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return null;
+  }
+  const mins = Math.round((endMs - startMs) / 60_000);
+  return {
+    duration: formatFastDuration(mins),
+    relative: formatRelativeDay(fast.endedAt),
+    qualified: isQualifiedFast(mins),
+  };
+}
+
+function formatRelativeDay(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfTarget = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfToday - startOfTarget) / 86_400_000);
+  if (diffDays === 0) return "i dag";
+  if (diffDays === 1) return "i går";
+  if (diffDays === 2) return "i forgårs";
+  return `${d.getDate()}. ${MONTH_SHORT[d.getMonth()]}`;
+}
+
+const MONTH_SHORT = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "maj",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "okt",
+  "nov",
+  "dec",
+];
 
 function RecentFasts({
   list,
