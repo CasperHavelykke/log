@@ -39,7 +39,7 @@ export function WeekStrip({
           href="/jobs"
           value={appsThisWeek}
           target={applicationsTarget}
-          label="ansøgninger"
+          label="Ansøgninger"
         />
       )}
       {hasFocusGoal && (
@@ -47,7 +47,7 @@ export function WeekStrip({
           href="/projects"
           value={weekHoursX10 / 10}
           target={focusHoursTargetX10 / 10}
-          label="t fokus"
+          label="Fokus-timer"
           decimals={1}
         />
       )}
@@ -77,12 +77,14 @@ function ProgressLink({
       href={href}
       className="group min-w-0 flex-1 rounded-md border border-border bg-card px-3 py-2.5 transition hover:border-accent-bright"
     >
-      <div className="flex items-baseline justify-between gap-2 text-[12px]">
-        <span className="text-mid">{label}</span>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] uppercase tracking-[0.5px] text-light">
+          {label}
+        </span>
         <span
-          className={`font-medium ${reached ? "text-success" : "text-ink"}`}
+          className={`font-serif text-[15px] font-medium ${reached ? "text-success" : "text-ink"}`}
         >
-          {fmt(value)} / {fmt(target)}
+          {fmt(value)} <span className="text-dim">/ {fmt(target)}</span>
         </span>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-bg">
