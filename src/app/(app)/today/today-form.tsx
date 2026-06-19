@@ -1550,127 +1550,136 @@ function FastCard({
     const mins = fastDurationMinutes(active.startedAt, null, now);
     const qualified = isQualifiedFast(mins);
     const hours = mins / 60;
+    const startedLabel = (
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-light">
+        siden {formatTimestampShort(active.startedAt)}
+        {!editingStart && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditStartInput(isoToDatetimeLocal(active.startedAt));
+              setEditingStart(true);
+            }}
+            className="cursor-pointer text-dim hover:text-accent-bright"
+            title="Redigér start-tidspunkt"
+          >
+            <Pencil className="size-3" />
+          </button>
+        )}
+      </span>
+    );
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div
-          className={`rounded-[6px] border px-5 py-5 ${
+          className={`rounded-[6px] border px-5 py-5 md:grid md:grid-cols-[1fr_1.4fr] md:items-center md:gap-8 md:border-0 md:bg-transparent md:p-0 ${
             qualified
               ? "border-success bg-[rgba(74,222,128,0.06)]"
               : "border-accent-dim bg-accent-bg"
           }`}
         >
-          <div className="flex items-baseline justify-between gap-2">
-            <span
-              className={`text-[10px] font-semibold uppercase tracking-[0.6px] ${qualified ? "text-success" : "text-accent-bright"}`}
+          {/* Left column: label + tæller + siden-info */}
+          <div className="md:text-center">
+            <div className="flex items-baseline justify-between gap-2 md:block">
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-[0.6px] ${qualified ? "text-success" : "text-accent-bright"}`}
+              >
+                {qualified ? "✓ Mål nået" : "Aktiv"}
+              </span>
+              <span className="md:hidden">{startedLabel}</span>
+            </div>
+            {editingStart && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 md:justify-center">
+                <input
+                  type="datetime-local"
+                  value={editStartInput}
+                  onChange={(e) => setEditStartInput(e.target.value)}
+                  className="!w-auto !py-1 text-[13px]"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveStartEdit}
+                  disabled={pending}
+                  className="cursor-pointer rounded-[3px] border border-accent bg-accent px-3 py-1 text-[12px] text-white disabled:opacity-50"
+                >
+                  Gem
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingStart(false)}
+                  className="cursor-pointer text-[12px] text-mid hover:text-ink"
+                >
+                  Annullér
+                </button>
+              </div>
+            )}
+            <div
+              className={`mt-2 text-center font-serif text-[44px] leading-none md:text-[56px] md:tracking-[-1px] ${qualified ? "text-success" : "text-accent-bright"}`}
             >
-              {qualified ? "✓ Mål nået" : "Aktiv"}
-            </span>
-            <span className="flex items-center gap-1.5 text-[11px] text-light">
-              siden {formatTimestampShort(active.startedAt)}
-              {!editingStart && (
+              {formatFastDuration(mins)}
+            </div>
+            <div className="mt-2 hidden md:block">{startedLabel}</div>
+          </div>
+
+          {/* Right column: bar + knapper */}
+          <div className="mt-3 space-y-3 md:mt-0">
+            <ElasticTimerBar hours={hours} />
+            {!manualEndMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleEnd()}
+                  disabled={pending}
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2.5 text-[14px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+                >
+                  <Utensils className="size-4" />
+                  Bryder fasten nu
+                </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setEditStartInput(isoToDatetimeLocal(active.startedAt));
-                    setEditingStart(true);
+                    setManualEnd(isoToDatetimeLocal(new Date().toISOString()));
+                    setManualEndMode(true);
                   }}
-                  className="cursor-pointer text-dim hover:text-accent-bright"
-                  title="Redigér start-tidspunkt"
+                  className="block w-full cursor-pointer text-center text-[12px] text-light hover:text-accent-bright"
                 >
-                  <Pencil className="size-3" />
+                  …eller indtast tidspunkt manuelt
                 </button>
-              )}
-            </span>
-          </div>
-          {editingStart && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <input
-                type="datetime-local"
-                value={editStartInput}
-                onChange={(e) => setEditStartInput(e.target.value)}
-                className="!w-auto !py-1 text-[13px]"
-              />
-              <button
-                type="button"
-                onClick={handleSaveStartEdit}
-                disabled={pending}
-                className="cursor-pointer rounded-[3px] border border-accent bg-accent px-3 py-1 text-[12px] text-white disabled:opacity-50"
-              >
-                Gem
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingStart(false)}
-                className="cursor-pointer text-[12px] text-mid hover:text-ink"
-              >
-                Annullér
-              </button>
-            </div>
-          )}
-          <div
-            className={`mt-2 text-center font-serif text-[44px] leading-none ${qualified ? "text-success" : "text-accent-bright"}`}
-          >
-            {formatFastDuration(mins)}
-          </div>
-          <div className="mt-3">
-            <ElasticTimerBar hours={hours} />
+              </>
+            ) : (
+              <div className="rounded-[3px] border border-border-light bg-bg p-3">
+                <label className="mb-1.5 block text-[12px] text-mid">
+                  Hvornår begyndte du at spise?
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={manualEnd}
+                    onChange={(e) => setManualEnd(e.target.value)}
+                    min={isoToDatetimeLocal(active.startedAt)}
+                    max={isoToDatetimeLocal(new Date().toISOString())}
+                    className="!w-auto !py-1.5 text-[13px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleEndManual}
+                    disabled={pending}
+                    className="flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-3 py-1.5 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+                  >
+                    <Utensils className="size-4" />
+                    Bryd faste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualEndMode(false)}
+                    className="cursor-pointer text-[12px] text-mid hover:text-ink"
+                  >
+                    Annullér
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        {!manualEndMode ? (
-          <>
-            <button
-              type="button"
-              onClick={() => handleEnd()}
-              disabled={pending}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2.5 text-[14px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
-            >
-              <Utensils className="size-4" />
-              Bryder fasten nu
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setManualEnd(isoToDatetimeLocal(new Date().toISOString()));
-                setManualEndMode(true);
-              }}
-              className="cursor-pointer text-[12px] text-light hover:text-accent-bright"
-            >
-              …eller indtast tidspunkt manuelt
-            </button>
-          </>
-        ) : (
-          <div className="rounded-[3px] border border-border-light bg-bg p-3">
-            <label className="mb-1.5 block text-[12px] text-mid">
-              Hvornår begyndte du at spise?
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="datetime-local"
-                value={manualEnd}
-                onChange={(e) => setManualEnd(e.target.value)}
-                min={isoToDatetimeLocal(active.startedAt)}
-                max={isoToDatetimeLocal(new Date().toISOString())}
-                className="!w-auto !py-1.5 text-[13px]"
-              />
-              <button
-                type="button"
-                onClick={handleEndManual}
-                disabled={pending}
-                className="flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-3 py-1.5 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
-              >
-                <Utensils className="size-4" />
-                Bryd faste
-              </button>
-              <button
-                type="button"
-                onClick={() => setManualEndMode(false)}
-                className="cursor-pointer text-[12px] text-mid hover:text-ink"
-              >
-                Annullér
-              </button>
-            </div>
-          </div>
-        )}
         <RecentFasts list={recent} onDelete={handleDelete} />
       </div>
     );
