@@ -19,7 +19,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   providers: [
     Resend({
-      from: process.env.EMAIL_FROM ?? "onboarding@resend.dev",
+      from: (() => {
+        const addr = process.env.EMAIL_FROM;
+        if (!addr) {
+          throw new Error(
+            "EMAIL_FROM mangler — sæt env-var til en verificeret Resend-afsender",
+          );
+        }
+        return `Loggen <${addr}>`;
+      })(),
       // 6-cifret kode i stedet for UUID, så iOS PWA-brugere kan taste den
       // ind i appen frem for at klikke et link (links åbner i Safari, ikke
       // i PWA'en — cookien lander det forkerte sted).
@@ -38,7 +46,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!resendKey) {
           throw new Error("AUTH_RESEND_KEY mangler");
         }
-        const from = provider.from ?? "onboarding@resend.dev";
+        const from = provider.from;
+        if (!from) {
+          throw new Error("EMAIL_FROM mangler");
+        }
         const subject = `Login-kode: ${token}`;
         const html = `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
