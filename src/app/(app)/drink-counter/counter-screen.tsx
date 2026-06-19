@@ -91,7 +91,10 @@ export function CounterScreen({
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-bg text-ink">
-      <header className="flex items-center justify-between px-5 pt-6 pb-3">
+      <header
+        className="flex items-center justify-between px-5 pb-3"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}
+      >
         <span className="text-[11px] font-semibold uppercase tracking-[0.6px] text-light">
           Aktiv · {elapsed}
         </span>
@@ -200,7 +203,10 @@ export function CounterScreen({
         </div>
       </section>
 
-      <footer className="border-t border-hair px-5 py-4">
+      <footer
+        className="border-t border-hair px-5 pt-4"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+      >
         <button
           type="button"
           onClick={confirmEnd}
