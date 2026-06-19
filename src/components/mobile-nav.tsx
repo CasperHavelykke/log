@@ -98,7 +98,7 @@ export function MobileNav({ showJobs }: { showJobs: boolean }) {
         className={`fixed bottom-0 left-0 right-0 z-50 bg-bg/95 backdrop-blur-lg transition-opacity md:hidden ${
           open ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)" }}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
