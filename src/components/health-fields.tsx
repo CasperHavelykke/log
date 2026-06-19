@@ -161,14 +161,16 @@ export function CompactNumberInput({
   onChange,
   unit,
   placeholder,
+  fluid = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   unit: string;
   placeholder: string;
+  fluid?: boolean;
 }) {
   return (
-    <div className="relative w-full sm:w-[110px]">
+    <div className={fluid ? "relative w-full" : "relative w-full sm:w-[110px]"}>
       <input
         type="text"
         inputMode="decimal"
@@ -183,6 +185,28 @@ export function CompactNumberInput({
       >
         {unit}
       </span>
+    </div>
+  );
+}
+
+export function CompactField({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1 text-[10px] uppercase tracking-[0.5px] text-light">
+        {label}
+        {hint && (
+          <span className="ml-1 text-[10px] text-accent">{hint}</span>
+        )}
+      </div>
+      {children}
     </div>
   );
 }

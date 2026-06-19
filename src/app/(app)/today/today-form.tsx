@@ -52,6 +52,7 @@ import { DayIntention } from "./day-intention";
 import {
   Section as FieldSection,
   Field as FieldRow,
+  CompactField,
   Scale1to5,
   YesNo as YesNoButtons,
   IntensityPicker,
@@ -1132,44 +1133,48 @@ function HealthBody({
       </FieldSection>
 
       <FieldSection icon={<ScaleIcon className="size-3.5" />} title="Krop">
-        <FieldRow label="Vægt">
-          <CompactNumberInput
-            value={weightInput}
-            onChange={(raw) => {
-              setWeightInput(raw);
-              const t = raw.trim().replace(",", ".");
-              if (t === "") {
-                setDay({ ...day, weightX10: null });
-                return;
-              }
-              const n = Number(t);
-              if (Number.isFinite(n) && n >= 0 && n <= 500) {
-                setDay({ ...day, weightX10: Math.round(n * 10) });
-              }
-            }}
-            unit="kg"
-            placeholder="78,5"
-          />
-        </FieldRow>
-        <FieldRow label="Livvidde">
-          <CompactNumberInput
-            value={waistInput}
-            onChange={(raw) => {
-              setWaistInput(raw);
-              const t = raw.trim().replace(",", ".");
-              if (t === "") {
-                setDay({ ...day, waistX10: null });
-                return;
-              }
-              const n = Number(t);
-              if (Number.isFinite(n) && n >= 0 && n <= 300) {
-                setDay({ ...day, waistX10: Math.round(n * 10) });
-              }
-            }}
-            unit="cm"
-            placeholder="89,5"
-          />
-        </FieldRow>
+        <div className="grid grid-cols-2 gap-3">
+          <CompactField label="Vægt">
+            <CompactNumberInput
+              fluid
+              value={weightInput}
+              onChange={(raw) => {
+                setWeightInput(raw);
+                const t = raw.trim().replace(",", ".");
+                if (t === "") {
+                  setDay({ ...day, weightX10: null });
+                  return;
+                }
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 500) {
+                  setDay({ ...day, weightX10: Math.round(n * 10) });
+                }
+              }}
+              unit="kg"
+              placeholder="78,5"
+            />
+          </CompactField>
+          <CompactField label="Livvidde">
+            <CompactNumberInput
+              fluid
+              value={waistInput}
+              onChange={(raw) => {
+                setWaistInput(raw);
+                const t = raw.trim().replace(",", ".");
+                if (t === "") {
+                  setDay({ ...day, waistX10: null });
+                  return;
+                }
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 300) {
+                  setDay({ ...day, waistX10: Math.round(n * 10) });
+                }
+              }}
+              unit="cm"
+              placeholder="89,5"
+            />
+          </CompactField>
+        </div>
       </FieldSection>
 
       <FieldSection
@@ -1177,51 +1182,56 @@ function HealthBody({
         title="Ernæring"
         meta={kcal !== null ? `${kcal} kcal` : undefined}
       >
-        <FieldRow label="Kulhydrat">
-          <CompactNumberInput
-            value={day.carbsG === null ? "" : String(day.carbsG)}
-            onChange={(v) => {
-              const t = v.trim();
-              if (t === "") return setDay({ ...day, carbsG: null });
-              const n = Number(t);
-              if (Number.isFinite(n) && n >= 0 && n <= 2000) {
-                setDay({ ...day, carbsG: Math.floor(n) });
-              }
-            }}
-            unit="g"
-            placeholder="0"
-          />
-        </FieldRow>
-        <FieldRow label="Protein">
-          <CompactNumberInput
-            value={day.proteinG === null ? "" : String(day.proteinG)}
-            onChange={(v) => {
-              const t = v.trim();
-              if (t === "") return setDay({ ...day, proteinG: null });
-              const n = Number(t);
-              if (Number.isFinite(n) && n >= 0 && n <= 1000) {
-                setDay({ ...day, proteinG: Math.floor(n) });
-              }
-            }}
-            unit="g"
-            placeholder="0"
-          />
-        </FieldRow>
-        <FieldRow label="Fedt">
-          <CompactNumberInput
-            value={day.fatG === null ? "" : String(day.fatG)}
-            onChange={(v) => {
-              const t = v.trim();
-              if (t === "") return setDay({ ...day, fatG: null });
-              const n = Number(t);
-              if (Number.isFinite(n) && n >= 0 && n <= 1000) {
-                setDay({ ...day, fatG: Math.floor(n) });
-              }
-            }}
-            unit="g"
-            placeholder="0"
-          />
-        </FieldRow>
+        <div className="grid grid-cols-3 gap-3">
+          <CompactField label="Kulhydrat">
+            <CompactNumberInput
+              fluid
+              value={day.carbsG === null ? "" : String(day.carbsG)}
+              onChange={(v) => {
+                const t = v.trim();
+                if (t === "") return setDay({ ...day, carbsG: null });
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 2000) {
+                  setDay({ ...day, carbsG: Math.floor(n) });
+                }
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </CompactField>
+          <CompactField label="Protein">
+            <CompactNumberInput
+              fluid
+              value={day.proteinG === null ? "" : String(day.proteinG)}
+              onChange={(v) => {
+                const t = v.trim();
+                if (t === "") return setDay({ ...day, proteinG: null });
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 1000) {
+                  setDay({ ...day, proteinG: Math.floor(n) });
+                }
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </CompactField>
+          <CompactField label="Fedt">
+            <CompactNumberInput
+              fluid
+              value={day.fatG === null ? "" : String(day.fatG)}
+              onChange={(v) => {
+                const t = v.trim();
+                if (t === "") return setDay({ ...day, fatG: null });
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 1000) {
+                  setDay({ ...day, fatG: Math.floor(n) });
+                }
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </CompactField>
+        </div>
       </FieldSection>
 
       <FieldSection icon={<Activity className="size-3.5" />} title="Aktivitet">
