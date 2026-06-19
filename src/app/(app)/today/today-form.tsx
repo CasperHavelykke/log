@@ -1080,7 +1080,7 @@ function HealthBody({
       : null;
 
   return (
-    <div>
+    <div className="md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-7">
       <FieldSection icon={<Moon className="size-3.5" />} title="Søvn">
         <FieldRow label="Varighed" hint={hasGarminDuration ? "Garmin" : undefined}>
           {hasGarminDuration ? (
