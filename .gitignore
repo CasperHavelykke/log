@@ -44,3 +44,6 @@ next-env.d.ts
 # local data
 /data
 
+# design mockups — kept locally, not deployed
+/mockups
+
