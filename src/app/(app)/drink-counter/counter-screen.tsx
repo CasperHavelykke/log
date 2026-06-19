@@ -91,12 +91,12 @@ export function CounterScreen({
 
   return (
     <div
-      className="flex min-h-[100dvh] flex-col bg-bg text-ink"
+      className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-bg text-ink"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}
     >
-      <header className="flex items-center justify-between px-5 pt-6 pb-3">
+      <header className="flex shrink-0 items-center justify-between px-5 pt-6 pb-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.6px] text-light">
           Aktiv · {elapsed}
         </span>
@@ -110,7 +110,7 @@ export function CounterScreen({
         </button>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-6">
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-6">
         <div className="mb-8 flex flex-col items-center">
           <div
             className="font-serif text-[140px] leading-none text-accent"
@@ -158,7 +158,7 @@ export function CounterScreen({
         </div>
       </main>
 
-      <section className="border-t border-hair px-5 py-4">
+      <section className="shrink-0 border-t border-hair px-5 py-4">
         <div className="mx-auto w-full max-w-[420px]">
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-light">
@@ -173,7 +173,7 @@ export function CounterScreen({
               Ingen indtag endnu. Tryk på en knap ovenfor.
             </p>
           ) : (
-            <ul className="max-h-[26vh] space-y-1.5 overflow-y-auto">
+            <ul className="max-h-[22vh] space-y-1.5 overflow-y-auto overscroll-contain">
               {[...session.logs].reverse().map((l) => (
                 <li
                   key={l.id}
@@ -206,7 +206,7 @@ export function CounterScreen({
       </section>
 
       <footer
-        className="border-t border-hair px-5 pt-4"
+        className="shrink-0 border-t border-hair px-5 pt-4"
         style={{
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
         }}
