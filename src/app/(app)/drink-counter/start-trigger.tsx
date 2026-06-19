@@ -32,16 +32,16 @@ export function StartCounterTrigger() {
         className="inline-flex cursor-pointer items-center gap-1.5 text-[12px] text-accent hover:underline"
       >
         <Beer className="size-3.5" />
-        Start genstande-tæller
+        Start genstandstæller
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-[440px] rounded-t-[18px] bg-bg-elevated p-6 shadow-xl sm:rounded-[14px]"
+            className="w-full max-w-[440px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center gap-3">
@@ -49,7 +49,7 @@ export function StartCounterTrigger() {
                 <Beer className="size-5" />
               </span>
               <h3 className="font-serif text-[20px] text-ink">
-                Genstande-tæller
+                Genstandstæller
               </h3>
             </div>
             <div className="mb-5 space-y-2 text-[13px] text-mid">
@@ -64,7 +64,7 @@ export function StartCounterTrigger() {
                 den flydende knap.
               </p>
               <p>
-                Alle genstande bookføres på dagens dato i din alkohol-log,
+                Alle genstande bogføres på dagens dato i din alkohol-log,
                 også hvis du krydser midnat.
               </p>
             </div>
