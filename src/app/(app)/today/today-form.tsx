@@ -1968,14 +1968,12 @@ function SupplementsBody({
             return (
               <div
                 key={i.id}
-                className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[13px]"
+                className="flex items-center gap-3 rounded-[8px] bg-bg px-3.5 py-2.5 text-[13px]"
               >
-                <span className="font-medium text-ink">{name}</span>
-                {dose && (
-                  <span className="text-accent-bright">{dose}</span>
-                )}
+                <span className="font-semibold text-ink">{name}</span>
+                {dose && <span className="text-accent">{dose}</span>}
                 {time && (
-                  <span className="text-[11px] uppercase tracking-[0.3px] text-light">
+                  <span className="text-[10px] uppercase tracking-[0.3px] text-light">
                     · {time}
                   </span>
                 )}
@@ -1990,7 +1988,7 @@ function SupplementsBody({
                 <button
                   type="button"
                   onClick={() => removeIntake(i.id)}
-                  className="ml-auto cursor-pointer px-1 text-dim hover:text-danger"
+                  className="ml-auto cursor-pointer px-1.5 text-dim hover:text-danger"
                   title="Fjern"
                 >
                   ×
@@ -2005,16 +2003,16 @@ function SupplementsBody({
         <button
           type="button"
           onClick={() => setPicking(true)}
-          className="cursor-pointer rounded-[3px] border border-dashed border-border bg-bg px-3 py-2 text-[13px] text-light hover:border-accent hover:text-accent-bright"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-dashed border-hair-strong bg-transparent px-3.5 py-2.5 text-[13px] text-light transition hover:border-accent hover:text-accent"
         >
           + Vælg tilskud
         </button>
       )}
 
       {picking && !customizing && (
-        <div className="rounded-[3px] border border-accent-dim bg-bg p-3">
-          <div className="mb-2 flex items-baseline justify-between">
-            <span className="font-serif text-[13px] italic text-accent-bright">
+        <div className="rounded-[10px] border border-[var(--accent-soft-strong)] bg-bg-elevated p-3.5">
+          <div className="mb-2.5 flex items-baseline justify-between">
+            <span className="font-serif text-[14px] italic text-accent">
               Vælg tilskud
             </span>
             <button
@@ -2034,7 +2032,7 @@ function SupplementsBody({
               {supplements.filter((s) => !s.archived).map((s) => (
                 <span
                   key={s.id}
-                  className="group inline-flex items-center rounded-full border border-border bg-card text-[12px] text-mid hover:border-accent hover:text-accent-bright"
+                  className="group inline-flex items-center rounded-full border border-hair-strong bg-bg text-[12px] text-mid transition hover:border-accent hover:text-accent"
                 >
                   <button
                     type="button"
@@ -2055,7 +2053,7 @@ function SupplementsBody({
                       e.stopPropagation();
                       removeSupplement(s);
                     }}
-                    className="cursor-pointer rounded-r-full px-2 py-1 text-dim opacity-50 hover:bg-bg hover:text-danger hover:opacity-100"
+                    className="cursor-pointer rounded-r-full px-2 py-1 text-dim opacity-50 hover:bg-bg-subtle hover:text-danger hover:opacity-100"
                     title={`Fjern ${s.name} fra biblioteket`}
                     aria-label={`Slet ${s.name}`}
                   >
@@ -2071,7 +2069,7 @@ function SupplementsBody({
               setPicking(false);
               setCreating(true);
             }}
-            className="mt-3 cursor-pointer text-[12px] text-accent-bright hover:underline"
+            className="mt-3 cursor-pointer text-[12px] text-accent hover:underline"
           >
             + Opret nyt tilskud
           </button>
