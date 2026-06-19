@@ -205,7 +205,12 @@ export function CounterScreen({
         </div>
       </section>
 
-      <footer className="shrink-0 border-t border-hair px-5 pb-5 pt-4">
+      <footer
+        className="shrink-0 border-t border-hair px-5 pt-4"
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+        }}
+      >
         <button
           type="button"
           onClick={confirmEnd}
