@@ -91,7 +91,7 @@ export function CounterScreen({
 
   return (
     <div
-      className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-bg text-ink"
+      className="fixed inset-0 flex h-[100vh] flex-col overflow-hidden bg-bg text-ink"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}
