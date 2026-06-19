@@ -176,6 +176,7 @@ export default async function Today() {
         note: f.note,
       }))}
       fasteEnabled={user.fasteEnabled ?? false}
+      garminSleepEnabled={user.garminSleepEnabled ?? false}
       initialSupplementIntakes={todaysIntakes.map((i) => ({
         id: i.id,
         name: i.name,

@@ -14,6 +14,7 @@ export const metadata = { title: "Indstillinger | Log" };
 export default async function Settings() {
   const user = await requireUser();
   const fasteEnabled = user.fasteEnabled ?? false;
+  const garminSleepEnabled = user.garminSleepEnabled ?? false;
   const [clients, customParameters, activePeriod, allPeriods, allApps] =
     await Promise.all([
       listOAuthClients(),
@@ -73,6 +74,7 @@ export default async function Settings() {
       }
       initialPastPeriods={pastPeriods}
       initialFasteEnabled={fasteEnabled}
+      initialGarminSleepEnabled={garminSleepEnabled}
     />
   );
 }

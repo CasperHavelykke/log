@@ -20,6 +20,9 @@ export const users = sqliteTable("users", {
   fasteEnabled: integer("faste_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  garminSleepEnabled: integer("garmin_sleep_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),

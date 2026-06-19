@@ -234,6 +234,7 @@ export function TodayPage(props: {
   activeFast: ActiveFast;
   recentFasts: RecentFast[];
   fasteEnabled: boolean;
+  garminSleepEnabled: boolean;
   lastSavedAt: string | null;
 }) {
   const [day, setDay] = useState<DayState>(props.initialDay);
@@ -374,6 +375,7 @@ export function TodayPage(props: {
             sleepInput={sleepInput}
             setSleepInput={setSleepInput}
             garminSleep={props.garminSleep}
+            garminSleepEnabled={props.garminSleepEnabled}
             date={props.date}
             trackers={props.trackers}
             customParameters={props.customParameters}
@@ -977,6 +979,7 @@ function HealthBody({
   sleepInput,
   setSleepInput,
   garminSleep,
+  garminSleepEnabled,
   date,
   trackers,
   customParameters,
@@ -991,14 +994,18 @@ function HealthBody({
     score: number | null;
     qualityLabel: string | null;
   } | null;
+  garminSleepEnabled: boolean;
   date: string;
   trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
   customValues: CustomValueRow[];
 }) {
   const hasGarminDuration =
-    garminSleep !== null && garminSleep.durationMin !== null;
-  const hasGarminScore = garminSleep !== null && garminSleep.score !== null;
+    garminSleepEnabled &&
+    garminSleep !== null &&
+    garminSleep.durationMin !== null;
+  const hasGarminScore =
+    garminSleepEnabled && garminSleep !== null && garminSleep.score !== null;
   const garminHoursText = hasGarminDuration
     ? `${Math.floor(garminSleep!.durationMin! / 60)}t ${String(garminSleep!.durationMin! % 60).padStart(2, "0")}m`
     : null;
@@ -1039,13 +1046,27 @@ function HealthBody({
             />
           )}
         </FieldRow>
-        <FieldRow label="Kvalitet" hint={hasGarminScore ? "Garmin" : undefined}>
-          <SleepQualityScale
-            value={hasGarminScore ? garminQualityValue : day.sleepQuality}
-            onChange={(v) => setDay({ ...day, sleepQuality: v })}
-            disabled={hasGarminScore}
-          />
-        </FieldRow>
+        {garminSleepEnabled ? (
+          <FieldRow label="Søvnscore" hint="Garmin">
+            {hasGarminScore ? (
+              <span className="text-[13px] font-medium text-ink">
+                {garminSleep!.score}
+                <span className="ml-0.5 text-[11px] text-dim">/100</span>
+              </span>
+            ) : (
+              <span className="text-[12px] italic text-dim">
+                Importér CSV
+              </span>
+            )}
+          </FieldRow>
+        ) : (
+          <FieldRow label="Kvalitet">
+            <SleepQualityScale
+              value={day.sleepQuality}
+              onChange={(v) => setDay({ ...day, sleepQuality: v })}
+            />
+          </FieldRow>
+        )}
       </FieldSection>
 
       <FieldSection icon={<Smile className="size-3.5" />} title="Stemning">

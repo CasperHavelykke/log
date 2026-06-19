@@ -15,9 +15,9 @@ import {
   startJobSearchPeriod,
   endJobSearchPeriod,
 } from "../jobs/period-actions";
-import { Briefcase, Clock } from "lucide-react";
+import { Briefcase, Clock, Moon } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
-import { setFasteEnabled } from "@/lib/user-prefs";
+import { setFasteEnabled, setGarminSleepEnabled } from "@/lib/user-prefs";
 
 type OAuthClientRow = {
   id: number;
@@ -48,6 +48,7 @@ export function SettingsPage({
   initialActivePeriod,
   initialPastPeriods,
   initialFasteEnabled,
+  initialGarminSleepEnabled,
 }: {
   username: string;
   initialClients: OAuthClientRow[];
@@ -55,6 +56,7 @@ export function SettingsPage({
   initialActivePeriod: ActivePeriodRow | null;
   initialPastPeriods: PastPeriodRow[];
   initialFasteEnabled: boolean;
+  initialGarminSleepEnabled: boolean;
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-5 py-8">
@@ -79,7 +81,10 @@ export function SettingsPage({
       </header>
 
       <div className="space-y-4">
-        <FeaturesCard initialFasteEnabled={initialFasteEnabled} />
+        <FeaturesCard
+          initialFasteEnabled={initialFasteEnabled}
+          initialGarminSleepEnabled={initialGarminSleepEnabled}
+        />
         <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
         <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
@@ -119,8 +124,17 @@ function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function FeaturesCard({ initialFasteEnabled }: { initialFasteEnabled: boolean }) {
+function FeaturesCard({
+  initialFasteEnabled,
+  initialGarminSleepEnabled,
+}: {
+  initialFasteEnabled: boolean;
+  initialGarminSleepEnabled: boolean;
+}) {
   const [fasteEnabled, setFastEnabledState] = useState(initialFasteEnabled);
+  const [garminEnabled, setGarminEnabledState] = useState(
+    initialGarminSleepEnabled,
+  );
   const [, start] = useTransition();
 
   function toggleFaste() {
@@ -131,38 +145,77 @@ function FeaturesCard({ initialFasteEnabled }: { initialFasteEnabled: boolean })
     });
   }
 
+  function toggleGarmin() {
+    const next = !garminEnabled;
+    setGarminEnabledState(next);
+    start(async () => {
+      await setGarminSleepEnabled(next);
+    });
+  }
+
   return (
     <Card title="Funktioner">
       <p className="mb-4 text-[13px] text-mid">
         Slå funktioner til/fra. Du kan altid komme tilbage og ændre det.
       </p>
 
-      <div className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-4 py-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent-bright">
-          <Clock className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-medium text-ink">Faste-tracking</div>
-          <div className="text-[12px] text-mid">
-            Faste-timer på /today + historik på /helbred
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={toggleFaste}
-          className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition ${
-            fasteEnabled ? "bg-accent" : "bg-bg"
-          } border ${fasteEnabled ? "border-accent" : "border-border-light"}`}
-          aria-pressed={fasteEnabled}
-        >
-          <span
-            className={`absolute top-0.5 inline-block size-5 rounded-full bg-white shadow transition-transform ${
-              fasteEnabled ? "translate-x-[22px]" : "translate-x-0.5"
-            }`}
-          />
-        </button>
+      <div className="space-y-2">
+        <FeatureToggle
+          icon={<Clock className="size-4" />}
+          title="Faste-tracking"
+          description="Faste-timer på /today + historik på /helbred"
+          enabled={fasteEnabled}
+          onToggle={toggleFaste}
+        />
+        <FeatureToggle
+          icon={<Moon className="size-4" />}
+          title="Garmin søvndata"
+          description="Erstatter manuel søvnkvalitet med Garmin-søvnscore + viser HRV, hvilepuls, SpO₂ m.m. fra Garmin-upload"
+          enabled={garminEnabled}
+          onToggle={toggleGarmin}
+        />
       </div>
     </Card>
+  );
+}
+
+function FeatureToggle({
+  icon,
+  title,
+  description,
+  enabled,
+  onToggle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-4 py-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent-bright">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-medium text-ink">{title}</div>
+        <div className="text-[12px] text-mid">{description}</div>
+      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition ${
+          enabled ? "bg-accent" : "bg-bg"
+        } border ${enabled ? "border-accent" : "border-border-light"}`}
+        aria-pressed={enabled}
+      >
+        <span
+          className={`absolute top-0.5 inline-block size-5 rounded-full bg-white shadow transition-transform ${
+            enabled ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+    </div>
   );
 }
 

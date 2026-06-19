@@ -116,7 +116,7 @@ const METRICS: Metric[] = [
   { key: "waist", label: "Livvidde", short: "Livvidde", category: "body", unit: "cm", color: "#f97316", decimals: 1 },
   { key: "mood", label: "Humør", short: "Humør", category: "health", unit: "/5", domain: [1, 5], color: "#4ade80", decimals: 0 },
   { key: "energy", label: "Energi", short: "Energi", category: "health", unit: "/5", domain: [1, 5], color: "#fbbf24", decimals: 0 },
-  { key: "sleepQuality", label: "Søvnkvalitet", short: "Søvnkval.", category: "health", unit: "/4", domain: [1, 4], color: "#a78bfa", decimals: 0 },
+  { key: "sleepQuality", label: "Søvnkvalitet", short: "Søvnkval.", category: "sleep", unit: "/4", domain: [1, 4], color: "#a78bfa", decimals: 0 },
   { key: "sleepHours", label: "Søvnvarighed", short: "Søvn", category: "sleep", unit: "t", color: "#5fa3f0", decimals: 1 },
   { key: "sleepScore", label: "Søvnscore (Garmin)", short: "Søvnscore", category: "sleep", unit: "/100", domain: [0, 100], color: "#4ade80", decimals: 0 },
   { key: "hrv", label: "HRV", short: "HRV", category: "garmin", unit: "ms", color: "#a78bfa", decimals: 0 },
@@ -234,6 +234,7 @@ export function StatistikClient({
   data,
   supplementMetrics,
   customMetrics,
+  garminSleepEnabled,
 }: {
   data: DataPoint[];
   supplementMetrics: { metricKey: string; label: string; unit: string }[];
@@ -243,6 +244,7 @@ export function StatistikClient({
     unit: string;
     kind: string;
   }[];
+  garminSleepEnabled: boolean;
 }) {
   const dynamicMetrics: Metric[] = supplementMetrics.map((s, i) => ({
     key: s.metricKey as MetricKey,
@@ -353,6 +355,7 @@ export function StatistikClient({
           onToggle={toggle}
           data={filteredData}
           allMetrics={ALL_METRICS}
+          garminSleepEnabled={garminSleepEnabled}
         />
 
         <div className="space-y-3">
@@ -445,11 +448,13 @@ function MetricPicker({
   onToggle,
   data,
   allMetrics,
+  garminSleepEnabled,
 }: {
   selected: Set<MetricKey>;
   onToggle: (k: MetricKey) => void;
   data: DataPoint[];
   allMetrics: Metric[];
+  garminSleepEnabled: boolean;
 }) {
   const counts = useMemo(() => {
     const m = new Map<MetricKey, number>();
@@ -466,12 +471,23 @@ function MetricPicker({
   return (
     <aside className="space-y-3 self-start rounded-md border border-border bg-card p-3">
       {CATEGORIES.map((cat) => {
-        const metrics = allMetrics.filter((m) => m.category === cat.id);
+        if (cat.id === "garmin" && !garminSleepEnabled) return null;
+        const metrics = allMetrics
+          .filter((m) => m.category === cat.id)
+          .filter((m) => {
+            if (m.key === "sleepScore" && !garminSleepEnabled) return false;
+            if (m.key === "sleepQuality" && garminSleepEnabled) return false;
+            return true;
+          });
         if (metrics.length === 0) return null;
+        const label =
+          cat.id === "sleep" && garminSleepEnabled
+            ? "Garmin søvndata"
+            : cat.label;
         return (
           <div key={cat.id}>
             <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.6px] text-light">
-              {cat.label}
+              {label}
             </div>
             <div className="space-y-1">
               {metrics.map((m) => {

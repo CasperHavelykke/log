@@ -16,12 +16,14 @@ export default async function Health() {
     listCustomParameters(false),
   ]);
   const fasteEnabled = user.fasteEnabled ?? false;
+  const garminSleepEnabled = user.garminSleepEnabled ?? false;
 
   return (
     <>
     <HealthCalendar
       trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
       customParameters={customParameters}
+      garminSleepEnabled={garminSleepEnabled}
       sleepEntries={sleeps.map((s) => ({
         date: s.date,
         durationMin: s.durationMin,

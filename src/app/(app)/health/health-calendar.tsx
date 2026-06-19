@@ -133,11 +133,13 @@ export function HealthCalendar({
   sleepEntries: initialSleep,
   trackers,
   customParameters,
+  garminSleepEnabled,
 }: {
   entries: Entry[];
   sleepEntries: Sleep[];
   trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
+  garminSleepEnabled: boolean;
 }) {
   const today = todayIsoDate();
   const [entries, setEntries] = useState<Map<string, Entry>>(
@@ -231,6 +233,7 @@ export function HealthCalendar({
         month={month}
         year={year}
         onShift={shift}
+        garminSleepEnabled={garminSleepEnabled}
         onImported={(s) =>
           setSleeps((m) => {
             const next = new Map(m);
@@ -259,6 +262,7 @@ export function HealthCalendar({
           sleep={sleeps.get(selected)}
           trackers={trackers}
           customParameters={customParameters}
+          garminSleepEnabled={garminSleepEnabled}
           onSaved={(e) => handleEntrySaved(selected, e)}
           onSleepDeleted={() =>
             setSleeps((m) => {
@@ -280,11 +284,13 @@ function PageHead({
   year,
   onShift,
   onImported,
+  garminSleepEnabled,
 }: {
   month: number;
   year: number;
   onShift: (delta: number) => void;
   onImported: (s: Sleep) => void;
+  garminSleepEnabled: boolean;
 }) {
   return (
     <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
@@ -306,7 +312,7 @@ function PageHead({
         </a>
       </div>
       <div className="flex items-center gap-2">
-        <SleepImport onImported={onImported} />
+        {garminSleepEnabled && <SleepImport onImported={onImported} />}
         <div className="inline-flex items-center rounded-[4px] border border-border bg-card p-0.5">
           <button
             type="button"
@@ -525,6 +531,7 @@ function DayEditorPanel({
   sleep,
   trackers,
   customParameters,
+  garminSleepEnabled,
   onSaved,
   onSleepDeleted,
 }: {
@@ -533,6 +540,7 @@ function DayEditorPanel({
   sleep?: Sleep;
   trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
+  garminSleepEnabled: boolean;
   onSaved: (e: Entry) => void;
   onSleepDeleted: () => void;
 }) {
@@ -669,9 +677,12 @@ function DayEditorPanel({
     exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, healthNotes,
   ]);
 
-  const hasGarminScore = sleep?.score !== null && sleep?.score !== undefined;
+  const hasGarminScore =
+    garminSleepEnabled && sleep?.score !== null && sleep?.score !== undefined;
   const hasGarminDuration =
-    sleep?.durationMin !== null && sleep?.durationMin !== undefined;
+    garminSleepEnabled &&
+    sleep?.durationMin !== null &&
+    sleep?.durationMin !== undefined;
 
   const kcal =
     carbsG !== null && proteinG !== null && fatG !== null
@@ -701,13 +712,27 @@ function DayEditorPanel({
             />
           )}
         </Field>
-        <Field label="Kvalitet" hint={hasGarminScore ? "Garmin" : undefined}>
-          <SleepQualityScale
-            value={hasGarminScore ? garminScoreToQuality(sleep!.score) : sleepQuality}
-            onChange={setSleepQuality}
-            disabled={hasGarminScore}
-          />
-        </Field>
+        {garminSleepEnabled ? (
+          <Field label="Søvnscore" hint="Garmin">
+            {hasGarminScore ? (
+              <span className="text-[13px] font-medium text-ink">
+                {sleep!.score}
+                <span className="ml-0.5 text-[11px] text-dim">/100</span>
+              </span>
+            ) : (
+              <span className="text-[12px] italic text-dim">
+                Importér CSV
+              </span>
+            )}
+          </Field>
+        ) : (
+          <Field label="Kvalitet">
+            <SleepQualityScale
+              value={sleepQuality}
+              onChange={setSleepQuality}
+            />
+          </Field>
+        )}
       </Section>
 
       <Section icon={<Smile className="size-3.5" />} title="Stemning">

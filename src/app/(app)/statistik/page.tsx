@@ -8,6 +8,7 @@ export const metadata = { title: "Statistik | Log" };
 
 export default async function StatistikPage() {
   const user = await requireUser();
+  const garminSleepEnabled = user.garminSleepEnabled ?? false;
 
   const [
     dayEntries,
@@ -213,6 +214,7 @@ export default async function StatistikPage() {
       data={data}
       supplementMetrics={supplementMetrics}
       customMetrics={customMetrics}
+      garminSleepEnabled={garminSleepEnabled}
     />
   );
 }
