@@ -235,6 +235,7 @@ export function TodayPage(props: {
   recentFasts: RecentFast[];
   fasteEnabled: boolean;
   garminSleepEnabled: boolean;
+  hasActiveJobPeriod: boolean;
   lastSavedAt: string | null;
 }) {
   const [day, setDay] = useState<DayState>(props.initialDay);
@@ -312,7 +313,9 @@ export function TodayPage(props: {
       <WeekStrip
         appsThisWeek={props.weekAppsCount}
         weekHoursX10={props.weekHoursX10}
-        applicationsTarget={weekGoal.applicationsTarget}
+        applicationsTarget={
+          props.hasActiveJobPeriod ? weekGoal.applicationsTarget : null
+        }
         focusHoursTargetX10={weekGoal.focusHoursTargetX10}
       />
       <DayIntention
@@ -320,17 +323,23 @@ export function TodayPage(props: {
         initialNote={dayGoals.goalNote ?? ""}
       />
 
-      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card title="Jobsøgning" meta="i dag">
-          <ApplicationsList
-            apps={apps}
-            onChange={setApps}
-            date={props.date}
-            unattachedDocs={unattached}
-            setUnattachedDocs={setUnattached}
-            onError={setError}
-          />
-        </Card>
+      <div
+        className={`mb-4 grid grid-cols-1 gap-4 ${
+          props.hasActiveJobPeriod ? "md:grid-cols-2" : ""
+        }`}
+      >
+        {props.hasActiveJobPeriod && (
+          <Card title="Jobsøgning" meta="i dag">
+            <ApplicationsList
+              apps={apps}
+              onChange={setApps}
+              date={props.date}
+              unattachedDocs={unattached}
+              setUnattachedDocs={setUnattached}
+              onError={setError}
+            />
+          </Card>
+        )}
 
         <Card title="Fokus" meta="i dag">
           <FocusBody

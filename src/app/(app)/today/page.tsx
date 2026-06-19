@@ -16,6 +16,7 @@ import {
 import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
 import { listDocuments } from "../documents/actions";
 import { listTrackers } from "../health/trackere/actions";
+import { getActiveJobSearchPeriod } from "../jobs/period-actions";
 import {
   listCustomParameters,
   listCustomValuesForDate,
@@ -76,6 +77,7 @@ export default async function Today() {
     trackers,
     customParameters,
     customValues,
+    activePeriod,
   ] = await Promise.all([
     getActiveSupplements(user.id),
     getSupplementIntakesOnDate(user.id, date),
@@ -85,7 +87,9 @@ export default async function Today() {
     listTrackers(false),
     listCustomParameters(false),
     listCustomValuesForDate(date),
+    getActiveJobSearchPeriod(),
   ]);
+  const hasActiveJobPeriod = activePeriod !== null;
 
   const docsByApp = new Map<number, typeof allDocs>();
   for (const d of allDocs) {
@@ -177,6 +181,7 @@ export default async function Today() {
       }))}
       fasteEnabled={user.fasteEnabled ?? false}
       garminSleepEnabled={user.garminSleepEnabled ?? false}
+      hasActiveJobPeriod={hasActiveJobPeriod}
       initialSupplementIntakes={todaysIntakes.map((i) => ({
         id: i.id,
         name: i.name,
