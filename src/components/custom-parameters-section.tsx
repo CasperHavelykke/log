@@ -157,7 +157,7 @@ function ParameterRow({
         </div>
       </div>
       {isBoolScale && value.valueBool === true && (
-        <div className="mt-2 sm:ml-3 sm:mt-1">
+        <div className="mt-2 sm:mt-1 sm:flex sm:justify-end">
           <ScaleButtons
             max={parameter.kind === "bool_scale_5" ? 5 : 10}
             value={value.valueInt}
