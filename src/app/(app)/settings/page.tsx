@@ -55,6 +55,7 @@ export default async function Settings() {
   return (
     <SettingsPage
       username={user.name ?? user.email ?? ""}
+      email={user.email ?? ""}
       initialClients={clients.map((c) => ({
         id: c.id,
         clientId: c.clientId,

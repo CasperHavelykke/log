@@ -15,9 +15,14 @@ import {
   startJobSearchPeriod,
   endJobSearchPeriod,
 } from "../jobs/period-actions";
-import { Briefcase, Clock, Moon } from "lucide-react";
+import { Briefcase, Clock, Moon, AlertTriangle } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
 import { setFasteEnabled, setGarminSleepEnabled } from "@/lib/user-prefs";
+import {
+  deleteAccount,
+  getAccountSummary,
+  type AccountSummary,
+} from "./delete-account-actions";
 
 type OAuthClientRow = {
   id: number;
@@ -43,6 +48,7 @@ type PastPeriodRow = {
 
 export function SettingsPage({
   username,
+  email,
   initialClients,
   initialCustomParameters,
   initialActivePeriod,
@@ -51,6 +57,7 @@ export function SettingsPage({
   initialGarminSleepEnabled,
 }: {
   username: string;
+  email: string;
   initialClients: OAuthClientRow[];
   initialCustomParameters: CustomParamSummary[];
   initialActivePeriod: ActivePeriodRow | null;
@@ -91,6 +98,7 @@ export function SettingsPage({
         <ExportCard />
         <ImportCard />
         <InfoCard />
+        <DeleteAccountCard email={email} />
       </div>
     </div>
   );
@@ -543,6 +551,154 @@ function InfoCard() {
         </p>
       </div>
     </Card>
+  );
+}
+
+function DeleteAccountCard({ email }: { email: string }) {
+  const [step, setStep] = useState<"closed" | "summary" | "confirm">("closed");
+  const [summary, setSummary] = useState<AccountSummary | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function openSummary() {
+    setErr(null);
+    start(async () => {
+      const s = await getAccountSummary();
+      setSummary(s);
+      setStep("summary");
+    });
+  }
+
+  function runDelete() {
+    setErr(null);
+    start(async () => {
+      const res = await deleteAccount({ confirmEmail });
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      window.location.href = "/login?deleted=1";
+    });
+  }
+
+  return (
+    <section className="rounded-md border border-danger/40 bg-card px-6 py-5">
+      <h2 className="mb-3 flex items-center gap-2 border-b border-danger/30 pb-2.5 font-serif text-[20px] font-medium text-danger">
+        <AlertTriangle className="size-5" />
+        Slet konto
+      </h2>
+
+      <p className="mb-4 text-[13px] text-mid">
+        Sletter din bruger og alt tilknyttet data permanent: dagbogsindlæg,
+        projekter, ansøgninger, helbredsdata, fotos, dokumenter osv. Kan ikke
+        fortrydes. Tag en eksport først hvis du vil beholde dataen.
+      </p>
+
+      {step === "closed" && (
+        <button
+          type="button"
+          onClick={openSummary}
+          disabled={pending}
+          className="cursor-pointer rounded-[3px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-50"
+        >
+          {pending ? "Indlæser..." : "Slet min konto"}
+        </button>
+      )}
+
+      {step === "summary" && summary && (
+        <div className="rounded-[3px] border border-danger/40 bg-[rgba(248,113,113,0.04)] p-3">
+          <p className="mb-2 text-[13px] font-medium text-ink">
+            Du sletter følgende:
+          </p>
+          <ul className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] text-mid">
+            <SummaryRow label="Dagbogsindlæg" value={summary.dayEntries} />
+            <SummaryRow label="Projekter" value={summary.projects} />
+            <SummaryRow label="Tids-poster" value={summary.timeEntries} />
+            <SummaryRow label="Ansøgninger" value={summary.jobApplications} />
+            <SummaryRow label="Søvn-poster" value={summary.sleepEntries} />
+            <SummaryRow label="Faster" value={summary.fasts} />
+            <SummaryRow label="Kosttilskud" value={summary.supplements} />
+            <SummaryRow label="Trackere" value={summary.trackers} />
+            <SummaryRow label="Egne målinger" value={summary.customParameters} />
+            <SummaryRow label="Fotos" value={summary.photos} />
+            <SummaryRow label="Dokumenter" value={summary.documents} />
+          </ul>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setStep("confirm")}
+              className="cursor-pointer rounded-[3px] border border-danger bg-danger px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
+            >
+              Fortsæt
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("closed");
+                setSummary(null);
+              }}
+              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+            >
+              Annullér
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "confirm" && (
+        <div className="rounded-[3px] border border-danger/40 bg-[rgba(248,113,113,0.04)] p-3">
+          <p className="mb-2 text-[13px] text-ink">
+            Skriv din email for at bekræfte:
+          </p>
+          <p className="mb-3 text-[11px] italic text-light">
+            {email}
+          </p>
+          <input
+            type="email"
+            value={confirmEmail}
+            onChange={(e) => setConfirmEmail(e.target.value)}
+            placeholder="dig@example.com"
+            autoComplete="off"
+            className="!mb-3 !text-[14px]"
+          />
+          {err && <p className="mb-2 text-[13px] text-danger">{err}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={runDelete}
+              disabled={pending || !confirmEmail.trim()}
+              className="cursor-pointer rounded-[3px] border border-danger bg-danger px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {pending ? "Sletter..." : "Slet min konto permanent"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("summary");
+                setConfirmEmail("");
+                setErr(null);
+              }}
+              disabled={pending}
+              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+            >
+              Tilbage
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: number }) {
+  return (
+    <li className="flex items-baseline justify-between gap-2 border-b border-border-light/50 py-0.5">
+      <span>{label}</span>
+      <span className={`font-medium ${value > 0 ? "text-ink" : "text-dim"}`}>
+        {value}
+      </span>
+    </li>
   );
 }
 

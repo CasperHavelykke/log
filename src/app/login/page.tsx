@@ -32,6 +32,7 @@ export default async function LoginPage({
   const step = params.step === "verify" ? "verify" : "email";
   const email = typeof params.email === "string" ? params.email : "";
   const error = typeof params.error === "string" ? params.error : undefined;
+  const deleted = params.deleted === "1";
 
   const user = await getCurrentUser();
   if (user) redirect(returnTo);
@@ -48,6 +49,11 @@ export default async function LoginPage({
           <CodeForm email={email} returnTo={returnTo} error={error} />
         ) : (
           <>
+            {deleted && (
+              <div className="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
+                Din konto og alle data er slettet.
+              </div>
+            )}
             {error && (
               <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
                 Login fejlede. Prøv igen eller kontakt support.
