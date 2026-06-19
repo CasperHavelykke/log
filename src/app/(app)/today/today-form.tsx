@@ -1968,7 +1968,7 @@ function SupplementsBody({
             return (
               <div
                 key={i.id}
-                className="flex items-center gap-3 rounded-[8px] bg-bg px-3.5 py-2.5 text-[13px]"
+                className="flex items-center gap-3 rounded-[8px] bg-bg-elevated px-3.5 py-2.5 text-[13px] md:bg-bg"
               >
                 <span className="font-semibold text-ink">{name}</span>
                 {dose && <span className="text-accent">{dose}</span>}
