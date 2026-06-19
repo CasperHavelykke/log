@@ -83,7 +83,7 @@ export function CustomParametersSection({
   if (parameters.length === 0) return null;
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-4 sm:space-y-1">
       {parameters.map((p) => (
         <ParameterRow
           key={p.id}

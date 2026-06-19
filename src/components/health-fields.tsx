@@ -22,7 +22,7 @@ export function Section({
           <span className="ml-auto text-[10px] text-accent-bright">{meta}</span>
         )}
       </div>
-      <div className="space-y-1">{children}</div>
+      <div className="space-y-4 sm:space-y-1">{children}</div>
     </div>
   );
 }
