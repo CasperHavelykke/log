@@ -309,7 +309,12 @@ export function TodayPage(props: {
 
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
-      <PageHeader date={props.date} />
+      <PageHeader
+        date={props.date}
+        savingDay={savingDay}
+        lastSaved={lastSaved}
+        error={error}
+      />
       <WeekStrip
         appsThisWeek={props.weekAppsCount}
         weekHoursX10={props.weekHoursX10}
@@ -423,35 +428,64 @@ export function TodayPage(props: {
         </Card>
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-2 border-t border-border pt-4 text-[12px] italic">
-        {error ? (
-          <span className="text-danger">{error}</span>
-        ) : savingDay ? (
-          <span className="text-light">Gemmer…</span>
-        ) : lastSaved ? (
-          <span className="text-success">
-            ✓ Gemt {new Date(lastSaved).toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-        ) : (
-          <span className="text-light">Auto-gemmes mens du skriver</span>
-        )}
-      </div>
     </div>
   );
 }
 
-function PageHeader({ date }: { date: string }) {
+function PageHeader({
+  date,
+  savingDay,
+  lastSaved,
+  error,
+}: {
+  date: string;
+  savingDay: boolean;
+  lastSaved: string | null;
+  error: string | null;
+}) {
   return (
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-      <h1 className="font-serif text-[36px] font-medium leading-none text-ink">Log</h1>
-      <div className="text-right">
-        <div className="text-sm font-medium uppercase tracking-[1px] text-accent-bright">
+    <header className="mb-7 flex items-end justify-between gap-4 border-b border-hair pb-5">
+      <div>
+        <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
           {danishWeekday(date)}
         </div>
-        <div className="font-serif text-[22px] text-ink">{danishLongDate(date)}</div>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+          {danishLongDate(date)}
+        </h1>
       </div>
+      <SaveStatus savingDay={savingDay} lastSaved={lastSaved} error={error} />
     </header>
   );
+}
+
+function SaveStatus({
+  savingDay,
+  lastSaved,
+  error,
+}: {
+  savingDay: boolean;
+  lastSaved: string | null;
+  error: string | null;
+}) {
+  if (error) {
+    return <span className="text-[12px] italic text-danger">{error}</span>;
+  }
+  if (savingDay) {
+    return <span className="text-[12px] italic text-light">Gemmer…</span>;
+  }
+  if (lastSaved) {
+    const time = new Date(lastSaved).toLocaleTimeString("da-DK", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return (
+      <span className="inline-flex items-center gap-1 text-[12px] italic text-success">
+        <Check className="size-3" />
+        Gemt {time}
+      </span>
+    );
+  }
+  return null;
 }
 
 
@@ -468,12 +502,16 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-md border border-border bg-card px-6 py-5 transition-colors hover:border-accent-dim ${full ? "col-span-full" : ""}`}
+      className={`rounded-[10px] bg-bg-elevated px-5 py-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:px-6 ${full ? "col-span-full" : ""}`}
     >
-      <div className="mb-4 flex items-baseline justify-between border-b border-border-light pb-2.5">
-        <div className="font-serif text-[20px] font-medium text-accent-bright">{title}</div>
+      <div className="mb-4 flex items-baseline justify-between border-b border-hair pb-2.5">
+        <div className="font-serif text-[19px] font-medium text-accent">
+          {title}
+        </div>
         {meta && (
-          <div className="text-[12px] uppercase tracking-[0.5px] text-light">{meta}</div>
+          <div className="text-[10px] uppercase tracking-[0.5px] text-light">
+            {meta}
+          </div>
         )}
       </div>
       {children}
