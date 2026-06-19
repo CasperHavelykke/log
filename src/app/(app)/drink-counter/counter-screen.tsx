@@ -90,11 +90,14 @@ export function CounterScreen({
   const elapsed = formatElapsed(now - new Date(session.startedAt).getTime());
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-bg text-ink">
-      <header
-        className="flex items-center justify-between px-5 pb-3"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}
-      >
+    <div
+      className="flex min-h-[100dvh] flex-col bg-bg text-ink"
+      style={{
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      <header className="flex items-center justify-between px-5 pt-6 pb-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.6px] text-light">
           Aktiv · {elapsed}
         </span>
@@ -203,10 +206,7 @@ export function CounterScreen({
         </div>
       </section>
 
-      <footer
-        className="border-t border-hair px-5 pt-4"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
-      >
+      <footer className="border-t border-hair px-5 py-4">
         <button
           type="button"
           onClick={confirmEnd}
