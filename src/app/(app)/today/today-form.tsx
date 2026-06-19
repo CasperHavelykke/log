@@ -502,10 +502,10 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-[10px] bg-bg-elevated px-5 py-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:px-6 ${full ? "col-span-full" : ""}`}
+      className={`md:rounded-[10px] md:bg-bg-elevated md:px-6 md:py-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] ${full ? "col-span-full" : ""}`}
     >
-      <div className="mb-4 flex items-baseline justify-between border-b border-hair pb-2.5">
-        <div className="font-serif text-[19px] font-medium text-accent">
+      <div className="mb-3 flex items-baseline justify-between md:mb-4 md:border-b md:border-hair md:pb-2.5">
+        <div className="font-serif text-[22px] font-medium text-ink md:text-[19px] md:text-accent">
           {title}
         </div>
         {meta && (
