@@ -38,7 +38,10 @@ export function FloatingCounterBanner({
     <button
       type="button"
       onClick={returnToCounter}
-      className="fixed bottom-20 right-4 z-50 inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-[13px] font-medium text-white shadow-[0_8px_24px_rgba(110,169,242,0.4)] transition active:scale-95 md:bottom-6"
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)",
+      }}
+      className="fixed right-4 z-[60] inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-[13px] font-medium text-white shadow-[0_8px_24px_rgba(110,169,242,0.4)] transition active:scale-95 md:!bottom-6"
     >
       <span className="font-semibold">{totalUnits}</span>
       <span>genstande · tilbage til tæller →</span>
