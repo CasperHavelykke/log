@@ -18,18 +18,7 @@ export function WeekStrip({
     focusHoursTargetX10 !== null && focusHoursTargetX10 > 0;
 
   if (!hasAppGoal && !hasFocusGoal) {
-    return (
-      <p className="mb-4 text-center text-[12px] italic text-light">
-        Ingen ugemål sat —{" "}
-        <Link href="/jobs" className="underline hover:text-accent-bright">
-          sæt ét på /jobs
-        </Link>{" "}
-        eller{" "}
-        <Link href="/projects" className="underline hover:text-accent-bright">
-          /projekter
-        </Link>
-      </p>
-    );
+    return null;
   }
 
   return (
