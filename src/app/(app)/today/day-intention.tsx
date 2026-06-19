@@ -44,7 +44,7 @@ export function DayIntention({
         onChange={(e) => setNote(e.target.value)}
         rows={note.length > 80 ? 3 : 1}
         placeholder="Hvad er din intention for dagen?"
-        className="!border-0 !bg-transparent !p-0 !text-[14px] text-ink"
+        className="!border-0 !bg-transparent !p-0 !text-[16px] text-ink sm:!text-[14px]"
       />
     </div>
   );
