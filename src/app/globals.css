@@ -4,27 +4,39 @@
   --bg: #0a0f1a;
   --page: #111827;
   --card: #1a2436;
+  --bg-elevated: #131c2c;
+  --bg-subtle: #1a2436;
   --border: #2a3654;
   --border-light: #1f2a3f;
+  --hair: rgba(255, 255, 255, 0.06);
+  --hair-strong: rgba(255, 255, 255, 0.10);
   --ink: #e8ecf3;
   --mid: #a0aec0;
   --light: #6b7a92;
   --dim: #4a5568;
-  --accent: #4a90e2;
+  --accent: #6ea9f2;
   --accent-bright: #5fa3f0;
   --accent-dim: #2a5a9e;
-  --accent-bg: rgba(74, 144, 226, 0.1);
+  --accent-bg: rgba(110, 169, 242, 0.14);
+  --accent-soft-strong: rgba(110, 169, 242, 0.22);
   --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
   --warning: #fbbf24;
+  --warning-soft: rgba(245, 185, 66, 0.12);
   --danger: #f87171;
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-page: var(--page);
   --color-card: var(--card);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-subtle: var(--bg-subtle);
   --color-border: var(--border);
   --color-border-light: var(--border-light);
+  --color-hair: var(--hair);
+  --color-hair-strong: var(--hair-strong);
   --color-ink: var(--ink);
   --color-mid: var(--mid);
   --color-light: var(--light);

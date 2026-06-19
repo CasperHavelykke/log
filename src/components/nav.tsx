@@ -13,43 +13,112 @@ import {
   Settings,
 } from "lucide-react";
 
-const allItems = [
+type Item = {
+  href: string;
+  label: string;
+  icon: typeof CalendarDays;
+  key: string;
+};
+
+const PRIMARY_ITEMS: Item[] = [
   { href: "/today", label: "I dag", icon: CalendarDays, key: "today" },
-  { href: "/jobs", label: "Job", icon: Briefcase, key: "jobs" },
-  { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
   { href: "/health", label: "Helbred", icon: HeartPulse, key: "health" },
   { href: "/statistik", label: "Statistik", icon: LineChart, key: "statistik" },
-  { href: "/documents", label: "Dokumenter", icon: FileText, key: "documents" },
-  { href: "/journal", label: "Journal", icon: NotebookPen, key: "journal" },
-  { href: "/settings", label: "Indstillinger", icon: Settings, key: "settings" },
+  { href: "/jobs", label: "Job", icon: Briefcase, key: "jobs" },
+  { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
 ];
 
-export function Nav({ showJobs = true }: { showJobs?: boolean }) {
+const ARCHIVE_ITEMS: Item[] = [
+  { href: "/documents", label: "Dokumenter", icon: FileText, key: "documents" },
+  { href: "/journal", label: "Journal", icon: NotebookPen, key: "journal" },
+];
+
+export function Nav({
+  showJobs = true,
+  email,
+}: {
+  showJobs?: boolean;
+  email?: string | null;
+}) {
   const pathname = usePathname();
-  const items = allItems.filter((i) => (i.key === "jobs" ? showJobs : true));
+  const primary = PRIMARY_ITEMS.filter(
+    (i) => i.key !== "jobs" || showJobs,
+  );
+  const initial = (email ?? "?").trim().charAt(0).toUpperCase() || "?";
+  const shortEmail =
+    email && email.length > 22 ? email.slice(0, 20) + "…" : email ?? "";
+
   return (
-    <header className="sticky top-0 z-10 hidden border-b border-border bg-background/80 backdrop-blur md:block">
-      <div className="mx-auto max-w-5xl px-3 py-2 sm:px-4 sm:py-3">
-        <nav className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
-          {items.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`inline-flex min-h-[40px] min-w-[40px] touch-manipulation items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition active:bg-border/60 sm:min-h-0 sm:min-w-0 sm:px-2.5 ${
-                  active
-                    ? "bg-accent/15 text-accent"
-                    : "text-muted hover:bg-border/40 hover:text-foreground"
-                }`}
-              >
-                <Icon className="size-4" />
-                <span className="hidden sm:inline">{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+    <aside className="sticky top-0 hidden h-screen w-[224px] shrink-0 flex-col border-r border-hair bg-[#070b14] px-3.5 py-5 md:flex">
+      <div className="mb-3.5 flex items-baseline gap-2 border-b border-hair pb-5">
+        <span className="font-serif text-[24px] leading-none text-ink">
+          Log
+        </span>
+        <span className="text-[11px] italic text-dim">loggen.app</span>
       </div>
-    </header>
+
+      <nav className="flex flex-col gap-0.5">
+        {primary.map((item) => (
+          <NavItem key={item.key} item={item} pathname={pathname} />
+        ))}
+
+        <div className="px-2.5 pb-1.5 pt-3.5 text-[10px] font-semibold uppercase tracking-[0.6px] text-dim">
+          Arkiv
+        </div>
+        {ARCHIVE_ITEMS.map((item) => (
+          <NavItem key={item.key} item={item} pathname={pathname} />
+        ))}
+      </nav>
+
+      <div className="flex-1" />
+
+      <NavItem
+        item={{
+          href: "/settings",
+          label: "Indstillinger",
+          icon: Settings,
+          key: "settings",
+        }}
+        pathname={pathname}
+      />
+
+      <div className="mt-1.5 flex items-center gap-2.5 border-t border-hair px-2.5 pt-3.5">
+        <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-bg text-[13px] font-semibold text-accent-bright">
+          {initial}
+        </span>
+        {email && (
+          <span
+            className="truncate text-[12px] text-light"
+            title={email}
+          >
+            {shortEmail}
+          </span>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function NavItem({
+  item,
+  pathname,
+}: {
+  item: Item;
+  pathname: string;
+}) {
+  const active = pathname === item.href || pathname.startsWith(item.href + "/");
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition ${
+        active
+          ? "bg-accent-bg text-accent-bright"
+          : "text-mid hover:bg-bg-subtle hover:text-ink"
+      }`}
+    >
+      <Icon className="size-4 shrink-0" />
+      {item.label}
+    </Link>
   );
 }
