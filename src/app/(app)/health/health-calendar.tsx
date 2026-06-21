@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
-import { PhotoUploader } from "@/components/tracker-photo-section";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createTracker } from "./trackere/actions";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
 import {
@@ -1341,7 +1342,6 @@ const FOTO_PRESETS: { name: string; kind: "skin_spot" | "dermatitis" }[] = [
 ];
 
 function FotoOpfoelgningCard({
-  date,
   trackers,
   onTrackerCreated,
 }: {
@@ -1349,12 +1349,11 @@ function FotoOpfoelgningCard({
   trackers: TrackerRef[];
   onTrackerCreated: (t: TrackerRef) => void;
 }) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [customName, setCustomName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const selected = trackers.find((t) => t.id === selectedId) ?? null;
   const usedNames = new Set(trackers.map((t) => t.name.trim().toLowerCase()));
 
   async function createPreset(name: string, kind: "skin_spot" | "dermatitis") {
@@ -1363,16 +1362,14 @@ function FotoOpfoelgningCard({
     const res = await createTracker({ name, kind, notes: null });
     setCreating(false);
     if (res.ok) {
-      const t: TrackerRef = {
+      onTrackerCreated({
         id: res.tracker.id,
         name: res.tracker.name,
         kind: res.tracker.kind,
         photoCount: 0,
         latestTakenAt: null,
-      };
-      onTrackerCreated(t);
-      setSelectedId(t.id);
-      setAdding(false);
+      });
+      router.push(`/health/trackere/${res.tracker.id}`);
     }
   }
 
@@ -1383,17 +1380,14 @@ function FotoOpfoelgningCard({
     const res = await createTracker({ name, kind: "other", notes: null });
     setCreating(false);
     if (res.ok) {
-      const t: TrackerRef = {
+      onTrackerCreated({
         id: res.tracker.id,
         name: res.tracker.name,
         kind: res.tracker.kind,
         photoCount: 0,
         latestTakenAt: null,
-      };
-      onTrackerCreated(t);
-      setSelectedId(t.id);
-      setCustomName("");
-      setAdding(false);
+      });
+      router.push(`/health/trackere/${res.tracker.id}`);
     }
   }
 
@@ -1405,40 +1399,31 @@ function FotoOpfoelgningCard({
         </h2>
       </div>
 
-      {selected ? (
-        <PhotoUploader
-          tracker={{ id: selected.id, name: selected.name }}
-          date={date}
-          onBack={() => setSelectedId(null)}
-        />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {trackers.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setSelectedId(t.id)}
-                className="flex cursor-pointer items-center gap-3 rounded-[10px] bg-bg-elevated p-3 text-left transition-colors hover:bg-bg-subtle md:bg-bg md:hover:bg-bg-subtle"
-              >
-                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
-                  <Camera className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-medium text-ink">
-                    {t.name}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-light">
-                    {t.photoCount === 0
-                      ? "Ingen billeder endnu"
-                      : t.latestTakenAt
-                        ? `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"} · seneste ${danishLongDate(t.latestTakenAt)}`
-                        : `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"}`}
-                  </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-dim" />
-              </button>
-            ))}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        {trackers.map((t) => (
+          <Link
+            key={t.id}
+            href={`/health/trackere/${t.id}`}
+            className="flex cursor-pointer items-center gap-3 rounded-[10px] bg-bg-elevated p-3 text-left transition-colors hover:bg-bg-subtle md:bg-bg md:hover:bg-bg-subtle"
+          >
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
+              <Camera className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-medium text-ink">
+                {t.name}
+              </div>
+              <div className="mt-0.5 text-[11px] text-light">
+                {t.photoCount === 0
+                  ? "Ingen billeder endnu"
+                  : t.latestTakenAt
+                    ? `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"} · seneste ${danishLongDate(t.latestTakenAt)}`
+                    : `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"}`}
+              </div>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-dim" />
+          </Link>
+        ))}
             <button
               type="button"
               onClick={() => setAdding((v) => !v)}
@@ -1503,8 +1488,6 @@ function FotoOpfoelgningCard({
               </div>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }
