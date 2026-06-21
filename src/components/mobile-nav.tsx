@@ -179,7 +179,7 @@ function Drawer({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-50 transform bg-bg shadow-2xl transition-transform duration-300 md:hidden ${
+      className={`fixed bottom-0 left-0 right-0 z-50 transform bg-bg/80 shadow-2xl backdrop-blur-xl transition-transform duration-300 md:hidden ${
         open ? "translate-y-0" : "translate-y-full"
       }`}
       style={{
