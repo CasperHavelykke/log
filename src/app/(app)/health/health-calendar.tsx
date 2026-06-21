@@ -313,8 +313,6 @@ function PageHead({
   month,
   year,
   onShift,
-  onImported,
-  garminSleepEnabled,
 }: {
   month: number;
   year: number;
@@ -322,37 +320,37 @@ function PageHead({
   onImported: (s: Sleep) => void;
   garminSleepEnabled: boolean;
 }) {
+  const monthShort = MONTHS[month].slice(0, 3);
   return (
-    <header className="mb-6 flex items-end justify-between gap-4 border-b border-hair pb-5">
-      <div>
+    <header className="mb-6 flex items-end justify-between gap-3 border-b border-hair pb-5">
+      <div className="min-w-0">
         <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
           Helbred
         </div>
-        <h1 className="font-serif text-[28px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+        <h1 className="whitespace-nowrap font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
           {capitalize(MONTHS[month])} {year}
         </h1>
       </div>
-      <div className="flex items-center gap-2">
-        {garminSleepEnabled && <SleepImport onImported={onImported} />}
-        <div className="inline-flex items-center rounded-[8px] bg-bg-elevated p-1">
-          <button
-            type="button"
-            onClick={() => onShift(-1)}
-            className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[6px] text-mid hover:bg-bg-subtle hover:text-ink"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          <span className="min-w-[100px] px-2 text-center text-[13px] font-medium text-ink">
-            {capitalize(MONTHS[month])} {year}
-          </span>
-          <button
-            type="button"
-            onClick={() => onShift(1)}
-            className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[6px] text-mid hover:bg-bg-subtle hover:text-ink"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
+      <div className="inline-flex shrink-0 items-center rounded-full bg-bg-elevated p-1">
+        <button
+          type="button"
+          onClick={() => onShift(-1)}
+          className="inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-mid hover:bg-bg-subtle hover:text-ink"
+          aria-label="Forrige måned"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <span className="px-2 text-[12px] font-medium text-ink">
+          {monthShort}
+        </span>
+        <button
+          type="button"
+          onClick={() => onShift(1)}
+          className="inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-mid hover:bg-bg-subtle hover:text-ink"
+          aria-label="Næste måned"
+        >
+          <ChevronRight className="size-4" />
+        </button>
       </div>
     </header>
   );
