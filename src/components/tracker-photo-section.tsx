@@ -213,12 +213,12 @@ export function TrackerPhotoSection({
   );
 }
 
-function PhotoUploader({
+export function PhotoUploader({
   tracker,
   date,
   onBack,
 }: {
-  tracker: TrackerRef;
+  tracker: { id: number; name: string };
   date: string;
   onBack: () => void;
 }) {

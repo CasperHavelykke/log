@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
@@ -105,6 +105,50 @@ export async function deleteTracker(id: number) {
     );
   revalidatePath("/health/trackere");
   return { ok: true as const };
+}
+
+export async function listTrackersWithPhotoStats() {
+  const user = await requireUser();
+  const trackerRows = await db
+    .select()
+    .from(schema.trackers)
+    .where(
+      and(
+        eq(schema.trackers.userId, user.id),
+        eq(schema.trackers.archived, false),
+      ),
+    )
+    .orderBy(asc(schema.trackers.name));
+
+  const statsRows = await db
+    .select({
+      trackerId: schema.photos.trackerId,
+      photoCount: count(schema.photos.id),
+      latestTakenAt: max(schema.photos.takenAt),
+    })
+    .from(schema.photos)
+    .where(eq(schema.photos.userId, user.id))
+    .groupBy(schema.photos.trackerId);
+
+  const statsByTracker = new Map<
+    number,
+    { photoCount: number; latestTakenAt: string | null }
+  >();
+  for (const row of statsRows) {
+    if (row.trackerId === null) continue;
+    statsByTracker.set(row.trackerId, {
+      photoCount: row.photoCount,
+      latestTakenAt: row.latestTakenAt ?? null,
+    });
+  }
+
+  return trackerRows.map((t) => ({
+    id: t.id,
+    name: t.name,
+    kind: t.kind,
+    photoCount: statsByTracker.get(t.id)?.photoCount ?? 0,
+    latestTakenAt: statsByTracker.get(t.id)?.latestTakenAt ?? null,
+  }));
 }
 
 export async function listTrackers(includeArchived = false) {

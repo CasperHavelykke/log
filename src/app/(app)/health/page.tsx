@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/session";
 import { getAllDayEntries, getAllSleepEntries } from "@/lib/queries";
-import { listTrackers } from "./trackere/actions";
+import { listTrackersWithPhotoStats } from "./trackere/actions";
 import { listCustomParameters } from "@/lib/custom-parameters";
 import { HealthCalendar } from "./health-calendar";
 import { FasteHistory } from "./faste-history";
@@ -12,7 +12,7 @@ export default async function Health() {
   const [entries, sleeps, trackers, customParameters] = await Promise.all([
     getAllDayEntries(user.id),
     getAllSleepEntries(user.id),
-    listTrackers(false),
+    listTrackersWithPhotoStats(),
     listCustomParameters(false),
   ]);
   const fasteEnabled = user.fasteEnabled ?? false;
@@ -21,7 +21,7 @@ export default async function Health() {
   return (
     <>
     <HealthCalendar
-      trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
+      trackers={trackers}
       customParameters={customParameters}
       garminSleepEnabled={garminSleepEnabled}
       sleepEntries={sleeps.map((s) => ({

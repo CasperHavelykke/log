@@ -10,6 +10,7 @@ import {
   Dumbbell,
   Moon,
   Pencil,
+  Plus,
   Scale,
   Smile,
   Sparkles,
@@ -20,7 +21,8 @@ import {
 } from "lucide-react";
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
-import { TrackerPhotoSection } from "@/components/tracker-photo-section";
+import { PhotoUploader } from "@/components/tracker-photo-section";
+import { createTracker } from "./trackere/actions";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
 import {
   listCustomValuesForDate,
@@ -75,7 +77,13 @@ type Entry = {
   nextStep: string;
 };
 
-type TrackerRef = { id: number; name: string; kind: string };
+type TrackerRef = {
+  id: number;
+  name: string;
+  kind: string;
+  photoCount: number;
+  latestTakenAt: string | null;
+};
 
 const MONTHS = [
   "januar", "februar", "marts", "april", "maj", "juni",
@@ -126,7 +134,7 @@ function fmtMinutes(m: number | null): string {
 export function HealthCalendar({
   entries: initial,
   sleepEntries: initialSleep,
-  trackers,
+  trackers: initialTrackers,
   customParameters,
   garminSleepEnabled,
 }: {
@@ -143,6 +151,7 @@ export function HealthCalendar({
   const [sleeps, setSleeps] = useState<Map<string, Sleep>>(
     () => new Map(initialSleep.map((s) => [s.date, s])),
   );
+  const [trackers, setTrackers] = useState<TrackerRef[]>(initialTrackers);
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -263,7 +272,7 @@ export function HealthCalendar({
 
       <StatRow summary={summary} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
         <CalendarPane
           cells={cells}
           entries={entries}
@@ -278,7 +287,6 @@ export function HealthCalendar({
           date={selected}
           entry={entries.get(selected)}
           sleep={sleeps.get(selected)}
-          trackers={trackers}
           customParameters={customParameters}
           garminSleepEnabled={garminSleepEnabled}
           onSaved={(e) => handleEntrySaved(selected, e)}
@@ -298,6 +306,12 @@ export function HealthCalendar({
           }
         />
       </div>
+
+      <FotoOpfoelgningCard
+        date={selected}
+        trackers={trackers}
+        onTrackerCreated={(t) => setTrackers((prev) => [...prev, t])}
+      />
     </div>
   );
 }
@@ -542,7 +556,6 @@ function DayEditorPanel({
   date,
   entry,
   sleep,
-  trackers,
   customParameters,
   garminSleepEnabled,
   onSaved,
@@ -552,7 +565,6 @@ function DayEditorPanel({
   date: string;
   entry?: Entry;
   sleep?: Sleep;
-  trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
   garminSleepEnabled: boolean;
   onSaved: (e: Entry) => void;
@@ -705,7 +717,7 @@ function DayEditorPanel({
       : null;
 
   return (
-    <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+    <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
       <EditorHead date={date} saveState={saveState} savedAt={savedAt} errorMsg={errorMsg.current} />
 
       {(hasGarminScore || hasGarminDuration) && (
@@ -872,10 +884,6 @@ function DayEditorPanel({
           placeholder="Symptomer, medicin, observationer..."
           className="!rounded-[8px] !border-hair !bg-bg-elevated !text-[16px] md:!rounded-[6px] md:!border-transparent md:!bg-bg-subtle md:!text-[13px]"
         />
-      </Section>
-
-      <Section icon={<Camera className="size-3.5" />} title="Fotos">
-        <TrackerPhotoSection date={date} trackers={trackers} />
       </Section>
     </aside>
   );
@@ -1323,4 +1331,180 @@ function parseInt0to50(s: string): number | null {
   const n = Number(s);
   if (!Number.isFinite(n) || n < 0 || n > 50) return null;
   return Math.floor(n);
+}
+
+// --- FOTO-OPFØLGNING (eget card under grid'et) ----------------------------
+
+const FOTO_PRESETS: { name: string; kind: "skin_spot" | "dermatitis" }[] = [
+  { name: "Skønhedsplet", kind: "skin_spot" },
+  { name: "Skæleksem", kind: "dermatitis" },
+];
+
+function FotoOpfoelgningCard({
+  date,
+  trackers,
+  onTrackerCreated,
+}: {
+  date: string;
+  trackers: TrackerRef[];
+  onTrackerCreated: (t: TrackerRef) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const selected = trackers.find((t) => t.id === selectedId) ?? null;
+  const usedNames = new Set(trackers.map((t) => t.name.trim().toLowerCase()));
+
+  async function createPreset(name: string, kind: "skin_spot" | "dermatitis") {
+    if (creating) return;
+    setCreating(true);
+    const res = await createTracker({ name, kind, notes: null });
+    setCreating(false);
+    if (res.ok) {
+      const t: TrackerRef = {
+        id: res.tracker.id,
+        name: res.tracker.name,
+        kind: res.tracker.kind,
+        photoCount: 0,
+        latestTakenAt: null,
+      };
+      onTrackerCreated(t);
+      setSelectedId(t.id);
+      setAdding(false);
+    }
+  }
+
+  async function createCustom() {
+    const name = customName.trim();
+    if (!name || creating) return;
+    setCreating(true);
+    const res = await createTracker({ name, kind: "other", notes: null });
+    setCreating(false);
+    if (res.ok) {
+      const t: TrackerRef = {
+        id: res.tracker.id,
+        name: res.tracker.name,
+        kind: res.tracker.kind,
+        photoCount: 0,
+        latestTakenAt: null,
+      };
+      onTrackerCreated(t);
+      setSelectedId(t.id);
+      setCustomName("");
+      setAdding(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mb-3 md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
+        <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
+          Foto-opfølgning
+        </h2>
+      </div>
+
+      {selected ? (
+        <PhotoUploader
+          tracker={{ id: selected.id, name: selected.name }}
+          date={date}
+          onBack={() => setSelectedId(null)}
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {trackers.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedId(t.id)}
+                className="flex cursor-pointer items-center gap-3 rounded-[10px] bg-bg-elevated p-3 text-left transition-colors hover:bg-bg-subtle md:bg-bg md:hover:bg-bg-subtle"
+              >
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
+                  <Camera className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-medium text-ink">
+                    {t.name}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-light">
+                    {t.photoCount === 0
+                      ? "Ingen billeder endnu"
+                      : t.latestTakenAt
+                        ? `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"} · seneste ${danishLongDate(t.latestTakenAt)}`
+                        : `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"}`}
+                  </div>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-dim" />
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setAdding((v) => !v)}
+              className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-hair-strong p-3 text-[13px] text-light transition-colors hover:border-accent hover:text-accent sm:col-span-2 ${
+                adding ? "border-accent text-accent" : ""
+              }`}
+            >
+              <Plus className="size-4" />
+              Tilføj opfølgning
+            </button>
+          </div>
+
+          {adding && (
+            <div className="mt-3 rounded-[8px] bg-bg-elevated p-3 md:bg-bg">
+              <div className="mb-2 text-[10px] uppercase tracking-[0.5px] text-light">
+                Vælg forslag eller skriv eget
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {FOTO_PRESETS.map((p) => {
+                  const already = usedNames.has(p.name.toLowerCase());
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => createPreset(p.name, p.kind)}
+                      disabled={already || creating}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+                        already
+                          ? "cursor-not-allowed border-hair bg-bg-elevated text-dim md:bg-bg-subtle"
+                          : "cursor-pointer border-hair-strong bg-bg-elevated text-mid hover:border-accent hover:text-accent md:bg-bg-subtle"
+                      }`}
+                    >
+                      <Plus className="size-3" />
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="Andet område (fx 'plet på arm')"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") createCustom();
+                    if (e.key === "Escape") {
+                      setAdding(false);
+                      setCustomName("");
+                    }
+                  }}
+                  className="!rounded-[8px] !border-hair !bg-bg-elevated !py-1.5 !text-[16px] md:!rounded-[6px] md:!border-transparent md:!bg-bg-subtle md:!text-[13px]"
+                />
+                <button
+                  type="button"
+                  onClick={createCustom}
+                  disabled={!customName.trim() || creating}
+                  className="shrink-0 cursor-pointer rounded-[8px] border border-accent bg-accent px-3 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-accent-bright disabled:opacity-50 md:rounded-[6px]"
+                >
+                  Opret
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
