@@ -186,11 +186,9 @@ export function HealthCalendar({
         .filter((e) => e.sleepHoursX10 !== null)
         .map((e) => e.sleepHoursX10! / 10),
     );
-    const moodAvg = avg(
-      monthEntries.filter((e) => e.mood !== null).map((e) => e.mood!),
-    );
-    const energyAvg = avg(
-      monthEntries.filter((e) => e.energy !== null).map((e) => e.energy!),
+    const drinks = monthEntries.reduce(
+      (sum, e) => sum + (e.alcoholUnits ?? 0),
+      0,
     );
 
     // Vægt-trend: nyeste vs. tidligere i måneden
@@ -207,17 +205,28 @@ export function HealthCalendar({
       }
     }
 
+    // Livvidde: seneste måling i måneden
+    const waistEntries = monthEntries
+      .filter((e) => e.waistX10 !== null)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const waistLatest =
+      waistEntries.length > 0
+        ? waistEntries[waistEntries.length - 1].waistX10! / 10
+        : null;
+
+    const daysInMonthCount = daysInMonth(year, month);
+
     return {
       logged,
+      loggedTotal: daysInMonthCount,
       training,
-      alcohol,
+      drinks,
       sleep: sleepAvg,
-      mood: moodAvg,
-      energy: energyAvg,
       weightLatest,
       weightDelta,
+      waistLatest,
     };
-  }, [monthEntries]);
+  }, [monthEntries, year, month]);
 
   function handleEntrySaved(date: string, next: Entry) {
     setEntries((prev) => {
@@ -293,41 +302,32 @@ function PageHead({
   garminSleepEnabled: boolean;
 }) {
   return (
-    <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-      <div className="flex flex-wrap items-baseline gap-4">
-        <h1 className="font-serif text-[30px] font-medium leading-none text-ink">
+    <header className="mb-6 flex items-end justify-between gap-4 border-b border-hair pb-5">
+      <div>
+        <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
           Helbred
+        </div>
+        <h1 className="font-serif text-[28px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+          {capitalize(MONTHS[month])} {year}
         </h1>
-        <a
-          href="/health/trackere"
-          className="text-[12px] text-accent-bright hover:underline"
-        >
-          Trackere →
-        </a>
-        <a
-          href="/health/photos"
-          className="text-[12px] text-accent-bright hover:underline"
-        >
-          Fotos →
-        </a>
       </div>
       <div className="flex items-center gap-2">
         {garminSleepEnabled && <SleepImport onImported={onImported} />}
-        <div className="inline-flex items-center rounded-[4px] border border-border bg-card p-0.5">
+        <div className="inline-flex items-center rounded-[8px] bg-bg-elevated p-1">
           <button
             type="button"
             onClick={() => onShift(-1)}
-            className="inline-flex min-h-[32px] min-w-[32px] cursor-pointer items-center justify-center rounded-[3px] text-mid hover:bg-bg hover:text-ink"
+            className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[6px] text-mid hover:bg-bg-subtle hover:text-ink"
           >
             <ChevronLeft className="size-4" />
           </button>
-          <span className="min-w-[140px] px-3 text-center font-serif text-[17px] text-ink">
+          <span className="min-w-[100px] px-2 text-center text-[13px] font-medium text-ink">
             {capitalize(MONTHS[month])} {year}
           </span>
           <button
             type="button"
             onClick={() => onShift(1)}
-            className="inline-flex min-h-[32px] min-w-[32px] cursor-pointer items-center justify-center rounded-[3px] text-mid hover:bg-bg hover:text-ink"
+            className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[6px] text-mid hover:bg-bg-subtle hover:text-ink"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -348,75 +348,86 @@ function StatRow({
 }: {
   summary: {
     logged: number;
+    loggedTotal: number;
     training: number;
-    alcohol: number;
+    drinks: number;
     sleep: number | null;
-    mood: number | null;
-    energy: number | null;
     weightLatest: number | null;
     weightDelta: number | null;
+    waistLatest: number | null;
   };
 }) {
   return (
-    <div className="mb-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
-      <Stat label="Logget" value={`${summary.logged} dage`} />
-      <Stat
+    <div className="mb-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-6">
+      <StatCard label="Logget" value={String(summary.logged)} unit={`/${summary.loggedTotal}`} />
+      <StatCard
         label="Søvn Ø"
-        value={summary.sleep !== null ? `${fmtHours(summary.sleep * 10)} t` : "–"}
+        value={summary.sleep !== null ? summary.sleep.toFixed(1).replace(".", ",") : "–"}
+        unit={summary.sleep !== null ? "t" : undefined}
       />
-      <Stat label="Humør Ø" value={summary.mood !== null ? String(summary.mood) : "–"} />
-      <Stat
-        label="Energi Ø"
-        value={summary.energy !== null ? String(summary.energy) : "–"}
+      <StatCard label="Træning" value={String(summary.training)} unit=" dage" />
+      <StatCard
+        label="Vægt"
+        value={
+          summary.weightLatest !== null
+            ? summary.weightLatest.toFixed(1).replace(".", ",")
+            : "–"
+        }
+        unit={summary.weightLatest !== null ? "kg" : undefined}
+        trend={
+          summary.weightLatest !== null && summary.weightDelta !== null && summary.weightDelta !== 0
+            ? {
+                value: `${summary.weightDelta < 0 ? "↓" : "↑"} ${Math.abs(summary.weightDelta).toFixed(1).replace(".", ",")}`,
+                positive: summary.weightDelta < 0,
+              }
+            : undefined
+        }
       />
-      {summary.training > 0 && (
-        <Stat label="Træning" value={`${summary.training} dage`} tone="text-success" />
-      )}
-      {summary.alcohol > 0 && (
-        <Stat label="Alkohol" value={`${summary.alcohol} dage`} tone="text-warning" />
-      )}
-      {summary.weightLatest !== null && (
-        <Stat
-          label="Vægt"
-          value={
-            <>
-              {summary.weightLatest.toFixed(1).replace(".", ",")} kg{" "}
-              {summary.weightDelta !== null && summary.weightDelta !== 0 && (
-                <span
-                  className={`text-[11px] ${
-                    summary.weightDelta < 0 ? "text-success" : "text-warning"
-                  }`}
-                >
-                  {summary.weightDelta < 0 ? "↓" : "↑"}{" "}
-                  {Math.abs(summary.weightDelta).toFixed(1).replace(".", ",")}
-                </span>
-              )}
-            </>
-          }
-        />
-      )}
+      <StatCard
+        label="Livvidde"
+        value={
+          summary.waistLatest !== null
+            ? summary.waistLatest.toFixed(1).replace(".", ",")
+            : "–"
+        }
+        unit={summary.waistLatest !== null ? "cm" : undefined}
+      />
+      <StatCard label="Genstande" value={String(summary.drinks)} unit="stk" />
     </div>
   );
 }
 
-function Stat({
+function StatCard({
   label,
   value,
-  tone,
+  unit,
+  trend,
 }: {
   label: string;
-  value: React.ReactNode;
-  tone?: string;
+  value: string;
+  unit?: string;
+  trend?: { value: string; positive: boolean };
 }) {
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[10px] uppercase tracking-[0.4px] text-light">
+    <div className="rounded-[10px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         {label}
-      </span>
-      <span className={`font-medium ${tone ?? "text-ink"}`}>{value}</span>
+      </div>
+      <div className="mt-1 font-serif text-[20px] leading-[1.1] text-ink sm:text-[22px]">
+        {value}
+        {unit && <span className="text-[12px] text-light">{unit}</span>}
+        {trend && (
+          <span
+            className={`ml-1.5 text-[11px] ${trend.positive ? "text-success" : "text-warning"}`}
+          >
+            {trend.value}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
+
 
 // --- CALENDAR --------------------------------------------------------------
 
