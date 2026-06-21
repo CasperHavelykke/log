@@ -38,7 +38,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Nav showJobs={showJobs} email={user.email ?? null} />
-      <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-32 pt-4 sm:py-8 md:px-10 md:pb-10">
+      <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-32 pt-[calc(env(safe-area-inset-top,0px)+16px)] sm:pb-8 sm:pt-[calc(env(safe-area-inset-top,0px)+32px)] md:px-10 md:pb-10">
         {children}
       </main>
       <MobileNav showJobs={showJobs} />
