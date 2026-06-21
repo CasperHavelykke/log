@@ -379,7 +379,7 @@ function StatRow({
   };
 }) {
   return (
-    <div className="mb-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-6">
+    <div className="mb-6 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-6">
       <StatCard label="Logget" value={String(summary.logged)} unit={`/${summary.loggedTotal}`} />
       <StatCard
         label="Søvn Ø"
@@ -430,7 +430,7 @@ function StatCard({
   trend?: { value: string; positive: boolean };
 }) {
   return (
-    <div className="rounded-[10px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="min-w-[100px] shrink-0 rounded-[10px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:min-w-0 sm:shrink">
       <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         {label}
       </div>
@@ -468,7 +468,7 @@ function CalendarPane({
   onSelect: (iso: string) => void;
 }) {
   return (
-    <div className="rounded-md border border-border bg-card p-3">
+    <div className="md:rounded-md md:border md:border-border md:bg-card md:p-3">
       <div className="mb-1.5 grid grid-cols-7 gap-1">
         {WEEKDAYS_SHORT.map((w) => (
           <div
@@ -724,7 +724,7 @@ function DayEditorPanel({
       : null;
 
   return (
-    <aside className="rounded-md border border-border bg-card p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+    <aside className="md:rounded-md md:border md:border-border md:bg-card md:p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
       <EditorHead date={date} saveState={saveState} savedAt={savedAt} errorMsg={errorMsg.current} />
 
       {(hasGarminScore || hasGarminDuration) && (
@@ -784,22 +784,26 @@ function DayEditorPanel({
       </Section>
 
       <Section icon={<Scale className="size-3.5" />} title="Krop">
-        <Field label="Vægt">
-          <NumberInput
-            value={weightInput}
-            onChange={setWeightInput}
-            unit="kg"
-            placeholder="78,5"
-          />
-        </Field>
-        <Field label="Livvidde">
-          <NumberInput
-            value={waistInput}
-            onChange={setWaistInput}
-            unit="cm"
-            placeholder="89,5"
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <GridField label="Vægt">
+            <NumberInput
+              fluid
+              value={weightInput}
+              onChange={setWeightInput}
+              unit="kg"
+              placeholder="78,5"
+            />
+          </GridField>
+          <GridField label="Livvidde">
+            <NumberInput
+              fluid
+              value={waistInput}
+              onChange={setWaistInput}
+              unit="cm"
+              placeholder="89,5"
+            />
+          </GridField>
+        </div>
       </Section>
 
       <Section
@@ -807,30 +811,35 @@ function DayEditorPanel({
         title="Ernæring"
         meta={kcal !== null ? `${kcal} kcal` : undefined}
       >
-        <Field label="Kulhydrat">
-          <NumberInput
-            value={carbsG === null ? "" : String(carbsG)}
-            onChange={(v) => setCarbsG(parseInt0to2000(v))}
-            unit="g"
-            placeholder="0"
-          />
-        </Field>
-        <Field label="Protein">
-          <NumberInput
-            value={proteinG === null ? "" : String(proteinG)}
-            onChange={(v) => setProteinG(parseInt0to1000(v))}
-            unit="g"
-            placeholder="0"
-          />
-        </Field>
-        <Field label="Fedt">
-          <NumberInput
-            value={fatG === null ? "" : String(fatG)}
-            onChange={(v) => setFatG(parseInt0to1000(v))}
-            unit="g"
-            placeholder="0"
-          />
-        </Field>
+        <div className="grid grid-cols-3 gap-3">
+          <GridField label="Kulhydrat">
+            <NumberInput
+              fluid
+              value={carbsG === null ? "" : String(carbsG)}
+              onChange={(v) => setCarbsG(parseInt0to2000(v))}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="Protein">
+            <NumberInput
+              fluid
+              value={proteinG === null ? "" : String(proteinG)}
+              onChange={(v) => setProteinG(parseInt0to1000(v))}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="Fedt">
+            <NumberInput
+              fluid
+              value={fatG === null ? "" : String(fatG)}
+              onChange={(v) => setFatG(parseInt0to1000(v))}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+        </div>
       </Section>
 
       <Section icon={<Activity className="size-3.5" />} title="Aktivitet">
@@ -1122,21 +1131,23 @@ function NumberInput({
   onChange,
   unit,
   placeholder,
+  fluid = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   unit: string;
   placeholder: string;
+  fluid?: boolean;
 }) {
   return (
-    <div className="relative w-[110px]">
+    <div className={fluid ? "relative w-full" : "relative w-[110px]"}>
       <input
         type="text"
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="!text-[12px]"
+        className="!text-[16px] sm:!text-[12px]"
         style={{ paddingRight: "32px", paddingTop: "5px", paddingBottom: "5px" }}
       />
       <span
@@ -1144,6 +1155,23 @@ function NumberInput({
       >
         {unit}
       </span>
+    </div>
+  );
+}
+
+function GridField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+        {label}
+      </div>
+      {children}
     </div>
   );
 }

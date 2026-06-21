@@ -144,20 +144,22 @@ function ParameterRow({
 
   return (
     <div className="py-1">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <label className="flex items-center gap-2 text-[14px] text-ink sm:text-[13px]">
-          {parameter.name}
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex min-w-0 items-center gap-2 text-[13px] text-ink">
+          <span className="truncate">{parameter.name}</span>
           {parameter.unit && (
-            <span className="text-[11px] text-dim sm:text-[10px]">· {parameter.unit}</span>
+            <span className="shrink-0 text-[10px] text-dim">
+              · {parameter.unit}
+            </span>
           )}
           <SaveIndicator saving={saving} saved={savedRecently} />
         </label>
-        <div className="self-stretch sm:self-auto">
+        <div className="shrink-0">
           {renderControls(parameter, value, onChange)}
         </div>
       </div>
       {isBoolScale && value.valueBool === true && (
-        <div className="mt-2 sm:mt-1 sm:flex sm:justify-end">
+        <div className="mt-2 flex justify-end">
           <ScaleButtons
             max={parameter.kind === "bool_scale_5" ? 5 : 10}
             value={value.valueInt}
@@ -235,11 +237,11 @@ function YesNoButtons({
   onChange: (v: boolean | null) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:flex sm:gap-0.5">
+    <div className="inline-flex gap-1">
       <button
         type="button"
         onClick={() => onChange(value === true ? null : true)}
-        className={`min-h-[44px] cursor-pointer rounded-[6px] border px-3 text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[44px] sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
+        className={`min-h-[32px] min-w-[44px] cursor-pointer rounded-[6px] border px-3 text-[12px] font-medium transition sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
           value === true
             ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
             : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
@@ -250,7 +252,7 @@ function YesNoButtons({
       <button
         type="button"
         onClick={() => onChange(value === false ? null : false)}
-        className={`min-h-[44px] cursor-pointer rounded-[6px] border px-3 text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[44px] sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
+        className={`min-h-[32px] min-w-[44px] cursor-pointer rounded-[6px] border px-3 text-[12px] font-medium transition sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
           value === false
             ? "border-mid text-ink"
             : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
@@ -271,16 +273,14 @@ function ScaleButtons({
   value: number | null;
   onChange: (v: number | null) => void;
 }) {
-  const gridCols =
-    max === 10 ? "grid-cols-10" : max === 5 ? "grid-cols-5" : "grid-cols-3";
   return (
-    <div className={`grid ${gridCols} gap-1.5 sm:flex sm:flex-wrap sm:gap-0.5`}>
+    <div className="inline-flex flex-wrap gap-1">
       {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
         <button
           key={n}
           type="button"
           onClick={() => onChange(value === n ? null : n)}
-          className={`min-h-[44px] cursor-pointer rounded-[6px] border text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:rounded-[3px] sm:text-[11px] sm:font-normal ${
+          className={`min-h-[32px] min-w-[32px] cursor-pointer rounded-[6px] border text-[12px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:rounded-[3px] sm:text-[11px] sm:font-normal ${
             value === n
               ? "border-accent bg-accent-bg text-accent-bright"
               : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
