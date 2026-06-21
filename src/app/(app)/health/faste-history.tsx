@@ -1,5 +1,5 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import { Clock } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 
@@ -43,7 +43,12 @@ export async function FasteHistory() {
 
   if (fasts.length === 0) {
     return (
-      <div className="rounded-md border border-border bg-card px-5 py-6 text-center">
+      <div className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+        <div className="mb-3 md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
+          <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
+            Faste
+          </h2>
+        </div>
         <p className="text-[13px] italic text-light">
           Ingen afsluttede faster endnu — start en på /today.
         </p>
@@ -52,9 +57,6 @@ export async function FasteHistory() {
   }
 
   const durations = fasts.map((f) => durationMinutes(f.startedAt, f.endedAt!));
-  // Stats tæller kun faster ≥16t — korte faster er stadig synlige i listen
-  // men inkluderes ikke i snit/længste, så tal ikke trækkes ned af glemte
-  // morgenmads-vinduer eller afbrudte forsøg.
   const qualifiedDurations = durations.filter((d) => d >= 16 * 60);
   const shortCount = durations.length - qualifiedDurations.length;
   const qualifiedAvg =
@@ -68,18 +70,18 @@ export async function FasteHistory() {
     qualifiedDurations.length > 0 ? Math.max(...qualifiedDurations) : null;
 
   return (
-    <section className="rounded-md border border-border bg-card px-5 py-5">
-      <div className="mb-4 flex items-baseline justify-between border-b border-border-light pb-3">
-        <h2 className="font-serif text-[20px] font-medium text-accent-bright">
-          Faste-historik
+    <section className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mb-3 flex items-baseline justify-between md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
+        <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
+          Faste
         </h2>
-        <span className="text-[11px] italic text-light">
-          seneste {fasts.length}
+        <span className="text-[11px] italic text-light md:text-[10px] md:uppercase md:not-italic md:tracking-[0.5px]">
+          seneste 30 dage
         </span>
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
-        <Stat label="Faster" value={qualifiedDurations.length} />
+      <div className="mb-3.5 grid grid-cols-3 gap-2 md:gap-2.5">
+        <Stat label="Faster" value={String(qualifiedDurations.length)} />
         <Stat
           label="Snit"
           value={qualifiedAvg !== null ? fmtDuration(qualifiedAvg) : "–"}
@@ -92,66 +94,65 @@ export async function FasteHistory() {
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-1.5">
         {fasts.slice(0, 10).map((f) => {
           const mins = durationMinutes(f.startedAt, f.endedAt!);
           const qualified = mins >= 16 * 60;
           return (
             <div
               key={f.id}
-              className="flex items-center gap-3 rounded-[4px] border border-border-light bg-bg px-3 py-2.5"
+              className="flex items-center gap-2.5 rounded-[10px] bg-bg-elevated px-3 py-2.5 text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:rounded-[8px] md:bg-bg md:py-2 md:shadow-none"
             >
               <span
                 className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
                   qualified
-                    ? "bg-[rgba(74,222,128,0.12)] text-success"
-                    : "bg-[rgba(245,185,66,0.12)] text-warning"
+                    ? "bg-[var(--success-soft)] text-success"
+                    : "bg-[var(--warning-soft)] text-warning"
                 }`}
               >
-                <Clock className="size-3.5" />
+                {qualified ? (
+                  <Check className="size-3.5" strokeWidth={2.5} />
+                ) : (
+                  <Clock className="size-3.5" />
+                )}
               </span>
-              <div className="min-w-0 flex-1">
-                <div
-                  className={`text-[13px] font-medium ${qualified ? "text-ink" : "text-warning"}`}
-                >
-                  {fmtDuration(mins)}
-                </div>
-                <div className="text-[11px] text-mid">
-                  {fmtRelative(f.startedAt)} · {fmtTime(f.startedAt)} →{" "}
-                  {fmtTime(f.endedAt!)}
-                </div>
-              </div>
+              <span
+                className={`font-semibold ${qualified ? "text-ink" : "text-warning"}`}
+              >
+                {fmtDuration(mins)}
+              </span>
+              <span className="ml-auto text-[12px] text-mid">
+                {fmtRelative(f.startedAt)} · {fmtTime(f.startedAt)} →{" "}
+                {fmtTime(f.endedAt!)}
+              </span>
             </div>
           );
         })}
       </div>
 
       {shortCount > 0 && (
-        <p className="mt-4 flex items-start gap-1.5 text-[11px] italic text-mid">
-          <span className="mt-0.5 inline-block size-2 shrink-0 rounded-full bg-warning" />
-          <span>
-            {shortCount} {shortCount === 1 ? "faste varede" : "faster varede"}{" "}
-            under 16 timer og tæller ikke med i snit eller længste.
-          </span>
+        <p className="mt-3 text-center text-[11px] italic text-light">
+          {shortCount} {shortCount === 1 ? "faste varede" : "faster varede"}{" "}
+          under 16 timer og tæller ikke med i snit eller længste
         </p>
       )}
 
       {fasts.length > 10 && (
-        <div className="mt-4 text-center text-[12px] text-light">
-          ... og {fasts.length - 10} ældre
+        <div className="mt-3 text-center text-[11px] text-light">
+          … og {fasts.length - 10} ældre
         </div>
       )}
     </section>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[4px] border border-border-light bg-bg px-3 py-2.5 text-center">
-      <div className="font-serif text-[20px] leading-none text-ink">
+    <div className="rounded-[10px] bg-bg-elevated px-3 py-2.5 text-center shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:rounded-[8px] md:bg-bg md:shadow-none">
+      <div className="font-serif text-[22px] leading-none text-ink md:text-[20px]">
         {value}
       </div>
-      <div className="mt-1 text-[10px] uppercase tracking-[0.5px] text-mid">
+      <div className="mt-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
         {label}
       </div>
     </div>
