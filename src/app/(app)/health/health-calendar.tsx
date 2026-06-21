@@ -181,11 +181,25 @@ export function HealthCalendar({
     const alcohol = monthEntries.filter(
       (e) => e.alcoholUnits !== null && e.alcoholUnits > 0,
     ).length;
-    const sleepAvg = avg(
-      monthEntries
-        .filter((e) => e.sleepHoursX10 !== null)
-        .map((e) => e.sleepHoursX10! / 10),
-    );
+    // Søvn-snit: brug Garmin-varighed hvis tilgængelig, ellers manuel sleepHours
+    const prefix = `${year}-${pad(month + 1)}`;
+    const sleepHours: number[] = [];
+    for (const e of monthEntries) {
+      const garmin = sleeps.get(e.date);
+      if (garmin?.durationMin != null) {
+        sleepHours.push(garmin.durationMin / 60);
+      } else if (e.sleepHoursX10 !== null) {
+        sleepHours.push(e.sleepHoursX10 / 10);
+      }
+    }
+    // Også tag Garmin-dage MED hvis der ikke er nogen dayEntry for dagen
+    for (const [date, s] of sleeps) {
+      if (!date.startsWith(prefix)) continue;
+      if (s.durationMin == null) continue;
+      if (entries.has(date)) continue; // allerede talt med ovenfor
+      sleepHours.push(s.durationMin / 60);
+    }
+    const sleepAvg = avg(sleepHours);
     const drinks = monthEntries.reduce(
       (sum, e) => sum + (e.alcoholUnits ?? 0),
       0,
@@ -226,7 +240,7 @@ export function HealthCalendar({
       weightDelta,
       waistLatest,
     };
-  }, [monthEntries, year, month]);
+  }, [monthEntries, year, month, sleeps, entries]);
 
   function handleEntrySaved(date: string, next: Entry) {
     setEntries((prev) => {
