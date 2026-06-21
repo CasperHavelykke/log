@@ -56,6 +56,7 @@ import {
   Section as FieldSection,
   Field as FieldRow,
   CompactField,
+  GridField,
   Scale1to5,
   YesNo as YesNoButtons,
   IntensityPicker,
@@ -1285,8 +1286,8 @@ function HealthBody({
       </FieldSection>
 
       <FieldSection icon={<ScaleIcon className="size-3.5" />} title="Krop">
-        <div className="grid grid-cols-2 gap-3">
-          <CompactField label="Vægt">
+        <div className="grid grid-cols-2 gap-3 md:block md:space-y-1">
+          <GridField label="Vægt">
             <CompactNumberInput
               fluid
               value={weightInput}
@@ -1305,8 +1306,8 @@ function HealthBody({
               unit="kg"
               placeholder="78,5"
             />
-          </CompactField>
-          <CompactField label="Livvidde">
+          </GridField>
+          <GridField label="Livvidde">
             <CompactNumberInput
               fluid
               value={waistInput}
@@ -1325,7 +1326,7 @@ function HealthBody({
               unit="cm"
               placeholder="89,5"
             />
-          </CompactField>
+          </GridField>
         </div>
       </FieldSection>
 
@@ -1334,8 +1335,8 @@ function HealthBody({
         title="Ernæring"
         meta={kcal !== null ? `${kcal} kcal` : undefined}
       >
-        <div className="grid grid-cols-3 gap-3">
-          <CompactField label="Kulhydrat">
+        <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
+          <GridField label="Kulhydrat">
             <CompactNumberInput
               fluid
               value={day.carbsG === null ? "" : String(day.carbsG)}
@@ -1350,8 +1351,8 @@ function HealthBody({
               unit="g"
               placeholder="0"
             />
-          </CompactField>
-          <CompactField label="Protein">
+          </GridField>
+          <GridField label="Protein">
             <CompactNumberInput
               fluid
               value={day.proteinG === null ? "" : String(day.proteinG)}
@@ -1366,8 +1367,8 @@ function HealthBody({
               unit="g"
               placeholder="0"
             />
-          </CompactField>
-          <CompactField label="Fedt">
+          </GridField>
+          <GridField label="Fedt">
             <CompactNumberInput
               fluid
               value={day.fatG === null ? "" : String(day.fatG)}
@@ -1382,7 +1383,7 @@ function HealthBody({
               unit="g"
               placeholder="0"
             />
-          </CompactField>
+          </GridField>
         </div>
       </FieldSection>
 

@@ -170,7 +170,7 @@ export function CompactNumberInput({
   fluid?: boolean;
 }) {
   return (
-    <div className={fluid ? "relative w-full" : "relative w-full sm:w-[110px]"}>
+    <div className={fluid ? "relative w-full md:w-[110px]" : "relative w-full sm:w-[110px]"}>
       <input
         type="text"
         inputMode="decimal"
@@ -207,6 +207,25 @@ export function CompactField({
         )}
       </div>
       {children}
+    </div>
+  );
+}
+
+// Responsiv: label-over-input på mobil (i grid-celle), label-venstre + input-højre
+// på desktop. Spejler GridField fra /helbred så de matcher i layout og typografi.
+export function GridField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="md:flex md:items-center md:justify-between md:gap-3 md:py-1">
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light md:mb-0 md:text-[13px] md:font-normal md:normal-case md:tracking-normal md:text-ink">
+        {label}
+      </div>
+      <div>{children}</div>
     </div>
   );
 }
