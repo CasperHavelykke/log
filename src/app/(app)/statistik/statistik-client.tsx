@@ -329,7 +329,7 @@ export function StatistikClient({
   const overlayMetrics = selectedMetrics.slice(0, MAX_OVERLAY);
 
   return (
-    <div className="mx-auto max-w-[1280px] space-y-5 py-8">
+    <div className="mx-auto max-w-[1280px] space-y-5 px-4 py-8">
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-hair pb-5">
         <div className="min-w-0">
           <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
