@@ -37,6 +37,7 @@ import {
   Camera,
   Check,
   Circle,
+  FolderKanban,
   Hourglass,
   Moon,
   Pencil,
@@ -862,7 +863,7 @@ function FocusEntryCard({
   return (
     <div className="flex items-center gap-3 rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:bg-bg">
       <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
-        <Briefcase className="size-4" />
+        <FolderKanban className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-[14px] font-medium text-ink">
