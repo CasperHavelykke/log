@@ -1311,23 +1311,28 @@ function SleepImport({
             className="w-full max-w-[480px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--accent-bg)] text-accent">
                 <Moon className="size-5" />
               </span>
               <h3 className="font-serif text-[20px] text-ink">
-                Importér Garmin søvndata
+                Importér søvndata
               </h3>
             </div>
 
             <div className="mb-4 space-y-2 text-[13px] text-mid">
+              <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+                Garmin søvndata
+              </div>
               <p>
-                Eksportér fra{" "}
-                <strong className="font-medium text-ink">Garmin Connect</strong>{" "}
-                → Søvn → vælg en nat → menuen (⋮) →{" "}
-                <strong className="font-medium text-ink">Eksportér</strong>.
-                Hver fil dækker én nat. Vælg flere på én gang.
+                Login på{" "}
+                <strong className="font-medium text-ink">
+                  connect.garmin.com
+                </strong>{" "}
+                → Sundhedstatistik → Søvn → vælg en dato → menuen (⋮) →{" "}
+                <strong className="font-medium text-ink">Eksportér CSV</strong>.
               </p>
+              <p>Hver fil dækker én nat. Vælg flere på én gang.</p>
               <p className="text-[12px] italic text-light">
                 Eksport-knappen findes kun i web-versionen på desktop —
                 ikke i Garmin Connect-appen.
@@ -1391,7 +1396,10 @@ function SleepImport({
               </p>
             )}
 
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <p className="text-[10px] italic text-dim">
+                Loggen er ikke tilknyttet Garmin.
+              </p>
               <button
                 type="button"
                 onClick={() => !pending && setOpen(false)}
