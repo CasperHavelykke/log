@@ -1219,11 +1219,13 @@ function SleepImport({
   onImported: (s: Sleep) => void;
   compact?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
-  function onFiles(files: FileList | null) {
+  function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setMsg(null);
     start(async () => {
@@ -1231,6 +1233,10 @@ function SleepImport({
         updated = 0,
         errors = 0;
       for (const f of Array.from(files)) {
+        if (!f.name.toLowerCase().endsWith(".csv")) {
+          errors++;
+          continue;
+        }
         const text = await f.text();
         const res = await importGarminSleepCsv({ csvText: text, filename: f.name });
         if (res.ok) {
@@ -1264,43 +1270,139 @@ function SleepImport({
       if (updated) parts.push(`${updated} opdateret`);
       if (errors) parts.push(`${errors} fejl`);
       setMsg(parts.join(", "));
-      setTimeout(() => setMsg(null), 4000);
       if (fileRef.current) fileRef.current.value = "";
+      if (errors === 0) {
+        setTimeout(() => {
+          setOpen(false);
+          setMsg(null);
+        }, 1400);
+      }
     });
   }
 
   return (
     <>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".csv,text/csv"
-        multiple
-        onChange={(e) => onFiles(e.target.files)}
-        className="hidden"
-      />
       {compact ? (
         <button
           type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={pending}
-          className="inline-flex cursor-pointer items-center gap-1 text-[11px] text-accent hover:underline disabled:opacity-50"
-          title={msg ?? "Importér søvndata (Garmin CSV)"}
+          onClick={() => setOpen(true)}
+          className="inline-flex cursor-pointer items-center gap-1 text-[11px] text-accent hover:underline"
         >
           <Upload className="size-3" />
-          {pending ? "Importerer…" : msg ?? "Importér søvndata"}
+          Importér søvndata
         </button>
       ) : (
         <button
           type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={pending}
-          className="inline-flex min-h-[32px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-bg-elevated px-3 py-1.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink disabled:opacity-50"
-          title={msg ?? "Importér søvndata (Garmin CSV)"}
+          onClick={() => setOpen(true)}
+          className="inline-flex min-h-[32px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-bg-elevated px-3 py-1.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink"
         >
           <Upload className="size-3.5" />
-          {pending ? "Importerer…" : msg ?? "Importér søvndata"}
+          Importér søvndata
         </button>
+      )}
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !pending && setOpen(false)}
+        >
+          <div
+            className="w-full max-w-[480px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <span className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--accent-bg)] text-accent">
+                <Moon className="size-5" />
+              </span>
+              <h3 className="font-serif text-[20px] text-ink">
+                Importér Garmin søvndata
+              </h3>
+            </div>
+
+            <div className="mb-4 space-y-2 text-[13px] text-mid">
+              <p>
+                Eksportér fra{" "}
+                <strong className="font-medium text-ink">Garmin Connect</strong>{" "}
+                → Søvn → vælg en nat → menuen (⋮) →{" "}
+                <strong className="font-medium text-ink">Eksportér</strong>.
+                Hver fil dækker én nat. Vælg flere på én gang.
+              </p>
+              <p className="text-[12px] italic text-light">
+                Eksport-knappen findes kun i web-versionen på desktop —
+                ikke i Garmin Connect-appen.
+              </p>
+            </div>
+
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (!pending) setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                if (!pending) handleFiles(e.dataTransfer.files);
+              }}
+              className={`flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[10px] border-2 border-dashed p-5 text-center transition-colors ${
+                dragOver
+                  ? "border-accent bg-[var(--accent-bg)]"
+                  : pending
+                    ? "cursor-not-allowed border-hair bg-bg opacity-60"
+                    : "border-hair-strong bg-bg hover:border-accent hover:bg-[var(--accent-bg)]"
+              }`}
+            >
+              <Upload
+                className={`size-6 ${dragOver ? "text-accent" : "text-light"}`}
+              />
+              <div className="text-[13px] text-mid">
+                {pending ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Importerer…
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-medium text-ink">Træk CSV-filer</span>{" "}
+                    hertil eller{" "}
+                    <span className="text-accent underline">vælg filer</span>
+                  </>
+                )}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,text/csv"
+                multiple
+                disabled={pending}
+                onChange={(e) => handleFiles(e.target.files)}
+                className="hidden"
+              />
+            </label>
+
+            {msg && (
+              <p
+                className={`mt-3 text-center text-[13px] ${
+                  msg.includes("fejl") ? "text-warning" : "text-success"
+                }`}
+              >
+                {msg}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => !pending && setOpen(false)}
+                disabled={pending}
+                className="cursor-pointer rounded-[8px] px-4 py-2 text-[13px] text-mid hover:text-ink disabled:cursor-not-allowed"
+              >
+                Luk
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
