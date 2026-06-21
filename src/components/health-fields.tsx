@@ -44,10 +44,10 @@ export function Field({
     <div
       className={`flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${indent ? "sm:ml-3" : ""}`}
     >
-      <span className="text-[14px] text-ink sm:text-[13px]">
+      <span className="text-[14px] text-ink sm:text-[13px] sm:text-mid">
         {label}
         {hint && (
-          <span className="ml-1.5 rounded-[2px] bg-accent-bg px-1 py-0.5 text-[9px] uppercase tracking-[0.3px] text-accent-bright">
+          <span className="ml-1.5 rounded-[3px] bg-[var(--accent-bg)] px-1 py-0.5 text-[9px] uppercase tracking-[0.3px] text-accent">
             {hint}
           </span>
         )}
@@ -65,7 +65,7 @@ export function Scale1to5({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="grid grid-cols-5 gap-1.5 sm:flex sm:gap-0.5">
+    <div className="grid grid-cols-5 gap-1 sm:inline-flex sm:gap-1">
       {[1, 2, 3, 4, 5].map((n) => {
         const active = value === n;
         return (
@@ -73,10 +73,10 @@ export function Scale1to5({
             key={n}
             type="button"
             onClick={() => onChange(active ? null : n)}
-            className={`min-h-[44px] cursor-pointer rounded-[6px] border text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:rounded-[3px] sm:text-[11px] sm:font-normal ${
+            className={`box-border inline-flex min-h-[36px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium outline-none transition-colors sm:min-w-[36px] md:min-h-[28px] md:min-w-[28px] md:rounded-[6px] md:text-[12px] ${
               active
-                ? "border-accent bg-accent-bg text-accent-bright"
-                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                ? "border-accent bg-accent text-white"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             }`}
           >
             {n}
@@ -95,23 +95,21 @@ export function YesNo({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:flex sm:gap-0.5">
+    <div className="grid grid-cols-2 gap-1 sm:inline-flex sm:gap-1">
       {[
-        { label: "Ja", v: true, cls: "yes" as const },
-        { label: "Nej", v: false, cls: "no" as const },
-      ].map(({ label, v, cls }) => {
+        { label: "Ja", v: true },
+        { label: "Nej", v: false },
+      ].map(({ label, v }) => {
         const active = value === v;
         return (
           <button
             key={label}
             type="button"
             onClick={() => onChange(v)}
-            className={`min-h-[44px] cursor-pointer rounded-[6px] border px-3 text-[15px] font-medium transition sm:min-h-[28px] sm:min-w-[44px] sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
+            className={`box-border inline-flex min-h-[36px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors sm:min-w-[52px] md:min-h-0 md:min-w-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px] ${
               active
-                ? cls === "yes"
-                  ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
-                  : "border-mid text-ink"
-                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                ? "border-accent bg-accent text-white"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             }`}
           >
             {label}
@@ -130,7 +128,7 @@ export function IntensityPicker({
   onChange: (v: "light" | "medium" | "hard" | null) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-0.5">
+    <div className="grid grid-cols-3 gap-1 sm:inline-flex sm:gap-1">
       {(
         [
           { v: "light", label: "Let" },
@@ -144,10 +142,10 @@ export function IntensityPicker({
             key={v}
             type="button"
             onClick={() => onChange(active ? null : v)}
-            className={`min-h-[44px] cursor-pointer rounded-[6px] border px-3 text-[14px] font-medium transition sm:min-h-[28px] sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
+            className={`box-border inline-flex min-h-[36px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors md:min-h-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px] ${
               active
-                ? "border-accent bg-accent-bg text-accent-bright"
-                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                ? "border-accent bg-accent text-white"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             }`}
           >
             {label}
@@ -179,11 +177,11 @@ export function CompactNumberInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="!text-[16px] sm:!text-[12px]"
-        style={{ paddingRight: "40px" }}
+        className="!rounded-[8px] !border-hair !bg-bg-elevated !py-2 !text-[16px] md:!rounded-[6px] md:!border-transparent md:!bg-bg-subtle md:!py-1.5 md:!text-[13px]"
+        style={{ paddingRight: "32px" }}
       />
       <span
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-dim sm:text-[10px]"
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-light"
       >
         {unit}
       </span>
@@ -202,7 +200,7 @@ export function CompactField({
 }) {
   return (
     <div>
-      <div className="mb-1 text-[10px] uppercase tracking-[0.5px] text-light">
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         {label}
         {hint && (
           <span className="ml-1 text-[10px] text-accent">{hint}</span>
