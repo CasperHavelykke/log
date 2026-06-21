@@ -1031,7 +1031,7 @@ function Scale1to5({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="inline-flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => {
         const active = value === n;
         return (
@@ -1039,10 +1039,10 @@ function Scale1to5({
             key={n}
             type="button"
             onClick={() => onChange(active ? null : n)}
-            className={`min-h-[28px] min-w-[28px] cursor-pointer rounded-[3px] border text-[11px] transition ${
+            className={`inline-flex min-h-[34px] min-w-[34px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:text-[12px] ${
               active
-                ? "border-accent bg-accent-bg text-accent-bright"
-                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                ? "border-accent bg-accent text-white"
+                : "border-hair bg-bg-elevated text-mid hover:border-hair-strong hover:text-ink"
             }`}
           >
             {n}
@@ -1061,7 +1061,7 @@ function YesNo({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="inline-flex gap-1">
       {[
         { label: "Ja", v: true, cls: "yes" },
         { label: "Nej", v: false, cls: "no" },
@@ -1072,12 +1072,12 @@ function YesNo({
             key={label}
             type="button"
             onClick={() => onChange(v)}
-            className={`min-h-[28px] min-w-[44px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
+            className={`inline-flex min-h-[34px] min-w-[52px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium transition sm:min-h-[28px] sm:min-w-[44px] sm:px-2 sm:text-[12px] ${
               active
                 ? cls === "yes"
                   ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
                   : "border-mid text-ink"
-                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                : "border-hair bg-bg-elevated text-mid hover:border-hair-strong hover:text-ink"
             }`}
           >
             {label}
@@ -1096,7 +1096,7 @@ function IntensityPicker({
   onChange: (v: "light" | "medium" | "hard" | null) => void;
 }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="inline-flex gap-1">
       {(
         [
           { v: "light", label: "Let" },
@@ -1110,10 +1110,10 @@ function IntensityPicker({
             key={v}
             type="button"
             onClick={() => onChange(active ? null : v)}
-            className={`min-h-[28px] cursor-pointer rounded-[3px] border px-2 text-[11px] transition ${
+            className={`inline-flex min-h-[34px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium transition sm:min-h-[28px] sm:px-2 sm:text-[12px] ${
               active
-                ? "border-accent bg-accent-bg text-accent-bright"
-                : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                ? "border-accent bg-accent text-white"
+                : "border-hair bg-bg-elevated text-mid hover:border-hair-strong hover:text-ink"
             }`}
           >
             {label}
