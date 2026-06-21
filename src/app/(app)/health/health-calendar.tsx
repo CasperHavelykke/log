@@ -1145,11 +1145,11 @@ function NumberInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="!text-[16px] sm:!text-[12px]"
-        style={{ paddingRight: "32px", paddingTop: "5px", paddingBottom: "5px" }}
+        className="!rounded-[8px] !border-hair-strong !bg-bg-subtle !py-2 !text-[16px] sm:!py-1.5 sm:!text-[13px]"
+        style={{ paddingRight: "30px" }}
       />
       <span
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-dim"
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-light"
       >
         {unit}
       </span>
