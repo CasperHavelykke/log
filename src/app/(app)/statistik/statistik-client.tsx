@@ -329,11 +329,16 @@ export function StatistikClient({
   const overlayMetrics = selectedMetrics.slice(0, MAX_OVERLAY);
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <h1 className="font-serif text-[32px] font-medium leading-none text-ink">
-          Statistik
-        </h1>
+    <div className="mx-auto max-w-[1280px] space-y-5 py-8">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-hair pb-5">
+        <div className="min-w-0">
+          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
+            Statistik
+          </div>
+          <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+            Oversigt
+          </h1>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <RangePicker value={rangeId} onChange={setRangeId} />
           <ModeToggle value={mode} onChange={setMode} />
@@ -389,15 +394,15 @@ function RangePicker({
   onChange: (id: (typeof RANGES)[number]["id"]) => void;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+    <div className="inline-flex rounded-[8px] bg-bg-elevated p-0.5 md:bg-bg-subtle">
       {RANGES.map((r) => (
         <button
           key={r.id}
           type="button"
           onClick={() => onChange(r.id)}
-          className={`rounded px-2.5 py-1 text-[12px] transition ${
+          className={`cursor-pointer rounded-[6px] px-2.5 py-1 text-[12px] transition-colors ${
             value === r.id
-              ? "bg-accent/20 text-accent-bright"
+              ? "bg-accent text-white"
               : "text-mid hover:text-ink"
           }`}
         >
@@ -416,13 +421,13 @@ function ModeToggle({
   onChange: (v: "stacked" | "overlay") => void;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+    <div className="inline-flex rounded-[8px] bg-bg-elevated p-0.5 md:bg-bg-subtle">
       <button
         type="button"
         onClick={() => onChange("stacked")}
-        className={`rounded px-2.5 py-1 text-[12px] transition ${
+        className={`cursor-pointer rounded-[6px] px-2.5 py-1 text-[12px] transition-colors ${
           value === "stacked"
-            ? "bg-accent/20 text-accent-bright"
+            ? "bg-accent text-white"
             : "text-mid hover:text-ink"
         }`}
       >
@@ -431,9 +436,9 @@ function ModeToggle({
       <button
         type="button"
         onClick={() => onChange("overlay")}
-        className={`rounded px-2.5 py-1 text-[12px] transition ${
+        className={`cursor-pointer rounded-[6px] px-2.5 py-1 text-[12px] transition-colors ${
           value === "overlay"
-            ? "bg-accent/20 text-accent-bright"
+            ? "bg-accent text-white"
             : "text-mid hover:text-ink"
         }`}
       >
@@ -469,7 +474,7 @@ function MetricPicker({
   }, [data, allMetrics]);
 
   return (
-    <aside className="space-y-3 self-start rounded-md border border-border bg-card p-3">
+    <aside className="space-y-3 self-start md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
       {CATEGORIES.map((cat) => {
         if (cat.id === "garmin" && !garminSleepEnabled) return null;
         const metrics = allMetrics
@@ -531,7 +536,7 @@ function MetricPicker({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-md border border-dashed border-border bg-card/40 px-6 py-12 text-center text-[13px] italic text-light">
+    <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
       {text}
     </div>
   );
@@ -546,7 +551,7 @@ function MetricHeader({
 }) {
   const s = statsFor(data, metric.key);
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border-light pb-2">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-hair pb-2">
       <div className="flex items-center gap-2">
         <span
           className="inline-block size-2.5 rounded-full"
@@ -602,7 +607,7 @@ function StackedView({
       {metrics.map((m) => (
         <div
           key={m.key}
-          className="rounded-md border border-border bg-card p-3"
+          className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]"
         >
           <MetricHeader metric={m} data={data} />
           <div className="mt-2 h-[160px] w-full">
@@ -685,8 +690,8 @@ function OverlayView({
   const overflow = all.length - metrics.length;
 
   return (
-    <div className="rounded-md border border-border bg-card p-3">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-border-light pb-2">
+    <div className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-hair pb-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {metrics.map((m, i) => (
             <div key={m.key} className="flex items-center gap-1.5 text-[12px]">
@@ -841,7 +846,7 @@ function ChartTooltip({
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-md border border-border bg-page/95 px-2.5 py-2 text-[11px] shadow-lg backdrop-blur">
+    <div className="rounded-[8px] bg-bg-elevated/95 px-3 py-2 text-[11px] shadow-[0_4px_12px_rgba(0,0,0,0.4)] backdrop-blur">
       <div className="mb-1 text-mid">{danishLongDate(label)}</div>
       <div className="space-y-0.5">
         {rows.map((r, i) => (
