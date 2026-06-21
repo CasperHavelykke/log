@@ -651,28 +651,28 @@ function FocusBody({
           {entries.map((e) => (
             <div
               key={e.id}
-              className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[13px]"
+              className="flex items-center gap-3 rounded-[8px] bg-bg-elevated px-3.5 py-2.5 text-[13px] md:bg-bg"
             >
-              <span className="flex items-center gap-1.5 font-medium text-ink">
+              <span className="flex items-center gap-1.5 font-semibold text-ink">
                 {e.projectId === focusProjectId && (
-                  <span className="text-accent-bright" title="Standard fokus-projekt">
+                  <span className="text-accent" title="Standard fokus-projekt">
                     ☆
                   </span>
                 )}
                 {projectName.get(e.projectId) ?? "Ukendt"}
               </span>
-              <span className="ml-auto shrink-0 font-medium text-accent-bright">
+              <span className="ml-auto shrink-0 text-accent">
                 {hoursDisplay(e.hoursX10)} t
               </span>
               {e.notes && (
-                <span className="min-w-0 max-w-[40%] truncate text-mid" title={e.notes}>
+                <span className="min-w-0 max-w-[40%] truncate text-[12px] italic text-mid" title={e.notes}>
                   {e.notes}
                 </span>
               )}
               <button
                 type="button"
                 onClick={() => removeEntry(e.id)}
-                className="cursor-pointer px-1 text-dim hover:text-danger"
+                className="cursor-pointer px-1.5 text-dim hover:text-danger"
                 title="Slet registrering"
               >
                 ×
@@ -683,14 +683,12 @@ function FocusBody({
       )}
 
       {/* Log-form */}
-      <div className="space-y-2 border-t border-border-light pt-3">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[140px] flex-1">
-            <Label>Projekt</Label>
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_110px]">
+          <CompactField label="Projekt">
             <select
               value={selectedProjectId ?? ""}
               onChange={(e) => setSelectedProjectId(Number(e.target.value))}
-              className="!py-1.5"
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -698,34 +696,29 @@ function FocusBody({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <Label>Timer</Label>
+          </CompactField>
+          <CompactField label="Timer">
             <input
-              type="number"
-              min={0}
-              max={24}
-              step={0.5}
+              type="text"
+              inputMode="decimal"
               value={hoursInput}
               onChange={(e) => setHoursInput(e.target.value)}
               placeholder="2,5"
-              className="!w-20 !py-1.5"
             />
-          </div>
+          </CompactField>
         </div>
         <input
           type="text"
           value={notesInput}
           onChange={(e) => setNotesInput(e.target.value)}
           placeholder="Note (valgfri) — fx 'opdaterede screenshots i Play Store'"
-          className="!py-1.5"
         />
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={logTime}
             disabled={pending || selectedProjectId === null}
-            className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition hover:brightness-110 disabled:opacity-50"
           >
             {pending ? "..." : "+ Log tid"}
           </button>
@@ -733,7 +726,7 @@ function FocusBody({
             <button
               type="button"
               onClick={makeSelectedFocus}
-              className="cursor-pointer rounded-[3px] border border-border bg-transparent px-3 py-2 text-[12px] text-mid hover:border-accent-dim hover:text-accent-bright"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] px-3 py-2.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink"
               title="Sæt som standardprojekt (vises først)"
             >
               ☆ Sæt som standard
@@ -748,12 +741,12 @@ function FocusBody({
                 placeholder="Nyt projektnavn"
                 onKeyDown={(e) => e.key === "Enter" && createNewProject()}
                 autoFocus
-                className="!flex-1 !py-1.5"
+                className="!flex-1"
               />
               <button
                 type="button"
                 onClick={createNewProject}
-                className="cursor-pointer rounded-[3px] border border-accent bg-accent px-3 py-2 text-[12px] text-white"
+                className="cursor-pointer rounded-[8px] bg-accent px-3 py-2 text-[12px] font-medium text-white hover:brightness-110"
               >
                 Opret
               </button>
@@ -772,7 +765,7 @@ function FocusBody({
             <button
               type="button"
               onClick={() => setAddingProject(true)}
-              className="cursor-pointer rounded-[3px] border border-dashed border-border bg-transparent px-3 py-2 text-[12px] text-light hover:border-accent hover:text-accent-bright"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] px-3 py-2.5 text-[12px] text-light hover:bg-bg-subtle hover:text-ink"
             >
               + Nyt projekt
             </button>
