@@ -83,7 +83,8 @@
       "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\); console.log\\(j.result.tools.length+' tools'\\); console.log\\(j.result.tools.map\\(t=>t.name\\).filter\\(n=>n.includes\\('sleep'\\)\\).join\\(', '\\)\\);}\\)\")",
       "Bash(\"C:\\\\Program Files\\\\nodejs\\\\node.exe\" node_modules/tsx/dist/cli.mjs scripts/migrate-sleep-quality.ts)",
       "Bash(npm ls *)",
-      "Bash(awk -F: '$1 >= 796 && $1 <= 1300 {print}')"
+      "Bash(awk -F: '$1 >= 796 && $1 <= 1300 {print}')",
+      "Bash(npx tsc *)"
     ]
   }
 }

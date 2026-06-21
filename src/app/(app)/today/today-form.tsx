@@ -33,6 +33,7 @@ import type {
 import {
   Activity,
   Apple,
+  Briefcase,
   Camera,
   Check,
   Circle,
@@ -559,7 +560,39 @@ function FocusBody({
   const [notesInput, setNotesInput] = useState("");
   const [addingProject, setAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
   const [pending, startSave] = useTransition();
+
+  function updateEntryHours(entry: TimeEntry, rawHours: string) {
+    const x10 = parseHours(rawHours);
+    if (x10 === null || x10 === 0) {
+      onError("Skriv et gyldigt timetal.");
+      return;
+    }
+    startSave(async () => {
+      const res = await saveTimeEntry({
+        projectId: entry.projectId,
+        date,
+        hoursX10: x10,
+        notes: entry.notes || null,
+      });
+      if (!res.ok) {
+        onError(res.error);
+        return;
+      }
+      if (res.entry) {
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.projectId === entry.projectId
+              ? { ...e, hoursX10: res.entry!.hoursX10 }
+              : e,
+          ),
+        );
+      }
+      setEditingEntryId(null);
+    });
+  }
 
   if (projects.length === 0 && !addingProject) {
     return (
@@ -641,99 +674,122 @@ function FocusBody({
     await setFocusProject(selectedProjectId);
   }
 
+  // Projekter der allerede har en entry i dag — kan ikke vælges igen i add-form
+  const usedProjectIds = new Set(entries.map((e) => e.projectId));
+  const availableProjects = projects.filter((p) => !usedProjectIds.has(p.id));
+
   return (
-    <div className="space-y-4">
-      {/* Dagens entries */}
+    <div className="space-y-3">
+      {/* Dagens entries som focus-rows */}
       {entries.length === 0 ? (
         <p className="text-[13px] italic text-dim">Ingen tid logget i dag endnu.</p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {entries.map((e) => (
-            <div
+            <FocusEntryCard
               key={e.id}
-              className="flex items-center gap-3 rounded-[8px] bg-bg-elevated px-3.5 py-2.5 text-[13px] md:bg-bg"
-            >
-              <span className="flex items-center gap-1.5 font-semibold text-ink">
-                {e.projectId === focusProjectId && (
-                  <span className="text-accent" title="Standard fokus-projekt">
-                    ☆
-                  </span>
-                )}
-                {projectName.get(e.projectId) ?? "Ukendt"}
-              </span>
-              <span className="ml-auto shrink-0 text-accent">
-                {hoursDisplay(e.hoursX10)} t
-              </span>
-              {e.notes && (
-                <span className="min-w-0 max-w-[40%] truncate text-[12px] italic text-mid" title={e.notes}>
-                  {e.notes}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => removeEntry(e.id)}
-                className="cursor-pointer px-1.5 text-dim hover:text-danger"
-                title="Slet registrering"
-              >
-                ×
-              </button>
-            </div>
+              entry={e}
+              name={projectName.get(e.projectId) ?? "Ukendt"}
+              isFocus={e.projectId === focusProjectId}
+              isEditing={editingEntryId === e.id}
+              pending={pending}
+              onStartEdit={() => setEditingEntryId(e.id)}
+              onCancelEdit={() => setEditingEntryId(null)}
+              onSave={(hours) => updateEntryHours(e, hours)}
+              onDelete={() => removeEntry(e.id)}
+            />
           ))}
         </div>
       )}
 
-      {/* Log-form */}
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_110px]">
-          <CompactField label="Projekt">
-            <select
-              value={selectedProjectId ?? ""}
-              onChange={(e) => setSelectedProjectId(Number(e.target.value))}
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.id === focusProjectId ? `☆ ${p.name}` : p.name}
-                </option>
-              ))}
-            </select>
-          </CompactField>
-          <CompactField label="Timer">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={hoursInput}
-              onChange={(e) => setHoursInput(e.target.value)}
-              placeholder="2,5"
-            />
-          </CompactField>
-        </div>
-        <input
-          type="text"
-          value={notesInput}
-          onChange={(e) => setNotesInput(e.target.value)}
-          placeholder="Note (valgfri) — fx 'opdaterede screenshots i Play Store'"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={logTime}
-            disabled={pending || selectedProjectId === null}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition hover:brightness-110 disabled:opacity-50"
-          >
-            {pending ? "..." : "+ Log tid"}
-          </button>
-          {selectedProjectId !== null && selectedProjectId !== focusProjectId && (
+      {/* Tilføj-knap eller form */}
+      {!showAddForm ? (
+        <button
+          type="button"
+          onClick={() => {
+            setShowAddForm(true);
+            // Vælg første tilgængelige projekt by default
+            if (availableProjects.length > 0) {
+              setSelectedProjectId(availableProjects[0].id);
+            }
+          }}
+          disabled={projects.length === 0 && !addingProject}
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-hair-strong bg-transparent px-3.5 py-2.5 text-[13px] text-light transition hover:border-accent hover:text-accent disabled:opacity-40"
+        >
+          + Tilføj
+        </button>
+      ) : (
+        <div className="space-y-3 rounded-[10px] border border-[var(--accent-soft-strong)] bg-bg-elevated p-3.5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_110px]">
+            <CompactField label="Projekt">
+              <select
+                value={selectedProjectId ?? ""}
+                onChange={(e) => setSelectedProjectId(Number(e.target.value))}
+              >
+                {availableProjects.length === 0 ? (
+                  <option value="">Ingen projekter ledige</option>
+                ) : (
+                  availableProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id === focusProjectId ? `☆ ${p.name}` : p.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </CompactField>
+            <CompactField label="Timer">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={hoursInput}
+                onChange={(e) => setHoursInput(e.target.value)}
+                placeholder="2,5"
+                autoFocus
+              />
+            </CompactField>
+          </div>
+          <input
+            type="text"
+            value={notesInput}
+            onChange={(e) => setNotesInput(e.target.value)}
+            placeholder="Note (valgfri)"
+          />
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={makeSelectedFocus}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] px-3 py-2.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink"
-              title="Sæt som standardprojekt (vises først)"
+              onClick={() => {
+                logTime();
+                setShowAddForm(false);
+              }}
+              disabled={pending || selectedProjectId === null}
+              className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition hover:brightness-110 disabled:opacity-50"
             >
-              ☆ Sæt som standard
+              {pending ? "..." : "Log tid"}
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddForm(false);
+                setHoursInput("");
+                setNotesInput("");
+              }}
+              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+            >
+              Annullér
+            </button>
+            {selectedProjectId !== null && selectedProjectId !== focusProjectId && (
+              <button
+                type="button"
+                onClick={makeSelectedFocus}
+                className="ml-auto cursor-pointer text-[12px] text-light hover:text-accent"
+                title="Sæt som standardprojekt"
+              >
+                ☆ Sæt som standard
+              </button>
+            )}
+          </div>
           {addingProject ? (
-            <div className="flex flex-1 items-center gap-2">
+            <div className="flex items-center gap-2 border-t border-hair pt-3">
               <input
                 type="text"
                 value={newProjectName}
@@ -765,14 +821,115 @@ function FocusBody({
             <button
               type="button"
               onClick={() => setAddingProject(true)}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] px-3 py-2.5 text-[12px] text-light hover:bg-bg-subtle hover:text-ink"
+              className="border-t border-hair pt-3 text-left text-[12px] text-accent hover:underline"
             >
-              + Nyt projekt
+              + Opret nyt projekt
             </button>
           )}
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
 
+function FocusEntryCard({
+  entry,
+  name,
+  isFocus,
+  isEditing,
+  pending,
+  onStartEdit,
+  onCancelEdit,
+  onSave,
+  onDelete,
+}: {
+  entry: TimeEntry;
+  name: string;
+  isFocus: boolean;
+  isEditing: boolean;
+  pending: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSave: (hours: string) => void;
+  onDelete: () => void;
+}) {
+  const [draft, setDraft] = useState(hoursDisplay(entry.hoursX10));
+
+  useEffect(() => {
+    if (isEditing) setDraft(hoursDisplay(entry.hoursX10));
+  }, [isEditing, entry.hoursX10]);
+
+  return (
+    <div className="flex items-center gap-3 rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:bg-bg">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
+        <Briefcase className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 text-[14px] font-medium text-ink">
+          {isFocus && (
+            <span className="text-accent" title="Standard fokus-projekt">
+              ☆
+            </span>
+          )}
+          <span className="truncate">{name}</span>
+        </div>
+        {entry.notes && (
+          <div className="truncate text-[12px] italic text-mid" title={entry.notes}>
+            {entry.notes}
+          </div>
+        )}
+      </div>
+      {isEditing ? (
+        <div className="flex items-center gap-1.5">
+          <input
+            type="text"
+            inputMode="decimal"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSave(draft);
+              if (e.key === "Escape") onCancelEdit();
+            }}
+            autoFocus
+            className="!w-16 !py-1 text-center"
+          />
+          <button
+            type="button"
+            onClick={() => onSave(draft)}
+            disabled={pending}
+            className="cursor-pointer rounded-[6px] bg-accent px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          >
+            Gem
+          </button>
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="cursor-pointer px-1.5 text-dim hover:text-ink"
+            title="Annullér"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={onStartEdit}
+            className="cursor-pointer rounded-[10px] bg-bg-subtle px-3 py-1.5 text-[14px] font-semibold text-ink transition hover:bg-bg"
+            title="Klik for at redigere"
+          >
+            {hoursDisplay(entry.hoursX10)} t
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="cursor-pointer px-1.5 text-dim hover:text-danger"
+            title="Slet"
+          >
+            ×
+          </button>
+        </>
+      )}
     </div>
   );
 }
