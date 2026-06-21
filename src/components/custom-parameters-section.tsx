@@ -236,27 +236,24 @@ function YesNoButtons({
   value: boolean | null;
   onChange: (v: boolean | null) => void;
 }) {
+  const base =
+    "box-border inline-flex min-h-[36px] min-w-[52px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors md:min-h-0 md:min-w-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px]";
+  const inactive =
+    "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg";
+  const active = "border-accent bg-accent text-white";
   return (
     <div className="inline-flex gap-1">
       <button
         type="button"
         onClick={() => onChange(value === true ? null : true)}
-        className={`min-h-[32px] min-w-[44px] cursor-pointer rounded-[6px] border px-3 text-[12px] font-medium transition sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
-          value === true
-            ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
-            : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
-        }`}
+        className={`${base} ${value === true ? active : inactive}`}
       >
         Ja
       </button>
       <button
         type="button"
         onClick={() => onChange(value === false ? null : false)}
-        className={`min-h-[32px] min-w-[44px] cursor-pointer rounded-[6px] border px-3 text-[12px] font-medium transition sm:rounded-[3px] sm:px-2 sm:text-[11px] sm:font-normal ${
-          value === false
-            ? "border-mid text-ink"
-            : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
-        }`}
+        className={`${base} ${value === false ? active : inactive}`}
       >
         Nej
       </button>
@@ -280,10 +277,10 @@ function ScaleButtons({
           key={n}
           type="button"
           onClick={() => onChange(value === n ? null : n)}
-          className={`min-h-[32px] min-w-[32px] cursor-pointer rounded-[6px] border text-[12px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:rounded-[3px] sm:text-[11px] sm:font-normal ${
+          className={`box-border inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium outline-none transition-colors md:min-h-[28px] md:min-w-[28px] md:rounded-[6px] md:text-[12px] ${
             value === n
-              ? "border-accent bg-accent-bg text-accent-bright"
-              : "border-border-light bg-bg text-mid hover:border-accent-dim hover:text-ink"
+              ? "border-accent bg-accent text-white"
+              : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
           }`}
         >
           {n}

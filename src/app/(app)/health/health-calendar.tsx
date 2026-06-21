@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  Dumbbell,
   Moon,
   Pencil,
   Scale,
@@ -108,16 +109,10 @@ function avg(xs: number[]): number | null {
   if (xs.length === 0) return null;
   return Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10;
 }
-function moodTone(mood: number | null): string {
-  if (mood === null) return "bg-border";
-  if (mood <= 2) return "bg-danger";
-  if (mood === 3) return "bg-warning";
-  return "bg-success";
-}
 function scoreColor(score: number | null): string {
   if (score === null) return "text-mid";
-  if (score >= 80) return "bg-[rgba(74,222,128,0.15)] text-success";
-  if (score >= 60) return "bg-[rgba(251,191,36,0.15)] text-warning";
+  if (score >= 80) return "bg-[var(--success-soft)] text-success";
+  if (score >= 60) return "bg-[var(--warning-soft)] text-warning";
   return "bg-[rgba(248,113,113,0.15)] text-danger";
 }
 function fmtMinutes(m: number | null): string {
@@ -466,7 +461,12 @@ function CalendarPane({
   onSelect: (iso: string) => void;
 }) {
   return (
-    <div className="md:rounded-md md:border md:border-border md:bg-card md:p-3">
+    <div className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mb-3 md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
+        <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
+          Kalender
+        </h2>
+      </div>
       <div className="mb-1.5 grid grid-cols-7 gap-1">
         {WEEKDAYS_SHORT.map((w) => (
           <div
@@ -485,68 +485,51 @@ function CalendarPane({
           const day = Number(iso.slice(8));
           const isToday = iso === today;
           const isSelected = iso === selected;
+          const hasScore =
+            sleep?.score !== null && sleep?.score !== undefined;
           return (
             <button
               key={iso}
               type="button"
               onClick={() => onSelect(iso)}
-              className={`relative flex aspect-square min-h-[44px] cursor-pointer flex-col rounded-[4px] border p-1 text-left transition ${
+              className={`relative flex aspect-square min-h-[44px] cursor-pointer flex-col rounded-[8px] border p-1 text-left transition-colors md:p-1.5 md:hover:bg-bg-subtle ${
                 isSelected
-                  ? "border-accent bg-accent-bg"
+                  ? "border-accent bg-[var(--accent-bg)]"
                   : isToday
-                    ? "border-accent-dim bg-bg"
-                    : "border-border-light bg-bg hover:border-accent-dim"
+                    ? "border-hair-strong bg-bg-elevated md:bg-bg"
+                    : "border-transparent bg-bg-elevated md:bg-bg"
               }`}
             >
-              <span
-                className={`text-[11px] font-medium ${
-                  isToday ? "text-accent-bright" : "text-mid"
-                }`}
-              >
-                {day}
-              </span>
-              {sleep?.score !== null && sleep?.score !== undefined && (
+              <span className="text-[13px] font-medium text-ink">{day}</span>
+              {hasScore && (
                 <span
-                  className={`absolute right-1 top-1 rounded-[2px] px-1 text-[9px] font-medium ${scoreColor(sleep.score)}`}
-                  title={`Garmin: ${sleep.score}`}
+                  className={`absolute right-1 top-1 rounded-[3px] px-1 py-[1px] text-[9px] font-semibold ${scoreColor(sleep!.score)}`}
+                  title={`Garmin søvnscore: ${sleep!.score}`}
                 >
-                  {sleep.score}
+                  {sleep!.score}
                 </span>
               )}
-              <div className="mt-auto flex items-end justify-between gap-1">
-                {e?.didExercise && (
-                  <span
-                    className="size-1.5 rounded-full bg-success"
-                    title="Træning"
-                  />
-                )}
-              </div>
-              {e?.mood !== null && e?.mood !== undefined && (
-                <div className={`mt-1 h-0.5 rounded-full ${moodTone(e.mood)}`} />
+              {e?.didExercise && (
+                <Dumbbell
+                  className="absolute bottom-1 left-1 size-[11px] text-accent opacity-85"
+                  strokeWidth={2.5}
+                />
               )}
             </button>
           );
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-border-light pt-3 text-[10px] text-dim">
+      <div className="mt-3.5 flex flex-wrap gap-x-3 gap-y-1 border-t border-hair pt-3.5 text-[11px] text-light">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block size-2 rounded-full bg-success" />
-          Godt humør
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block size-2 rounded-full bg-warning" />
-          Neutralt
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block size-2 rounded-full bg-danger" />
-          Lavt humør
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="rounded-[2px] bg-[rgba(74,222,128,0.15)] px-1 text-[9px] text-success">
+          <span className="rounded-[3px] bg-[var(--success-soft)] px-1.5 py-[1px] text-[10px] font-semibold text-success">
             82
           </span>
-          Garmin-score
+          Garmin søvnscore
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Dumbbell className="size-[11px] text-accent opacity-85" strokeWidth={2.5} />
+          Træning
         </span>
       </div>
     </div>
@@ -722,7 +705,7 @@ function DayEditorPanel({
       : null;
 
   return (
-    <aside className="md:rounded-md md:border md:border-border md:bg-card md:p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+    <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
       <EditorHead date={date} saveState={saveState} savedAt={savedAt} errorMsg={errorMsg.current} />
 
       {(hasGarminScore || hasGarminDuration) && (
@@ -782,7 +765,7 @@ function DayEditorPanel({
       </Section>
 
       <Section icon={<Scale className="size-3.5" />} title="Krop">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:block md:space-y-1">
           <GridField label="Vægt">
             <NumberInput
               fluid
@@ -809,7 +792,7 @@ function DayEditorPanel({
         title="Ernæring"
         meta={kcal !== null ? `${kcal} kcal` : undefined}
       >
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
           <GridField label="Kulhydrat">
             <NumberInput
               fluid
@@ -887,7 +870,7 @@ function DayEditorPanel({
           onChange={(e) => setHealthNotes(e.target.value)}
           rows={3}
           placeholder="Symptomer, medicin, observationer..."
-          className="!text-[13px]"
+          className="!rounded-[8px] !border-hair !bg-bg-elevated !text-[16px] md:!rounded-[6px] md:!border-transparent md:!bg-bg-subtle md:!text-[13px]"
         />
       </Section>
 
@@ -1039,10 +1022,10 @@ function Scale1to5({
             key={n}
             type="button"
             onClick={() => onChange(active ? null : n)}
-            className={`inline-flex min-h-[34px] min-w-[34px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium transition sm:min-h-[28px] sm:min-w-[28px] sm:text-[12px] ${
+            className={`box-border inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium outline-none transition-colors md:min-h-[28px] md:min-w-[28px] md:rounded-[6px] md:text-[12px] ${
               active
                 ? "border-accent bg-accent text-white"
-                : "border-hair bg-bg-elevated text-mid hover:border-hair-strong hover:text-ink"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             }`}
           >
             {n}
@@ -1063,21 +1046,19 @@ function YesNo({
   return (
     <div className="inline-flex gap-1">
       {[
-        { label: "Ja", v: true, cls: "yes" },
-        { label: "Nej", v: false, cls: "no" },
-      ].map(({ label, v, cls }) => {
+        { label: "Ja", v: true },
+        { label: "Nej", v: false },
+      ].map(({ label, v }) => {
         const active = value === v;
         return (
           <button
             key={label}
             type="button"
             onClick={() => onChange(v)}
-            className={`inline-flex min-h-[34px] min-w-[52px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium transition sm:min-h-[28px] sm:min-w-[44px] sm:px-2 sm:text-[12px] ${
+            className={`box-border inline-flex min-h-[36px] min-w-[52px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors md:min-h-0 md:min-w-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px] ${
               active
-                ? cls === "yes"
-                  ? "border-success bg-[rgba(74,222,128,0.12)] text-success"
-                  : "border-mid text-ink"
-                : "border-hair bg-bg-elevated text-mid hover:border-hair-strong hover:text-ink"
+                ? "border-accent bg-accent text-white"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             }`}
           >
             {label}
@@ -1110,10 +1091,10 @@ function IntensityPicker({
             key={v}
             type="button"
             onClick={() => onChange(active ? null : v)}
-            className={`inline-flex min-h-[34px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium transition sm:min-h-[28px] sm:px-2 sm:text-[12px] ${
+            className={`box-border inline-flex min-h-[36px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors md:min-h-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px] ${
               active
                 ? "border-accent bg-accent text-white"
-                : "border-hair bg-bg-elevated text-mid hover:border-hair-strong hover:text-ink"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             }`}
           >
             {label}
@@ -1138,14 +1119,14 @@ function NumberInput({
   fluid?: boolean;
 }) {
   return (
-    <div className={fluid ? "relative w-full" : "relative w-[110px]"}>
+    <div className={fluid ? "relative w-full md:w-[110px]" : "relative w-[110px]"}>
       <input
         type="text"
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="!rounded-[8px] !border-hair-strong !bg-bg-subtle !py-2 !text-[16px] sm:!py-1.5 sm:!text-[13px]"
+        className="!rounded-[8px] !border-hair !bg-bg-elevated !py-2 !text-[16px] md:!rounded-[6px] md:!border-transparent md:!bg-bg-subtle md:!py-1.5 md:!text-[13px]"
         style={{ paddingRight: "30px" }}
       />
       <span
@@ -1165,11 +1146,11 @@ function GridField({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+    <div className="md:flex md:items-center md:justify-between md:gap-3 md:py-1">
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light md:mb-0 md:text-[13px] md:font-normal md:normal-case md:tracking-normal md:text-ink">
         {label}
       </div>
-      {children}
+      <div>{children}</div>
     </div>
   );
 }

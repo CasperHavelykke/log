@@ -28,18 +28,18 @@ export function SleepQualityScale({
             type="button"
             disabled={disabled}
             onClick={() => onChange(active ? null : n)}
-            className={`flex flex-col items-center justify-center rounded-[3px] border px-1.5 py-1.5 text-[12px] font-medium transition disabled:cursor-not-allowed disabled:opacity-70 ${
+            className={`box-border flex min-h-[44px] flex-col items-center justify-center rounded-[8px] border px-1.5 py-1 text-[12px] font-medium outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-70 md:min-h-[36px] md:rounded-[6px] ${
               active
                 ? "border-accent bg-accent text-white"
-                : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
             } ${!disabled && "cursor-pointer"}`}
           >
             <span
-              className={`text-[10px] ${active ? "opacity-80" : "text-dim"}`}
+              className={`text-[9px] uppercase tracking-[0.4px] ${active ? "opacity-70" : "text-light"}`}
             >
               {n}
             </span>
-            <span>{SLEEP_QUALITY_LABELS[n - 1]}</span>
+            <span className="leading-tight">{SLEEP_QUALITY_LABELS[n - 1]}</span>
           </button>
         );
       })}
