@@ -26,7 +26,7 @@ import {
   type CustomParamSummary,
   type CustomValueRow,
 } from "@/lib/custom-parameters";
-import { formatDanishDate, danishWeekday, todayIsoDate } from "@/lib/date";
+import { danishLongDate, danishWeekday, todayIsoDate } from "@/lib/date";
 import { garminScoreToQuality } from "@/lib/sleep";
 import { SleepQualityScale } from "@/components/sleep-quality-scale";
 
@@ -916,11 +916,11 @@ function EditorHead({
   return (
     <div className="mb-3 flex items-baseline justify-between gap-2 border-b border-border-light pb-2.5">
       <div>
-        <div className="text-[11px] uppercase tracking-[0.4px] text-light">
+        <div className="text-[11px] font-medium uppercase tracking-[0.5px] text-light">
           {danishWeekday(date)}
         </div>
-        <div className="font-serif text-[18px] text-accent-bright">
-          {formatDanishDate(date)}
+        <div className="font-serif text-[22px] text-ink">
+          {danishLongDate(date)}
         </div>
       </div>
       <SaveIndicator state={saveState} savedAt={savedAt} errorMsg={errorMsg} />
