@@ -65,7 +65,7 @@ export function Scale1to5({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="grid grid-cols-5 gap-1 sm:inline-flex sm:gap-1">
+    <div className="inline-flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => {
         const active = value === n;
         return (
@@ -73,7 +73,7 @@ export function Scale1to5({
             key={n}
             type="button"
             onClick={() => onChange(active ? null : n)}
-            className={`box-border inline-flex min-h-[36px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium outline-none transition-colors sm:min-w-[36px] md:min-h-[28px] md:min-w-[28px] md:rounded-[6px] md:text-[12px] ${
+            className={`box-border inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[8px] border text-[13px] font-medium outline-none transition-colors md:min-h-[28px] md:min-w-[28px] md:rounded-[6px] md:text-[12px] ${
               active
                 ? "border-accent bg-accent text-white"
                 : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
@@ -95,7 +95,7 @@ export function YesNo({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-1 sm:inline-flex sm:gap-1">
+    <div className="inline-flex gap-1">
       {[
         { label: "Ja", v: true },
         { label: "Nej", v: false },
@@ -106,7 +106,7 @@ export function YesNo({
             key={label}
             type="button"
             onClick={() => onChange(v)}
-            className={`box-border inline-flex min-h-[36px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors sm:min-w-[52px] md:min-h-0 md:min-w-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px] ${
+            className={`box-border inline-flex min-h-[36px] min-w-[52px] cursor-pointer items-center justify-center rounded-[8px] border px-3 text-[13px] font-medium outline-none transition-colors md:min-h-0 md:min-w-0 md:rounded-[4px] md:px-3 md:py-1 md:text-[12px] ${
               active
                 ? "border-accent bg-accent text-white"
                 : "border-hair bg-bg-elevated text-mid hover:text-ink md:border-transparent md:bg-bg-subtle md:hover:bg-bg"
@@ -128,7 +128,7 @@ export function IntensityPicker({
   onChange: (v: "light" | "medium" | "hard" | null) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-1 sm:inline-flex sm:gap-1">
+    <div className="inline-flex gap-1">
       {(
         [
           { v: "light", label: "Let" },
@@ -170,7 +170,7 @@ export function CompactNumberInput({
   fluid?: boolean;
 }) {
   return (
-    <div className={fluid ? "relative w-full md:w-[110px]" : "relative w-full sm:w-[110px]"}>
+    <div className={fluid ? "relative w-full md:w-[110px]" : "relative w-[110px]"}>
       <input
         type="text"
         inputMode="decimal"
