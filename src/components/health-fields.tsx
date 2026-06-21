@@ -42,9 +42,9 @@ export function Field({
 }) {
   return (
     <div
-      className={`flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${indent ? "sm:ml-3" : ""}`}
+      className={`flex items-center justify-between gap-3 py-1 ${indent ? "ml-3" : ""}`}
     >
-      <span className="text-[14px] text-ink sm:text-[13px] sm:text-mid">
+      <span className="text-[13px] text-ink">
         {label}
         {hint && (
           <span className="ml-1.5 rounded-[3px] bg-[var(--accent-bg)] px-1 py-0.5 text-[9px] uppercase tracking-[0.3px] text-accent">
@@ -52,7 +52,7 @@ export function Field({
           </span>
         )}
       </span>
-      <div className="self-stretch sm:self-auto">{children}</div>
+      <div>{children}</div>
     </div>
   );
 }
