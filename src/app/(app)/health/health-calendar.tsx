@@ -294,6 +294,13 @@ export function HealthCalendar({
               return next;
             })
           }
+          onImported={(s) =>
+            setSleeps((m) => {
+              const next = new Map(m);
+              next.set(s.date, s);
+              return next;
+            })
+          }
         />
       </div>
     </div>
@@ -559,6 +566,7 @@ function DayEditorPanel({
   garminSleepEnabled,
   onSaved,
   onSleepDeleted,
+  onImported,
 }: {
   date: string;
   entry?: Entry;
@@ -568,6 +576,7 @@ function DayEditorPanel({
   garminSleepEnabled: boolean;
   onSaved: (e: Entry) => void;
   onSleepDeleted: () => void;
+  onImported: (s: Sleep) => void;
 }) {
   const [mood, setMood] = useState<number | null>(entry?.mood ?? null);
   const [energy, setEnergy] = useState<number | null>(entry?.energy ?? null);
@@ -757,6 +766,11 @@ function DayEditorPanel({
               onChange={setSleepQuality}
             />
           </Field>
+        )}
+        {garminSleepEnabled && (
+          <div className="pt-2">
+            <SleepImport onImported={onImported} compact />
+          </div>
         )}
       </Section>
 
@@ -955,16 +969,18 @@ function Section({
 }) {
   return (
     <div className="mb-4">
-      <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
+      <div className="mb-2 flex items-center gap-1.5 border-b border-hair pb-1.5 text-[10px] font-semibold uppercase tracking-[0.6px] text-light">
         <span className="text-mid">{icon}</span>
         <span>{title}</span>
         {aiPill && (
-          <span className="ml-auto rounded-full bg-accent-bg px-1.5 py-0.5 text-[8px] tracking-[0.3px] text-accent-bright">
+          <span className="ml-auto rounded-full bg-accent-bg px-1.5 py-0.5 text-[8px] font-normal tracking-[0.3px] text-accent-bright">
             AI
           </span>
         )}
         {meta && (
-          <span className="ml-auto text-[10px] text-accent-bright">{meta}</span>
+          <span className="ml-auto text-[10px] font-normal text-accent">
+            {meta}
+          </span>
         )}
       </div>
       <div className="space-y-1">{children}</div>
@@ -1180,7 +1196,13 @@ function GarminBanner({
 
 // --- SLEEP IMPORT (button in PageHead) ------------------------------------
 
-function SleepImport({ onImported }: { onImported: (s: Sleep) => void }) {
+function SleepImport({
+  onImported,
+  compact = false,
+}: {
+  onImported: (s: Sleep) => void;
+  compact?: boolean;
+}) {
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -1241,16 +1263,29 @@ function SleepImport({ onImported }: { onImported: (s: Sleep) => void }) {
         onChange={(e) => onFiles(e.target.files)}
         className="hidden"
       />
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={pending}
-        className="inline-flex min-h-[32px] cursor-pointer items-center gap-1.5 rounded-[4px] border border-border bg-transparent px-2.5 py-1 text-[12px] text-mid hover:border-accent-bright hover:text-ink"
-        title={msg ?? "Importér Garmin søvn-CSV"}
-      >
-        <Upload className="size-3.5" />
-        {pending ? "Importerer…" : msg ?? "Garmin søvn"}
-      </button>
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={pending}
+          className="inline-flex cursor-pointer items-center gap-1 text-[11px] text-accent hover:underline disabled:opacity-50"
+          title={msg ?? "Importér søvndata (Garmin CSV)"}
+        >
+          <Upload className="size-3" />
+          {pending ? "Importerer…" : msg ?? "Importér søvndata"}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={pending}
+          className="inline-flex min-h-[32px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-bg-elevated px-3 py-1.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink disabled:opacity-50"
+          title={msg ?? "Importér søvndata (Garmin CSV)"}
+        >
+          <Upload className="size-3.5" />
+          {pending ? "Importerer…" : msg ?? "Importér søvndata"}
+        </button>
+      )}
     </>
   );
 }
