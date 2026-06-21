@@ -1009,9 +1009,9 @@ function ApplicationsList({
   }
 
   return (
-    <div>
+    <div className="space-y-3">
       {apps.length === 0 ? (
-        <div className="py-2 text-sm italic text-dim">Ingen ansøgninger endnu</div>
+        <p className="text-[13px] italic text-dim">Ingen ansøgninger endnu</p>
       ) : (
         <div className="space-y-2">
           {apps.map((a) => {
@@ -1019,11 +1019,14 @@ function ApplicationsList({
             return (
               <div
                 key={a.id}
-                className="rounded-[3px] border border-border-light bg-bg px-3 py-2.5"
+                className="rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:bg-bg"
               >
                 <div className="flex items-center gap-3">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
+                    <Briefcase className="size-4" />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-ink">
+                    <div className="truncate text-[14px] font-medium text-ink">
                       {a.company}
                       {a.role && <span className="text-mid"> · {a.role}</span>}
                     </div>
@@ -1038,7 +1041,7 @@ function ApplicationsList({
                     onClick={() =>
                       setExpandedDocsFor(expanded ? null : a.id)
                     }
-                    className="cursor-pointer text-[11px] text-light hover:text-accent-bright"
+                    className="cursor-pointer text-[11px] text-light hover:text-accent"
                     title="Dokumenter"
                   >
                     📎 {a.documents.length}
@@ -1048,7 +1051,7 @@ function ApplicationsList({
                     onChange={(e) =>
                       changeStatus(a.id, e.target.value as Status)
                     }
-                    className={`!w-auto !border-0 !p-1 !text-[11px] uppercase tracking-[0.3px] !rounded-full ${STATUS_CLASSES[a.status]}`}
+                    className={`!w-auto !cursor-pointer !border-0 !rounded-full !px-2.5 !py-1 !text-[10px] !font-semibold uppercase tracking-[0.4px] ${STATUS_CLASSES[a.status]}`}
                   >
                     {Object.entries(STATUS_LABELS).map(([k, v]) => (
                       <option key={k} value={k} className="bg-card text-ink">
@@ -1059,14 +1062,14 @@ function ApplicationsList({
                   <button
                     type="button"
                     onClick={() => remove(a.id)}
-                    className="cursor-pointer border-none bg-transparent px-1 text-[18px] leading-none text-dim hover:text-danger"
+                    className="cursor-pointer px-1.5 text-dim hover:text-danger"
                     title="Fjern"
                   >
                     ×
                   </button>
                 </div>
                 {expanded && (
-                  <div className="mt-2 border-t border-border-light pt-2">
+                  <div className="mt-3 border-t border-hair pt-3">
                     <ApplicationDocuments
                       applicationId={a.id}
                       attached={a.documents}
@@ -1104,14 +1107,13 @@ function ApplicationsList({
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
-          className="mt-3 w-full cursor-pointer rounded-[3px] border border-dashed border-border bg-bg p-2.5 text-sm text-light transition hover:border-accent hover:bg-accent-bg hover:text-accent-bright"
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-hair-strong bg-transparent px-3.5 py-2.5 text-[13px] text-light transition hover:border-accent hover:text-accent"
         >
           + Tilføj ansøgning
         </button>
       ) : (
-        <div className="mt-3 border-t border-border-light pt-3">
-          <div className="mb-3">
-            <Label>Firma</Label>
+        <div className="space-y-3 rounded-[10px] border border-[var(--accent-soft-strong)] bg-bg-elevated p-3.5">
+          <CompactField label="Firma">
             <input
               type="text"
               value={company}
@@ -1119,19 +1121,17 @@ function ApplicationsList({
               placeholder="Fx Ravnit"
               autoFocus
             />
-          </div>
-          <div className="mb-3 grid grid-cols-2 gap-3">
-            <div>
-              <Label>Stilling</Label>
+          </CompactField>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <CompactField label="Stilling">
               <input
                 type="text"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="Fx Webudvikler"
               />
-            </div>
-            <div>
-              <Label>Status</Label>
+            </CompactField>
+            <CompactField label="Status">
               <select value={status} onChange={(e) => setStatus(e.target.value as Status)}>
                 {Object.entries(STATUS_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -1139,17 +1139,17 @@ function ApplicationsList({
                   </option>
                 ))}
               </select>
-            </div>
+            </CompactField>
           </div>
-          <p className="mb-3 text-[11px] italic text-dim">
+          <p className="text-[11px] italic text-dim">
             Tilknyt CV/ansøgning/job-opslag efter du har oprettet ansøgningen
             — tryk på 📎-ikonet på rækken.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={add}
-              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white transition hover:bg-accent-bright"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-[8px] bg-accent px-4 py-2.5 text-[13px] font-medium text-white transition hover:brightness-110"
             >
               Tilføj
             </button>
@@ -1159,7 +1159,7 @@ function ApplicationsList({
                 reset();
                 setDialogOpen(false);
               }}
-              className="cursor-pointer rounded-[3px] border border-border bg-transparent px-4 py-2 text-[13px] text-mid transition hover:border-accent-dim hover:text-ink"
+              className="cursor-pointer text-[12px] text-mid hover:text-ink"
             >
               Annullér
             </button>
