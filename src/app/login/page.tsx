@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/session";
 import { LoginForm } from "./login-form";
 import { CodeForm } from "./code-form";
 import { InstallPrompt } from "./install-prompt";
+import { LoginGate } from "./login-gate";
 
 export const metadata = { title: "Log ind | Log" };
 
@@ -63,7 +64,9 @@ export default async function LoginPage({
                 Login fejlede. Prøv igen eller kontakt support.
               </div>
             )}
-            <LoginForm returnTo={returnTo} />
+            <LoginGate>
+              <LoginForm returnTo={returnTo} />
+            </LoginGate>
           </>
         )}
       </div>

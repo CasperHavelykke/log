@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MoreVertical, Plus, Share } from "lucide-react";
+import { Share } from "lucide-react";
 
 type Env =
   | "loading"
@@ -9,6 +9,7 @@ type Env =
   | "ios-safari"
   | "ios-other"
   | "android-chrome"
+  | "android-samsung"
   | "android-other"
   | "desktop";
 
@@ -33,8 +34,8 @@ function detectEnv(): Env {
   }
 
   if (isAndroid) {
-    // SamsungBrowser, EdgA (Edge Android), OPR (Opera) — ikke Chrome
-    if (/SamsungBrowser|EdgA|OPR\//.test(ua)) return "android-other";
+    if (/SamsungBrowser/.test(ua)) return "android-samsung";
+    if (/EdgA|OPR\//.test(ua)) return "android-other";
     if (/Chrome/.test(ua)) return "android-chrome";
     return "android-other";
   }
@@ -58,14 +59,15 @@ export function InstallPrompt() {
           Velkommen til Loggen
         </h2>
         <p className="mt-1 text-[13px] text-mid">
-          En personlig dagbog for vægt, søvn, helbred, ansøgninger og mere.
-          Dine data ligger på en privat server — ikke i skyen.
+          Loggen er en database for dit liv, som kan tilkobles til din
+          foretrukne AI for nem logning og opfølgning.
         </p>
       </div>
 
       {env === "ios-safari" && <IosSafariInstructions />}
       {env === "ios-other" && <IosOtherInstructions />}
       {env === "android-chrome" && <AndroidChromeInstructions />}
+      {env === "android-samsung" && <AndroidSamsungInstructions />}
       {env === "android-other" && <AndroidOtherInstructions />}
     </div>
   );
@@ -104,7 +106,7 @@ function Step({
 function IosSafariInstructions() {
   return (
     <>
-      <StepHeader>Tilføj til hjemskærm</StepHeader>
+      <StepHeader>Føj til hjemmeskærm</StepHeader>
       <ol className="space-y-1">
         <Step number={1} icon={<Share className="size-4" />}>
           Tryk på <strong className="font-medium">Del</strong>-ikonet nederst i
@@ -112,17 +114,13 @@ function IosSafariInstructions() {
         </Step>
         <Step number={2}>
           Rul ned og vælg{" "}
-          <strong className="font-medium">&ldquo;Tilføj til hjemskærm&rdquo;</strong>
+          <strong className="font-medium">&ldquo;Føj til hjemmeskærm&rdquo;</strong>
         </Step>
         <Step number={3}>
           Tryk <strong className="font-medium">&ldquo;Tilføj&rdquo;</strong> i
           øverste højre hjørne
         </Step>
       </ol>
-      <p className="mt-4 text-[12px] italic text-light">
-        Du finder så Loggen som en almindelig app på din hjemskærm. Åbn appen og
-        log ind nedenfor for at komme i gang.
-      </p>
     </>
   );
 }
@@ -132,14 +130,10 @@ function IosOtherInstructions() {
     <>
       <StepHeader>Åbn i Safari for at installere</StepHeader>
       <p className="text-[13px] text-mid">
-        På iPhone og iPad kan du kun tilføje Loggen til hjemskærmen via{" "}
+        På iPhone og iPad kan du kun føje Loggen til hjemmeskærmen via{" "}
         <strong className="font-medium text-ink">Safari</strong>. Åbn{" "}
         <strong className="font-medium text-ink">loggen.app</strong> i Safari og
         følg vejledningen dér.
-      </p>
-      <p className="mt-3 text-[12px] italic text-light">
-        Du kan logge ind herunder, men appen virker bedst når den er installeret
-        på hjemskærmen.
       </p>
     </>
   );
@@ -148,29 +142,40 @@ function IosOtherInstructions() {
 function AndroidChromeInstructions() {
   return (
     <>
-      <StepHeader>Installer appen</StepHeader>
+      <StepHeader>Føj til hjemmeskærm</StepHeader>
       <ol className="space-y-1">
-        <Step number={1} icon={<MoreVertical className="size-4" />}>
-          Tryk på <strong className="font-medium">menuen (⋮)</strong> øverst til
-          højre i Chrome
+        <Step number={1}>
+          Tryk på{" "}
+          <strong className="font-medium">&ldquo;Føj til startskærm&rdquo;</strong>
+          -ikonet (skærm med pil ned) øverst til højre i Chrome
         </Step>
-        <Step number={2} icon={<Plus className="size-4" />}>
-          Vælg{" "}
-          <strong className="font-medium">
-            &ldquo;Installer app&rdquo;
-          </strong>{" "}
-          eller{" "}
-          <strong className="font-medium">
-            &ldquo;Føj til startside&rdquo;
-          </strong>
+        <Step number={2}>
+          Vælg <strong className="font-medium">&ldquo;Installer&rdquo;</strong>
+          {" "}(ikke &ldquo;Opret genvej&rdquo;)
         </Step>
         <Step number={3}>
-          Bekræft — Loggen lægger sig som en app på din hjemskærm
+          Bekræft med{" "}
+          <strong className="font-medium">&ldquo;Installer&rdquo;</strong> igen
         </Step>
       </ol>
-      <p className="mt-4 text-[12px] italic text-light">
-        Åbn så appen fra hjemskærmen og log ind nedenfor.
-      </p>
+    </>
+  );
+}
+
+function AndroidSamsungInstructions() {
+  return (
+    <>
+      <StepHeader>Føj til hjemmeskærm</StepHeader>
+      <ol className="space-y-1">
+        <Step number={1}>
+          Tryk på <strong className="font-medium">install-ikonet</strong>{" "}
+          (firkant med pil ned) i adresselinjen
+        </Step>
+        <Step number={2}>
+          Vælg <strong className="font-medium">&ldquo;Tilføj&rdquo;</strong> i
+          dialogen
+        </Step>
+      </ol>
     </>
   );
 }
@@ -184,10 +189,6 @@ function AndroidOtherInstructions() {
         <strong className="font-medium text-ink">Chrome</strong>. Åbn{" "}
         <strong className="font-medium text-ink">loggen.app</strong> i Chrome og
         følg vejledningen dér.
-      </p>
-      <p className="mt-3 text-[12px] italic text-light">
-        Du kan logge ind herunder, men appen virker bedst når den er installeret
-        på hjemskærmen.
       </p>
     </>
   );
