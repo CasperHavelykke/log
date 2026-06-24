@@ -8,6 +8,7 @@ import {
   updateJobApplication,
   updateJobApplicationStatus,
 } from "../today/actions";
+import { endJobSearchPeriod } from "./period-actions";
 import { danishLongDate } from "@/lib/date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -187,6 +188,7 @@ export function JobsPage({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
   const [adding, setAdding] = useState(false);
+  const [endingPeriod, setEndingPeriod] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -311,6 +313,7 @@ export function JobsPage({
           {selectedPeriod?.isActive && (
             <button
               type="button"
+              onClick={() => setEndingPeriod(true)}
               className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-elevated px-3.5 py-2 text-[13px] text-mid hover:bg-bg-subtle hover:text-ink md:w-auto md:justify-start"
               title="Marker perioden som afsluttet (du har fundet et job)"
             >
@@ -409,17 +412,15 @@ export function JobsPage({
       </div>
 
       {adding && (
-        <div className="mb-4 rounded-md border border-border bg-card p-5">
-          <AddForm
-            onCancel={() => setAdding(false)}
-            onAdded={(newApp) => {
-              setApps((xs) => [newApp, ...xs]);
-              addLocalEvent(newApp.id, newApp.status);
-              setAdding(false);
-            }}
-            onError={setError}
-          />
-        </div>
+        <AddForm
+          onCancel={() => setAdding(false)}
+          onAdded={(newApp) => {
+            setApps((xs) => [newApp, ...xs]);
+            addLocalEvent(newApp.id, newApp.status);
+            setAdding(false);
+          }}
+          onError={setError}
+        />
       )}
 
       {error && (
@@ -456,6 +457,92 @@ export function JobsPage({
       >
         <Plus className="size-6" strokeWidth={2.6} />
       </button>
+
+      {endingPeriod && selectedPeriod && (
+        <EndPeriodModal
+          period={selectedPeriod}
+          onClose={() => setEndingPeriod(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function EndPeriodModal({
+  period,
+  onClose,
+}: {
+  period: PeriodOption;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [saving, startSave] = useTransition();
+
+  function confirm() {
+    startSave(async () => {
+      const res = await endJobSearchPeriod();
+      if (res.ok) {
+        onClose();
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !saving && onClose()}
+    >
+      <div
+        className="w-full max-w-[440px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <span className="inline-flex size-12 items-center justify-center rounded-full bg-[var(--success-soft)] text-2xl">
+            🎉
+          </span>
+          <div>
+            <h3 className="font-serif text-[20px] text-ink">Tillykke!</h3>
+            <p className="text-[12px] text-mid">
+              {period.name ?? "Aktiv periode"} afsluttes
+            </p>
+          </div>
+        </div>
+        <div className="mb-5 space-y-2 text-[13px] text-mid">
+          <p>
+            Når du afslutter perioden låses alle ansøgninger som hørende til
+            denne søgning. Statistik og tragten arkiveres til{" "}
+            <strong className="font-medium text-ink">{period.name ?? "perioden"}</strong>.
+          </p>
+          <p>
+            Job flyttes til <strong className="font-medium text-ink">Arkiv</strong> i
+            menuen, hvor du altid kan se tidligere ansøgninger og perioder.
+          </p>
+          <p>
+            Hvis du senere skal søge igen, kan du starte en ny periode fra
+            indstillinger.
+          </p>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="cursor-pointer rounded-[8px] px-3 py-2 text-[13px] text-mid hover:text-ink disabled:opacity-50"
+          >
+            Ikke endnu
+          </button>
+          <button
+            type="button"
+            onClick={confirm}
+            disabled={saving}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+          >
+            <Check className="size-3.5" strokeWidth={2.5} />
+            {saving ? "Afslutter…" : "Afslut periode"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1150,7 +1237,6 @@ function AddForm({
   const [url, setUrl] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [notes, setNotes] = useState("");
-  const [applicationText, setApplicationText] = useState("");
   const [sentAt, setSentAt] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1167,7 +1253,7 @@ function AddForm({
         company,
         role: role || null,
         files: null,
-        applicationText: applicationText || null,
+        applicationText: null,
         status,
         sentAt: sentAt || undefined,
       });
@@ -1194,7 +1280,7 @@ function AddForm({
           url,
           contactPerson,
           notes,
-          applicationText,
+          applicationText: "",
           sentAt: res.application.sentAt ?? "",
           updatedAt: res.application.updatedAt,
           documents: [],
@@ -1204,88 +1290,84 @@ function AddForm({
   }
 
   return (
-    <div>
-      <h3 className="mb-3 font-serif text-[18px] text-accent-bright">Ny ansøgning</h3>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Firma">
-          <input
-            type="text"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="Fx Ravnit"
-            autoFocus
-          />
-        </Field>
-        <Field label="Stilling">
-          <input
-            type="text"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="Fx Webudvikler"
-          />
-        </Field>
-        <Field label="Status">
-          <select value={status} onChange={(e) => setStatus(e.target.value as Status)}>
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Sendt-dato">
-          <input
-            type="date"
-            value={sentAt}
-            onChange={(e) => setSentAt(e.target.value)}
-          />
-        </Field>
-        <Field label="URL" full>
-          <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
-        </Field>
-        <Field label="Kontaktperson" full>
-          <input
-            type="text"
-            value={contactPerson}
-            onChange={(e) => setContactPerson(e.target.value)}
-          />
-        </Field>
-        <Field label="Noter" full>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </Field>
-        <Field
-          label="Ansøgningstekst"
-          full
-          hint="Paste indholdet af ansøgningen — så kan Claude søge i den og finde inspiration på tværs af dine tidligere ansøgninger."
-        >
-          <textarea
-            value={applicationText}
-            onChange={(e) => setApplicationText(e.target.value)}
-            placeholder="Selve brevteksten — fri form. Kan være tomt."
-            rows={10}
-          />
-        </Field>
-      </div>
-      <p className="mt-3 text-[11px] italic text-dim">
-        Tilknyt CV / ansøgning / job-opslag efter du har oprettet ansøgningen
-        — via 📎-knappen på rækken eller redigér-modalen.
-      </p>
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={pending}
-          className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
-        >
-          {pending ? "Tilføjer..." : "Tilføj"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="cursor-pointer rounded-[3px] border border-border bg-transparent px-4 py-2 text-[13px] text-mid hover:border-accent-dim hover:text-ink"
-        >
-          Annullér
-        </button>
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !pending && onCancel()}
+    >
+      <div
+        className="w-full max-w-[520px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-1 font-serif text-[20px] text-ink">Ny ansøgning</h3>
+        <p className="mb-4 text-[13px] text-mid">
+          Tilknyt CV / ansøgning / job-opslag senere på ansøgningens side.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Firma">
+            <input
+              type="text"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Fx Ravnit"
+              autoFocus
+            />
+          </Field>
+          <Field label="Stilling">
+            <input
+              type="text"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="Fx Webudvikler"
+            />
+          </Field>
+          <Field label="Status">
+            <select value={status} onChange={(e) => setStatus(e.target.value as Status)}>
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Sendt-dato">
+            <input
+              type="date"
+              value={sentAt}
+              onChange={(e) => setSentAt(e.target.value)}
+            />
+          </Field>
+          <Field label="URL" full>
+            <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} />
+          </Field>
+          <Field label="Kontaktperson" full>
+            <input
+              type="text"
+              value={contactPerson}
+              onChange={(e) => setContactPerson(e.target.value)}
+            />
+          </Field>
+          <Field label="Noter" full>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          </Field>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="cursor-pointer rounded-[8px] px-3 py-2 text-[13px] text-mid hover:text-ink disabled:opacity-50"
+          >
+            Annullér
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending}
+            className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+          >
+            {pending ? "Tilføjer…" : "Tilføj"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -13,7 +13,6 @@ import { CustomParametersCard } from "./custom-parameters-card";
 import type { CustomParamSummary } from "@/lib/custom-parameters";
 import {
   startJobSearchPeriod,
-  endJobSearchPeriod,
 } from "../jobs/period-actions";
 import { Briefcase, Clock, Moon, AlertTriangle } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
@@ -272,24 +271,6 @@ function JobSearchCard({
     });
   }
 
-  function endNow() {
-    if (
-      !confirm(
-        "Afslut den aktive jobsøgningsperiode? Du kan altid se den i historikken bagefter.",
-      )
-    ) {
-      return;
-    }
-    start(async () => {
-      const res = await endJobSearchPeriod();
-      if (!res.ok) {
-        setErr(res.error);
-        return;
-      }
-      setActive(null);
-    });
-  }
-
   return (
     <Card title="Jobsøgning">
       <div className="mb-3 space-y-2 text-[13px] text-mid">
@@ -326,17 +307,12 @@ function JobSearchCard({
               {active.name || "Aktiv jobsøgningsperiode"}
             </span>
           </div>
-          <p className="mb-3 text-[12px] text-mid">
+          <p className="text-[12px] text-mid">
             Startet {formatDanishDate(active.startedAt)}
           </p>
-          <button
-            type="button"
-            onClick={endNow}
-            disabled={pending}
-            className="cursor-pointer rounded-[3px] border border-danger bg-transparent px-3 py-1.5 text-[12px] font-medium text-danger hover:bg-[rgba(248,113,113,0.08)] disabled:opacity-50"
-          >
-            {pending ? "Afslutter..." : "Afslut periode"}
-          </button>
+          <p className="mt-2 text-[11px] italic text-light">
+            Afslut perioden fra <strong className="font-medium text-mid">Job</strong>-siden når du har fundet et job.
+          </p>
         </div>
       ) : showStart ? (
         <div className="space-y-3 rounded-[3px] border border-border-light bg-bg p-3">

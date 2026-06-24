@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { Nav } from "@/components/nav";
 import { MobileNav } from "@/components/mobile-nav";
 import { requireUser } from "@/lib/session";
-import { getActiveJobSearchPeriod } from "./jobs/period-actions";
+import { listJobSearchPeriods } from "./jobs/period-actions";
 import { getActiveSession } from "./drink-counter/actions";
 import {
   CounterWrapper,
@@ -27,21 +27,26 @@ export default async function AppLayout({
     }
   }
 
-  let showJobs = false;
+  let jobsPlacement: "primary" | "archive" | "hidden" = "hidden";
   try {
-    const active = await getActiveJobSearchPeriod();
-    showJobs = active !== null;
+    const periods = await listJobSearchPeriods();
+    const hasActive = periods.some((p) => p.endedAt === null);
+    jobsPlacement = hasActive
+      ? "primary"
+      : periods.length > 0
+        ? "archive"
+        : "hidden";
   } catch {
-    showJobs = false;
+    jobsPlacement = "hidden";
   }
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <Nav showJobs={showJobs} email={user.email ?? null} />
+      <Nav jobsPlacement={jobsPlacement} email={user.email ?? null} />
       <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-32 pt-[calc(env(safe-area-inset-top,0px)+16px)] sm:pb-8 sm:pt-[calc(env(safe-area-inset-top,0px)+32px)] md:px-10 md:pb-10">
         {children}
       </main>
-      <MobileNav showJobs={showJobs} />
+      <MobileNav jobsPlacement={jobsPlacement} />
       {drinkSession && (
         <FloatingCounterBanner totalUnits={drinkSession.totalUnits} />
       )}

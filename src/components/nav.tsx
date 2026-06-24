@@ -20,11 +20,18 @@ type Item = {
   key: string;
 };
 
+const JOBS_ITEM: Item = {
+  href: "/jobs",
+  label: "Job",
+  icon: Briefcase,
+  key: "jobs",
+};
+
 const PRIMARY_ITEMS: Item[] = [
   { href: "/today", label: "I dag", icon: CalendarDays, key: "today" },
   { href: "/health", label: "Helbred", icon: HeartPulse, key: "health" },
   { href: "/statistik", label: "Statistik", icon: LineChart, key: "statistik" },
-  { href: "/jobs", label: "Job", icon: Briefcase, key: "jobs" },
+  JOBS_ITEM,
   { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
 ];
 
@@ -34,16 +41,18 @@ const ARCHIVE_ITEMS: Item[] = [
 ];
 
 export function Nav({
-  showJobs = true,
+  jobsPlacement = "primary",
   email,
 }: {
-  showJobs?: boolean;
+  jobsPlacement?: "primary" | "archive" | "hidden";
   email?: string | null;
 }) {
   const pathname = usePathname();
   const primary = PRIMARY_ITEMS.filter(
-    (i) => i.key !== "jobs" || showJobs,
+    (i) => i.key !== "jobs" || jobsPlacement === "primary",
   );
+  const archive =
+    jobsPlacement === "archive" ? [JOBS_ITEM, ...ARCHIVE_ITEMS] : ARCHIVE_ITEMS;
   const initial = (email ?? "?").trim().charAt(0).toUpperCase() || "?";
   const shortEmail =
     email && email.length > 22 ? email.slice(0, 20) + "…" : email ?? "";
@@ -65,7 +74,7 @@ export function Nav({
         <div className="px-2.5 pb-1.5 pt-3.5 text-[10px] font-semibold uppercase tracking-[0.6px] text-dim">
           Arkiv
         </div>
-        {ARCHIVE_ITEMS.map((item) => (
+        {archive.map((item) => (
           <NavItem key={item.key} item={item} pathname={pathname} />
         ))}
       </nav>

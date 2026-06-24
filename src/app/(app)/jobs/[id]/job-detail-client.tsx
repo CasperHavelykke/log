@@ -307,9 +307,9 @@ export function JobDetailClient({
                         href={app.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-accent hover:underline"
+                        className="inline-flex max-w-full items-center gap-1 text-accent hover:underline"
                       >
-                        <ExternalLink className="size-3" />
+                        <ExternalLink className="size-3 shrink-0" />
                         <span className="truncate">{app.url}</span>
                       </a>
                     ) : (
@@ -442,11 +442,13 @@ function InfoRow({
   full?: boolean;
 }) {
   return (
-    <div className={full ? "sm:col-span-2" : ""}>
+    <div className={`min-w-0 ${full ? "sm:col-span-2" : ""}`}>
       <dt className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         {label}
       </dt>
-      <dd className="mt-0.5 text-[13px] text-ink">{value}</dd>
+      <dd className="mt-0.5 min-w-0 overflow-hidden text-[13px] text-ink">
+        {value}
+      </dd>
     </div>
   );
 }

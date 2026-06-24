@@ -22,30 +22,49 @@ type Item = {
   key: string;
 };
 
-const ALL_ITEMS: Item[] = [
+const JOBS_ITEM: Item = {
+  href: "/jobs",
+  label: "Job",
+  icon: Briefcase,
+  key: "jobs",
+};
+
+const PRIMARY_ITEMS: Item[] = [
   { href: "/today", label: "I dag", icon: CalendarDays, key: "today" },
   { href: "/health", label: "Helbred", icon: HeartPulse, key: "health" },
   { href: "/statistik", label: "Statistik", icon: LineChart, key: "statistik" },
-  { href: "/jobs", label: "Job", icon: Briefcase, key: "jobs" },
+  JOBS_ITEM,
   { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
-  { href: "/documents", label: "Dokumenter", icon: FileText, key: "documents" },
-  { href: "/journal", label: "Journal", icon: NotebookPen, key: "journal" },
   { href: "/settings", label: "Indstillinger", icon: Settings, key: "settings" },
 ];
 
-export function MobileNav({ showJobs }: { showJobs: boolean }) {
+const ARCHIVE_ITEMS: Item[] = [
+  { href: "/documents", label: "Dokumenter", icon: FileText, key: "documents" },
+  { href: "/journal", label: "Journal", icon: NotebookPen, key: "journal" },
+];
+
+export function MobileNav({
+  jobsPlacement = "primary",
+}: {
+  jobsPlacement?: "primary" | "archive" | "hidden";
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Items visible in persistent bar — Job tager Projekters plads når aktiv
-  const visibleItems = ALL_ITEMS.filter((i) => {
-    if (i.key === "today" || i.key === "health" || i.key === "statistik") return true;
-    if (i.key === "jobs") return showJobs;
+  // Items synlig i persistent bottom bar (kun aktiv-periode visning her)
+  const visibleItems = PRIMARY_ITEMS.filter((i) => {
+    if (i.key === "today" || i.key === "health" || i.key === "statistik")
+      return true;
+    if (i.key === "jobs") return jobsPlacement === "primary";
     return false;
   });
 
-  // Items i drawer = alle minus job hvis ikke aktiv
-  const drawerItems = ALL_ITEMS.filter((i) => i.key !== "jobs" || showJobs);
+  // Drawer-sektioner
+  const drawerPrimary = PRIMARY_ITEMS.filter(
+    (i) => i.key !== "jobs" || jobsPlacement === "primary",
+  );
+  const drawerArchive =
+    jobsPlacement === "archive" ? [JOBS_ITEM, ...ARCHIVE_ITEMS] : ARCHIVE_ITEMS;
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + "/");
@@ -86,8 +105,8 @@ export function MobileNav({ showJobs }: { showJobs: boolean }) {
       {/* Drawer */}
       <Drawer
         open={open}
-        items={drawerItems}
-        activePathname={pathname}
+        primary={drawerPrimary}
+        archive={drawerArchive}
         onClose={() => setOpen(false)}
         isActive={isActive}
       />
@@ -155,13 +174,14 @@ export function MobileNav({ showJobs }: { showJobs: boolean }) {
 
 function Drawer({
   open,
-  items,
+  primary,
+  archive,
   onClose,
   isActive,
 }: {
   open: boolean;
-  items: Item[];
-  activePathname: string;
+  primary: Item[];
+  archive: Item[];
   onClose: () => void;
   isActive: (href: string) => boolean;
 }) {
@@ -194,10 +214,40 @@ function Drawer({
         className="mx-auto mt-3 h-1 w-10 rounded-full bg-border-strong"
         aria-hidden
       />
+      <DrawerSection
+        title="Naviger"
+        items={primary}
+        isActive={isActive}
+        onClose={onClose}
+      />
+      <DrawerSection
+        title="Arkiv"
+        items={archive}
+        isActive={isActive}
+        onClose={onClose}
+      />
+    </div>
+  );
+}
+
+function DrawerSection({
+  title,
+  items,
+  isActive,
+  onClose,
+}: {
+  title: string;
+  items: Item[];
+  isActive: (href: string) => boolean;
+  onClose: () => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <>
       <div className="px-4 pt-4 pb-2 text-center text-[11px] uppercase tracking-[0.6px] text-light">
-        Naviger
+        {title}
       </div>
-      <div className="grid grid-cols-3 gap-2 px-4 pb-4">
+      <div className="grid grid-cols-3 gap-2 px-4 pb-2">
         {items.map(({ href, label, icon: Icon, key }) => {
           const active = isActive(href);
           return (
@@ -217,6 +267,6 @@ function Drawer({
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
