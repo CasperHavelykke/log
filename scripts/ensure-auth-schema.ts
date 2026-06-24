@@ -9,15 +9,15 @@
  *     npx tsx scripts/ensure-auth-schema.ts
  *
  *   Turso (med Mullvad slået fra):
- *     $env:TURSO_DATABASE_URL = "libsql://..."
- *     $env:TURSO_AUTH_TOKEN = "..."
+ *     $env:DATABASE_URL = "libsql://..."
+ *     $env:DATABASE_AUTH_TOKEN = "..."
  *     npx tsx scripts/ensure-auth-schema.ts
  */
 import { createClient } from "@libsql/client";
 
 async function main() {
-  const url = process.env.TURSO_DATABASE_URL ?? "file:./data/app.db";
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const url = process.env.DATABASE_URL ?? "file:./data/app.db";
+  const authToken = process.env.DATABASE_AUTH_TOKEN;
   const client = createClient({ url, ...(authToken ? { authToken } : {}) });
 
   const isLocal = url.startsWith("file:");

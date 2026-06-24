@@ -2,12 +2,12 @@
  * Engangs-migration: kopierer alle rows fra en lokal SQLite-fil til en Turso-DB.
  *
  * Forudsætning: Turso-DB'en skal allerede have schema migreret. Kør først:
- *   TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... npm run db:migrate
+ *   DATABASE_URL=libsql://... DATABASE_AUTH_TOKEN=... npm run db:migrate
  *
  * Brug:
  *   SOURCE_URL=file:./data/app.db \
- *   TURSO_DATABASE_URL=libsql://...turso.io \
- *   TURSO_AUTH_TOKEN=... \
+ *   DATABASE_URL=libsql://...turso.io \
+ *   DATABASE_AUTH_TOKEN=... \
  *   tsx scripts/migrate-to-turso.ts
  */
 import { createClient } from "@libsql/client";
@@ -33,17 +33,17 @@ const BATCH_SIZE = 50;
 
 async function main() {
   const sourceUrl = process.env.SOURCE_URL ?? "file:./data/app.db";
-  const targetUrl = process.env.TURSO_DATABASE_URL;
-  const targetToken = process.env.TURSO_AUTH_TOKEN;
+  const targetUrl = process.env.DATABASE_URL;
+  const targetToken = process.env.DATABASE_AUTH_TOKEN;
 
   if (!targetUrl || !targetUrl.startsWith("libsql://")) {
     console.error(
-      "TURSO_DATABASE_URL skal være sat til en libsql:// URL (ikke en lokal file:).",
+      "DATABASE_URL skal være sat til en libsql:// URL (ikke en lokal file:).",
     );
     process.exit(1);
   }
   if (!targetToken) {
-    console.error("TURSO_AUTH_TOKEN skal være sat.");
+    console.error("DATABASE_AUTH_TOKEN skal være sat.");
     process.exit(1);
   }
 

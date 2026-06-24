@@ -8,7 +8,7 @@ import * as schema from "./schema";
 // Turso ("libsql://...turso.io" + authToken). Vi bruger samme driver overalt;
 // URL'en bestemmer mode. Default: lokal fil for backwards-kompatibilitet.
 function resolveUrl(): string {
-  const fromEnv = process.env.TURSO_DATABASE_URL;
+  const fromEnv = process.env.DATABASE_URL;
   if (fromEnv) return fromEnv;
   const localPath =
     process.env.DATABASE_PATH ?? resolve(process.cwd(), "data", "app.db");
@@ -22,7 +22,7 @@ const globalForDb = globalThis as unknown as {
 
 function openClient(): Client {
   const url = resolveUrl();
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const authToken = process.env.DATABASE_AUTH_TOKEN;
   return createClient(url.startsWith("file:") ? { url } : { url, authToken });
 }
 

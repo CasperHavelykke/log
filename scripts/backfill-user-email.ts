@@ -3,8 +3,8 @@
  * til den i stedet for at oprette en ny user-row.
  *
  * Brug:
- *   $env:TURSO_DATABASE_URL = "libsql://..."
- *   $env:TURSO_AUTH_TOKEN = "..."
+ *   $env:DATABASE_URL = "libsql://..."
+ *   $env:DATABASE_AUTH_TOKEN = "..."
  *   $env:BACKFILL_USER_ID = "1"
  *   $env:BACKFILL_EMAIL = "cadlh@hotmail.com"
  *   npx tsx scripts/backfill-user-email.ts
@@ -12,8 +12,8 @@
 import { createClient } from "@libsql/client";
 
 async function main() {
-  const url = process.env.TURSO_DATABASE_URL ?? "file:./data/app.db";
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const url = process.env.DATABASE_URL ?? "file:./data/app.db";
+  const authToken = process.env.DATABASE_AUTH_TOKEN;
   const userIdRaw = process.env.BACKFILL_USER_ID;
   const email = process.env.BACKFILL_EMAIL;
 

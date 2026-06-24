@@ -17,8 +17,8 @@
  * Idempotent — springer over blobs der allerede har en row.
  *
  * Brug:
- *   $env:TURSO_DATABASE_URL = "libsql://..."
- *   $env:TURSO_AUTH_TOKEN = "..."
+ *   $env:DATABASE_URL = "libsql://..."
+ *   $env:DATABASE_AUTH_TOKEN = "..."
  *   $env:BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_..."
  *   $env:RECOVER_USER_ID = "1"
  *   npx tsx scripts/recover-blobs.ts
@@ -63,8 +63,8 @@ function pathnameToTitle(pathname: string): string {
 }
 
 async function main() {
-  const url = process.env.TURSO_DATABASE_URL ?? "file:./data/app.db";
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const url = process.env.DATABASE_URL ?? "file:./data/app.db";
+  const authToken = process.env.DATABASE_AUTH_TOKEN;
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
   const userIdRaw = process.env.RECOVER_USER_ID;
 
