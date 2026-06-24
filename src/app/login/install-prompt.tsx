@@ -60,7 +60,7 @@ export function InstallPrompt() {
         </h2>
         <p className="mt-1 text-[13px] text-mid">
           Loggen er en database for dit liv, som kan tilkobles til din
-          foretrukne AI for nem logning og opfølgning.
+          foretrukne AI for nem logning og opfølgning uden at åbne appen.
         </p>
       </div>
 

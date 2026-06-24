@@ -40,9 +40,12 @@ export default async function LoginPage({
   if (user) redirect(returnTo);
 
   return (
-    <main className="flex min-h-screen items-start justify-center px-4 py-12">
+    <main
+      className="flex items-center justify-center overflow-hidden px-4"
+      style={{ height: "100vh" }}
+    >
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
+        <div className="mb-6 text-center">
           <h1 className="font-serif text-[34px] font-medium leading-none text-ink">
             Loggen
           </h1>
