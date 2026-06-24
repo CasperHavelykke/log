@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import { get } from "@vercel/blob";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
+import { getBlobStream } from "@/lib/blob";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,16 +52,19 @@ export async function GET(_req: Request, { params }: { params: Params }) {
     return new Response("Bad type", { status: 400 });
   }
 
-  const result = await get(blobUrl, { access: "private" });
-  if (!result || result.statusCode !== 200) {
+  const { stream, contentLength } = await getBlobStream(blobUrl);
+  if (!stream) {
     return new Response("Blob not available", { status: 502 });
   }
 
-  return new Response(result.stream, {
-    headers: {
-      "Content-Type": mimeType,
-      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(filename)}"`,
-      "Cache-Control": "private, max-age=3600",
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": mimeType,
+    "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(filename)}"`,
+    "Cache-Control": "private, max-age=3600",
+  };
+  if (contentLength !== undefined) {
+    headers["Content-Length"] = String(contentLength);
+  }
+
+  return new Response(stream, { headers });
 }

@@ -1,6 +1,11 @@
 import "server-only";
 
-import { del, put } from "@vercel/blob";
+import { mkdir, writeFile, unlink, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { randomBytes } from "node:crypto";
+import { Readable } from "node:stream";
+import { del as vercelDel, get as vercelGet } from "@vercel/blob";
 
 export const PHOTO_PREFIX = "photos";
 export const DOCUMENT_PREFIX = "documents";
@@ -24,6 +29,13 @@ export type UploadedBlob = {
   size: number;
 };
 
+// Lokal disk-rod for alle uploads. Ligger i samme data/ som SQLite-filen.
+const BLOB_ROOT = resolve(process.cwd(), "data");
+
+function blobAbsolutePath(relativePath: string): string {
+  return join(BLOB_ROOT, relativePath);
+}
+
 export async function uploadBlob(params: {
   data: Buffer | Blob | ArrayBuffer;
   prefix: string;
@@ -31,30 +43,78 @@ export async function uploadBlob(params: {
   contentType: string;
 }): Promise<UploadedBlob> {
   const safeName = sanitizeFilename(params.filename);
-  const path = `${params.prefix}/${safeName}`;
-  const result = await put(path, params.data, {
-    access: "private",
-    contentType: params.contentType,
-    addRandomSuffix: true,
-  });
+  const suffix = randomBytes(8).toString("hex");
+  const dot = safeName.lastIndexOf(".");
+  const stem = dot > 0 ? safeName.slice(0, dot) : safeName;
+  const ext = dot > 0 ? safeName.slice(dot) : "";
+  const finalName = `${stem}-${suffix}${ext}`;
+
+  const relativePath = `${params.prefix}/${finalName}`;
+  const absolutePath = blobAbsolutePath(relativePath);
+
+  await mkdir(dirname(absolutePath), { recursive: true });
+
+  let buffer: Buffer;
+  if (params.data instanceof Buffer) {
+    buffer = params.data;
+  } else if (params.data instanceof Blob) {
+    const arr = await params.data.arrayBuffer();
+    buffer = Buffer.from(new Uint8Array(arr));
+  } else {
+    buffer = Buffer.from(new Uint8Array(params.data));
+  }
+
+  await writeFile(absolutePath, buffer);
+
   return {
-    url: result.url,
-    pathname: result.pathname,
+    url: relativePath,
+    pathname: relativePath,
     contentType: params.contentType,
-    size:
-      params.data instanceof Buffer
-        ? params.data.length
-        : params.data instanceof Blob
-          ? params.data.size
-          : params.data.byteLength,
+    size: buffer.length,
   };
 }
 
 export async function deleteBlob(urlOrPathname: string): Promise<void> {
+  if (urlOrPathname.startsWith("http")) {
+    // Backwards-compat: gammel Vercel Blob URL — slet via SDK
+    try {
+      await vercelDel(urlOrPathname);
+    } catch {
+      // Allerede væk eller netværksfejl — ok
+    }
+    return;
+  }
+  // Lokal fil
   try {
-    await del(urlOrPathname);
+    await unlink(blobAbsolutePath(urlOrPathname));
   } catch {
-    // Hvis blob allerede er væk er det ok.
+    // Allerede væk — ok
+  }
+}
+
+export async function getBlobStream(urlOrPathname: string): Promise<{
+  stream: ReadableStream<Uint8Array> | null;
+  contentLength?: number;
+}> {
+  if (urlOrPathname.startsWith("http")) {
+    // Backwards-compat: gammel Vercel Blob URL
+    const result = await vercelGet(urlOrPathname, { access: "private" });
+    if (!result || result.statusCode !== 200) {
+      return { stream: null };
+    }
+    return {
+      stream: result.stream as unknown as ReadableStream<Uint8Array>,
+    };
+  }
+  // Lokal fil
+  const absolutePath = blobAbsolutePath(urlOrPathname);
+  try {
+    const stats = await stat(absolutePath);
+    const nodeStream = createReadStream(absolutePath);
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
+    return { stream: webStream, contentLength: stats.size };
+  } catch {
+    return { stream: null };
   }
 }
 
