@@ -1,6 +1,6 @@
 {
-  "name": "Log",
-  "short_name": "Log",
+  "name": "Loggen",
+  "short_name": "Loggen",
   "description": "Personlig logbog for aktivitet, projekter og helbred",
   "start_url": "/",
   "scope": "/",

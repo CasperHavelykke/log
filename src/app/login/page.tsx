@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { LoginForm } from "./login-form";
 import { CodeForm } from "./code-form";
+import { InstallPrompt } from "./install-prompt";
 
 export const metadata = { title: "Log ind | Log" };
 
@@ -38,17 +39,20 @@ export default async function LoginPage({
   if (user) redirect(returnTo);
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="flex min-h-screen items-start justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Log</h1>
-          <p className="mt-1 text-sm text-muted">Log ind for at fortsætte</p>
+          <h1 className="font-serif text-[34px] font-medium leading-none text-ink">
+            Loggen
+          </h1>
+          <p className="mt-2 text-[13px] italic text-light">loggen.app</p>
         </div>
 
         {step === "verify" && email ? (
           <CodeForm email={email} returnTo={returnTo} error={error} />
         ) : (
           <>
+            <InstallPrompt />
             {deleted && (
               <div className="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
                 Din konto og alle data er slettet.

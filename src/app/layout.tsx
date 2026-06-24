@@ -16,13 +16,13 @@ const ebGaramond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Log",
+  title: "Loggen",
   description: "Personlig logbog for aktivitet, projekter og helbred",
   manifest: "/manifest.json",
-  applicationName: "Log",
+  applicationName: "Loggen",
   appleWebApp: {
     capable: true,
-    title: "Log",
+    title: "Loggen",
     statusBarStyle: "black-translucent",
   },
   icons: {
