@@ -64,7 +64,7 @@ function ProgressLink({
   return (
     <Link
       href={href}
-      className="group min-w-0 flex-1 rounded-md border border-border bg-card px-3 py-2.5 transition hover:border-accent-bright"
+      className="group min-w-0 flex-1 rounded-[10px] border border-[var(--accent-soft-strong)] bg-gradient-to-r from-[var(--accent-bg)] to-transparent px-3 py-2.5 transition-colors hover:bg-[var(--accent-bg)]"
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[11px] uppercase tracking-[0.5px] text-light">
@@ -73,7 +73,7 @@ function ProgressLink({
         <span
           className={`font-serif text-[15px] font-medium ${reached ? "text-success" : "text-ink"}`}
         >
-          {fmt(value)} <span className="text-dim">/ {fmt(target)}</span>
+          {fmt(value)} <span className="text-light">/ {fmt(target)}</span>
         </span>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-bg">

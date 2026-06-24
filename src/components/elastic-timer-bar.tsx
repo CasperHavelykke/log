@@ -68,7 +68,7 @@ export function ElasticTimerBar({ hours }: { hours: number }) {
                 fontWeight: isTarget ? 600 : 400,
               }}
             >
-              {m}h{isTarget && reached ? " ✓" : ""}
+              {m}t{isTarget && reached ? " ✓" : ""}
             </div>
           </div>
         );

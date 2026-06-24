@@ -34,7 +34,7 @@ export function DayIntention({
   }, [note, date]);
 
   return (
-    <div className="mb-4 rounded-md border border-border bg-card px-4 py-3">
+    <div className="mb-4 rounded-[10px] border border-[var(--accent-soft-strong)] bg-gradient-to-r from-[var(--accent-bg)] to-transparent px-4 py-3">
       <label className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.5px] text-light">
         <Pencil className="size-3" />
         Mål for i dag
