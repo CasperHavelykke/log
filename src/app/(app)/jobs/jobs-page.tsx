@@ -4,13 +4,17 @@ import { useMemo, useState, useTransition } from "react";
 import {
   createJobApplication,
   deleteJobApplication,
+  setWeekGoal,
   updateJobApplication,
   updateJobApplicationStatus,
 } from "../today/actions";
 import { danishLongDate } from "@/lib/date";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ExternalLink, FileLinks } from "@/components/file-links";
 import { ApplicationDocuments } from "@/components/application-documents";
-import { Paperclip, Pencil, X } from "lucide-react";
+import { Check, Paperclip, Pencil, Plus, X } from "lucide-react";
+import { formatDanishDate } from "@/lib/date";
 
 type Status =
   | "sent"
@@ -129,14 +133,12 @@ function shortDate(iso: string): string {
   return `${d.getDate()}/${d.getMonth() + 1}`;
 }
 
-type Period = "month" | "30d" | "90d" | "6m" | "12m" | "all";
+type Period = "30d" | "90d" | "6m" | "all";
 
 const PERIOD_LABELS: Record<Period, string> = {
-  month: "Denne måned",
-  "30d": "30 dage",
-  "90d": "90 dage",
-  "6m": "6 måneder",
-  "12m": "12 måneder",
+  "30d": "30d",
+  "90d": "90d",
+  "6m": "6m",
   all: "Alt",
 };
 
@@ -152,14 +154,32 @@ function isoWeekNumber(date: Date): number {
 
 // ---------------------------------------------------------------------------
 
+type PeriodOption = {
+  id: number;
+  name: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  isActive: boolean;
+};
+
 export function JobsPage({
   initial,
   events: initialEvents,
   unattached: initialUnattached,
+  periods,
+  selectedPeriod,
+  showingAll,
+  weekTarget,
+  weekStart,
 }: {
   initial: App[];
   events: Event[];
   unattached: AppDoc[];
+  periods: PeriodOption[];
+  selectedPeriod: PeriodOption | null;
+  showingAll: boolean;
+  weekTarget: number | null;
+  weekStart: string;
 }) {
   const [apps, setApps] = useState<App[]>(initial);
   const [events, setEvents] = useState<Event[]>(initialEvents);
@@ -261,27 +281,96 @@ export function JobsPage({
     });
   }
 
+  const periodTitle = showingAll
+    ? "Alle ansøgninger"
+    : (selectedPeriod?.name ??
+      (selectedPeriod
+        ? `Periode fra ${formatDanishDate(selectedPeriod.startedAt)}`
+        : "Ingen aktiv periode"));
+  const periodDateRange = selectedPeriod
+    ? `${formatDanishDate(selectedPeriod.startedAt)} – ${selectedPeriod.endedAt ? formatDanishDate(selectedPeriod.endedAt) : "i dag"}`
+    : null;
+
   return (
-    <div className="mx-auto max-w-[880px] px-5 py-8">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">Job</h1>
-          <p className="mt-1 font-serif text-sm italic text-mid">
-            {apps.length === 0
-              ? "Ingen ansøgninger endnu"
-              : `${apps.length} ansøgning${apps.length === 1 ? "" : "er"} i alt`}
-          </p>
+    <div className="mx-auto max-w-[1280px] px-4 py-8">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-hair pb-5">
+        <div className="min-w-0">
+          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
+            Job
+          </div>
+          <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+            {periodTitle}
+          </h1>
+          {periodDateRange && !showingAll && (
+            <div className="mt-1.5 text-[12px] italic text-light">
+              {periodDateRange}
+            </div>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="cursor-pointer rounded-[3px] border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-bright"
-        >
-          + Ny ansøgning
-        </button>
+        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
+          {selectedPeriod?.isActive && (
+            <button
+              type="button"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-elevated px-3.5 py-2 text-[13px] text-mid hover:bg-bg-subtle hover:text-ink md:w-auto md:justify-start"
+              title="Marker perioden som afsluttet (du har fundet et job)"
+            >
+              <Check className="size-3.5" />
+              Afslut periode
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="hidden cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright md:inline-flex"
+          >
+            <Plus className="size-3.5" strokeWidth={2.5} />
+            Ny ansøgning
+          </button>
+        </div>
       </header>
 
-      {apps.length > 0 && <JobStats apps={apps} events={events} />}
+      {periods.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-1.5">
+          {periods.map((p) => {
+            const active = !showingAll && selectedPeriod?.id === p.id;
+            return (
+              <Link
+                key={p.id}
+                href={`/jobs?period=${p.id}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] transition-colors ${
+                  active
+                    ? "bg-accent-bg text-accent-bright"
+                    : "bg-bg-elevated text-mid hover:bg-bg-subtle hover:text-ink"
+                }`}
+              >
+                {p.isActive && (
+                  <span className="inline-block size-1.5 rounded-full bg-success" />
+                )}
+                {p.name || formatDanishDate(p.startedAt)}
+              </Link>
+            );
+          })}
+          <Link
+            href="/jobs?period=all"
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] transition-colors ${
+              showingAll
+                ? "bg-accent-bg text-accent-bright"
+                : "bg-bg-elevated text-mid hover:bg-bg-subtle hover:text-ink"
+            }`}
+          >
+            Alle
+          </Link>
+        </div>
+      )}
+
+      <WeekGoalBanner apps={apps} weekStart={weekStart} weekTarget={weekTarget} />
+
+      {apps.length > 0 && (
+        <>
+          <StatRow apps={apps} events={events} />
+          <JobStats apps={apps} events={events} />
+        </>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <input
@@ -289,27 +378,34 @@ export function JobsPage({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Søg firma, stilling, noter..."
-          className="!w-auto !min-w-[240px] flex-1"
+          className="!w-full !rounded-[8px] !border-hair !bg-bg-elevated !px-3 !py-2 !text-[13px] sm:!w-auto sm:!min-w-[280px] sm:!max-w-[360px] sm:flex-1"
         />
-      </div>
-
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        <FilterChip
-          active={statusFilter === "all"}
-          onClick={() => setStatusFilter("all")}
-          label="Alle"
-          count={apps.length}
-        />
-        {STATUS_ORDER.map((s) => (
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <FilterChip
-            key={s}
-            active={statusFilter === s}
-            onClick={() => setStatusFilter(s)}
-            label={STATUS_LABELS[s]}
-            count={counts[s]}
-            statusColor={s}
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+            label="Alle"
+            count={apps.length}
           />
-        ))}
+          {STATUS_ORDER.map((s) => (
+            <FilterChip
+              key={s}
+              active={statusFilter === s}
+              onClick={() => setStatusFilter(s)}
+              label={STATUS_LABELS[s]}
+              count={counts[s]}
+              statusColor={s}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="ml-auto hidden cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-3.5 py-1.5 text-[12px] font-medium text-white hover:bg-accent-bright md:inline-flex"
+        >
+          <Plus className="size-3.5" strokeWidth={2.5} />
+          Ny ansøgning
+        </button>
       </div>
 
       {adding && (
@@ -333,59 +429,120 @@ export function JobsPage({
       )}
 
       {filtered.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm italic text-dim">
+        <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
           {apps.length === 0
             ? "Tilføj din første ansøgning øverst."
             : "Ingen ansøgninger matcher dine filtre."}
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((a) =>
-            editingId === a.id ? (
-              <EditCard
-                key={a.id}
-                app={a}
-                unattached={unattached}
-                onDocumentsChange={(next) => {
-                  const added = next.filter(
-                    (d) => !a.documents.some((x) => x.id === d.id),
-                  );
-                  const removed = a.documents.filter(
-                    (d) => !next.some((x) => x.id === d.id),
-                  );
-                  setApps((xs) =>
-                    xs.map((x) =>
-                      x.id === a.id ? { ...x, documents: next } : x,
-                    ),
-                  );
-                  setUnattached((prev) => {
-                    const filtered = prev.filter(
-                      (d) => !added.some((x) => x.id === d.id),
-                    );
-                    return [...filtered, ...removed];
-                  });
-                }}
-                onSave={(updated) => handleSaveEdit(updated, a.status)}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
+        <div className="space-y-1.5">
+          {filtered.map((a) => (
               <RowCard
                 key={a.id}
                 app={a}
                 timeline={eventsByApp.get(a.id) ?? []}
-                onStatusChange={(s) => handleStatusChange(a.id, s)}
-                onEdit={() => setEditingId(a.id)}
-                onDelete={() => handleDelete(a.id)}
               />
-            ),
-          )}
+          ))}
         </div>
       )}
+
+      {/* FAB — kun synlig på mobil */}
+      <button
+        type="button"
+        onClick={() => setAdding(true)}
+        aria-label="Ny ansøgning"
+        className="fixed right-6 z-30 inline-flex size-14 cursor-pointer items-center justify-center rounded-full bg-accent text-white shadow-[0_4px_12px_rgba(110,169,242,0.4),0_8px_24px_rgba(0,0,0,0.3)] transition-transform hover:bg-accent-bright active:translate-y-0.5 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 112px)" }}
+      >
+        <Plus className="size-6" strokeWidth={2.6} />
+      </button>
     </div>
   );
 }
 
-// --- statistics -------------------------------------------------------------
+// --- stat row (6 cards) ------------------------------------------------------
+
+function StatRow({ apps, events }: { apps: App[]; events: Event[] }) {
+  const stats = useMemo(() => {
+    const totalSent = apps.filter((a) => a.sentAt).length;
+    const finalIds = new Set<number>();
+    const replyIds = new Set<number>();
+    const interviewIds = new Set<number>();
+    const offerIds = new Set<number>();
+    for (const e of events) {
+      if (
+        e.status === "interview" ||
+        e.status === "offer" ||
+        e.status === "rejected" ||
+        e.status === "withdrawn"
+      ) {
+        finalIds.add(e.applicationId);
+      }
+      if (REPLY_STATUSES.has(e.status)) replyIds.add(e.applicationId);
+      if (INTERVIEW_STATUSES.has(e.status)) interviewIds.add(e.applicationId);
+      if (OFFER_STATUSES.has(e.status)) offerIds.add(e.applicationId);
+    }
+    const replyPct = totalSent > 0 ? Math.round((replyIds.size / totalSent) * 100) : 0;
+    return {
+      sent: totalSent,
+      waiting: totalSent - finalIds.size,
+      replied: replyIds.size,
+      interview: interviewIds.size,
+      offer: offerIds.size,
+      replyPct,
+    };
+  }, [apps, events]);
+
+  const items = [
+    { label: "Sendt", value: String(stats.sent) },
+    { label: "Afventer", value: String(stats.waiting) },
+    { label: "Svar", value: String(stats.replied), small: `/${stats.sent}` },
+    { label: "Til samtale", value: String(stats.interview) },
+    { label: "Tilbud", value: String(stats.offer) },
+    { label: "Svarprocent", value: String(stats.replyPct), small: "%" },
+  ];
+
+  return (
+    <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:grid md:grid-cols-6 md:gap-2.5 md:overflow-visible md:px-0">
+      {items.map((s) => (
+        <div
+          key={s.label}
+          className="min-w-[92px] shrink-0 rounded-[10px] bg-bg-elevated px-3.5 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:min-w-0"
+        >
+          <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+            {s.label}
+          </div>
+          <div className="mt-1 font-serif text-[22px] leading-[1.1] text-ink">
+            {s.value}
+            {s.small && (
+              <small className="text-[12px] text-light">{s.small}</small>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- statistics (chart + funnel combined) -----------------------------------
+
+type ChartFilter = "sent" | "replied" | "interview" | "offer" | "rejected";
+
+const CHART_FILTER_LABELS: Record<ChartFilter, string> = {
+  sent: "Sendt",
+  replied: "Svar",
+  interview: "Til samtale",
+  offer: "Tilbud",
+  rejected: "Afvist",
+};
+
+const CHART_FILTER_COLORS: Record<ChartFilter, string> = {
+  sent: "var(--accent)",
+  replied: "var(--warning)",
+  interview: "var(--success)",
+  offer: "var(--success)",
+  rejected: "var(--danger)",
+};
 
 function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
   const [period, setPeriod] = useState<Period>("90d");
@@ -393,34 +550,45 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
   const range = useMemo(() => {
     const today = new Date();
     const todayIso = fmtIso(today);
-    if (period === "month") {
-      return { start: fmtIso(new Date(today.getFullYear(), today.getMonth(), 1)), end: todayIso };
-    }
     if (period === "30d") return { start: fmtIso(addDays(today, -29)), end: todayIso };
     if (period === "90d") return { start: fmtIso(addDays(today, -89)), end: todayIso };
     if (period === "6m") {
       const d = new Date(today.getFullYear(), today.getMonth() - 5, 1);
       return { start: fmtIso(d), end: todayIso };
     }
-    if (period === "12m") {
-      const d = new Date(today.getFullYear(), today.getMonth() - 11, 1);
-      return { start: fmtIso(d), end: todayIso };
-    }
     const sent = apps.map((a) => a.sentAt).filter(Boolean).sort();
     return { start: sent[0] ?? todayIso, end: todayIso };
   }, [period, apps]);
+
+  const [chartFilter, setChartFilter] = useState<ChartFilter>("sent");
 
   const cohort = useMemo(
     () => apps.filter((a) => a.sentAt && a.sentAt >= range.start && a.sentAt <= range.end),
     [apps, range],
   );
 
+  // Datoer for det aktuelle filter — enten sentAt (for "sent") eller events
+  // med matching status (for de andre).
+  const filteredDates = useMemo(() => {
+    if (chartFilter === "sent") {
+      return cohort
+        .map((a) => a.sentAt)
+        .filter((d): d is string => Boolean(d));
+    }
+    const cohortIds = new Set(cohort.map((a) => a.id));
+    const matchingStatuses: Set<Status> =
+      chartFilter === "replied"
+        ? REPLY_STATUSES
+        : new Set([chartFilter as Status]);
+    return events
+      .filter((e) => cohortIds.has(e.applicationId) && matchingStatuses.has(e.status))
+      .map((e) => e.occurredAt);
+  }, [chartFilter, cohort, events]);
+
   const buckets = useMemo(() => {
     const start = parseIso(range.start);
     const end = parseIso(range.end);
     const span = Math.max(0, daysBetween(start, end)) + 1;
-    // Ansøgninger er sparsom data (sjældent mere end 1/dag, ofte 0).
-    // Standard er ugentlige stænger; for lange spænd (>120 dage) skiftes til måneder.
     const granularity: "week" | "month" = span > 120 ? "month" : "week";
     const result: {
       label: string;
@@ -443,13 +611,10 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
         cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
       }
     } else {
-      // Ugentlige stænger — uger starter på mandage; den første spænd-stang kan
-      // være afkortet hvis range.start ikke falder på en mandag.
       const firstMondayOffset = (start.getDay() + 6) % 7;
       let cursor = addDays(start, -firstMondayOffset);
       while (cursor <= end) {
         const bEnd = addDays(cursor, 6);
-        // Klip til range så stænger ikke strækker sig udenfor.
         const clampedStart = cursor < start ? start : cursor;
         const clampedEnd = bEnd > end ? end : bEnd;
         result.push({
@@ -462,12 +627,12 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
       }
     }
 
-    for (const a of cohort) {
-      const b = result.find((x) => a.sentAt >= x.start && a.sentAt <= x.end);
+    for (const d of filteredDates) {
+      const b = result.find((x) => d >= x.start && d <= x.end);
       if (b) b.count++;
     }
     return { items: result, granularity };
-  }, [cohort, range]);
+  }, [filteredDates, range]);
 
   const funnel = useMemo(() => {
     const cohortIds = new Set(cohort.map((a) => a.id));
@@ -505,19 +670,19 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
   const labelEvery = Math.ceil(buckets.items.length / 16);
 
   return (
-    <div className="mb-6 rounded-md border border-border bg-card p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-serif text-[20px] font-medium text-accent-bright">Statistik</h2>
-        <div className="flex flex-wrap gap-1">
+    <div className="mb-6 rounded-[10px] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mb-3.5 flex flex-wrap items-baseline justify-between gap-3 border-b border-hair pb-2.5">
+        <h2 className="font-serif text-[19px] font-medium text-accent">Jobstatistik</h2>
+        <div className="inline-flex shrink-0 gap-0.5 rounded-[8px] bg-bg p-0.5">
           {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
             <button
               key={p}
               type="button"
               onClick={() => setPeriod(p)}
-              className={`cursor-pointer rounded-[3px] border px-2.5 py-1 text-[12px] transition ${
+              className={`shrink-0 cursor-pointer whitespace-nowrap rounded-[6px] px-2.5 py-1 text-[11px] transition-colors ${
                 period === p
-                  ? "border-accent bg-accent-bg text-accent-bright"
-                  : "border-border bg-bg text-mid hover:border-accent-dim hover:text-ink"
+                  ? "bg-accent text-white"
+                  : "text-mid hover:text-ink"
               }`}
             >
               {PERIOD_LABELS[p]}
@@ -526,83 +691,122 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
         </div>
       </div>
 
-      <div className="mb-2 text-[12px] text-light">
-        {cohort.length} ansøgning{cohort.length === 1 ? "" : "er"} sendt ·{" "}
-        {shortDate(range.start)}–{shortDate(range.end)}
-      </div>
-
-      {/* Bar chart */}
-      <div className="mb-5 flex h-[120px] items-stretch gap-[2px]">
-        {buckets.items.map((b, i) => (
-          <div
-            key={i}
-            className="flex h-full flex-1 flex-col items-center justify-end gap-1"
-          >
-            <div
-              className="w-full rounded-t-[2px] bg-accent transition-all hover:bg-accent-bright"
-              style={{
-                height: `${(b.count / maxBar) * 100}%`,
-                minHeight: b.count > 0 ? 3 : 0,
-              }}
-              title={`${b.count} ansøgning${b.count === 1 ? "" : "er"} · ${
-                buckets.granularity === "month"
-                  ? `Måned: ${b.label}`
-                  : `Uge ${b.label} · ${shortDate(b.start)}–${shortDate(b.end)}`
-              }`}
-            />
+      <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-[1.5fr_1fr] md:items-start">
+        {/* Aktivitet (chart) */}
+        <div className="min-w-0">
+          <div className="mb-2 flex items-baseline justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-mid">
+              Aktivitet · {CHART_FILTER_LABELS[chartFilter]}
+            </span>
+            <span className="text-[11px] text-light">
+              {filteredDates.length}{" "}
+              {chartFilter === "sent"
+                ? `ansøgning${filteredDates.length === 1 ? "" : "er"}`
+                : `event${filteredDates.length === 1 ? "" : "s"}`}
+              {" · "}
+              {buckets.granularity === "week" ? "uger" : "måneder"}
+            </span>
           </div>
-        ))}
-      </div>
-      <div className="mb-5 flex gap-[2px]">
-        {buckets.items.map((b, i) => (
-          <div
-            key={i}
-            className="flex-1 text-center text-[9px] text-dim"
-            style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
-          >
-            {b.label}
-          </div>
-        ))}
-      </div>
-
-      {/* Funnel */}
-      <div className="space-y-3 sm:space-y-1.5">
-        {[
-          { label: "Sendt", value: funnel.sent, color: "var(--accent)" },
-          { label: "Afventer svar", value: funnel.waiting, color: "var(--warning)" },
-          { label: "Til samtale", value: funnel.interview, color: "var(--success)" },
-          { label: "Tilbud", value: funnel.offer, color: "var(--success)" },
-          { label: "Afvist", value: funnel.rejected, color: "var(--danger)" },
-        ].map((stage) => {
-          const pct = funnel.sent > 0 ? (stage.value / funnel.sent) * 100 : 0;
-          return (
-            <div
-              key={stage.label}
-              className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
-            >
-              <div className="flex items-baseline justify-between gap-2 sm:w-28 sm:shrink-0 sm:justify-start">
-                <span className="text-[12px] text-mid">{stage.label}</span>
-                <span className="text-[11px] text-light sm:hidden">
-                  {stage.value} · {Math.round(pct)}%
-                </span>
-              </div>
-              <div className="relative h-6 flex-1 overflow-hidden rounded-[3px] bg-bg">
+          <div className="flex h-[140px] items-stretch gap-[2px]">
+            {buckets.items.map((b, i) => (
+              <div
+                key={i}
+                className="flex h-full flex-1 flex-col items-center justify-end"
+              >
                 <div
-                  className="flex h-full items-center rounded-[3px] px-2 text-[11px] font-medium text-white transition-all"
+                  className="w-full rounded-t-[3px] transition-all hover:opacity-80"
                   style={{
-                    width: `${Math.max(pct, stage.value > 0 ? 8 : 0)}%`,
-                    background: stage.color,
+                    height: `${(b.count / maxBar) * 100}%`,
+                    minHeight: b.count > 0 ? 2 : 0,
+                    background: CHART_FILTER_COLORS[chartFilter],
                   }}
+                  title={`${b.count} ${
+                    buckets.granularity === "month"
+                      ? `· måned: ${b.label}`
+                      : `· uge ${b.label} (${shortDate(b.start)}–${shortDate(b.end)})`
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-1.5 flex gap-[2px]">
+            {buckets.items.map((b, i) => (
+              <div
+                key={i}
+                className="flex-1 text-center text-[9px] text-dim"
+                style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
+              >
+                {b.label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tragten (funnel) — klikbar for at filtrere chart */}
+        <div className="min-w-0">
+          <div className="mb-2 flex items-baseline justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-mid">
+              Tragten
+            </span>
+            <span className="text-[10px] italic text-light">klik for at filtrere</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            {(
+              [
+                { label: "Sendt", value: funnel.sent, color: "var(--accent)", key: "sent" as ChartFilter },
+                { label: "Afventer", value: funnel.waiting, color: "var(--warning)", key: null },
+                { label: "Til samtale", value: funnel.interview, color: "var(--success)", key: "interview" as ChartFilter },
+                { label: "Tilbud", value: funnel.offer, color: "var(--success)", key: "offer" as ChartFilter },
+                { label: "Afvist", value: funnel.rejected, color: "var(--danger)", key: "rejected" as ChartFilter },
+              ] as const
+            ).map((stage) => {
+              const pct = funnel.sent > 0 ? (stage.value / funnel.sent) * 100 : 0;
+              const isActive = stage.key !== null && chartFilter === stage.key;
+              const isClickable = stage.key !== null;
+              return (
+                <button
+                  key={stage.label}
+                  type="button"
+                  disabled={!isClickable}
+                  onClick={() => stage.key && setChartFilter(stage.key)}
+                  className={`flex items-center gap-2.5 rounded-[6px] px-2 py-1 text-left transition-colors ${
+                    isClickable ? "cursor-pointer" : "cursor-default"
+                  } ${
+                    isActive
+                      ? "bg-bg"
+                      : isClickable
+                        ? "hover:bg-bg/60"
+                        : ""
+                  }`}
                 >
-                  {stage.value > 0 && stage.value}
-                </div>
-              </div>
-              <div className="hidden w-12 shrink-0 text-right text-[12px] text-light sm:block">
-                {Math.round(pct)}%
-              </div>
-            </div>
-          );
-        })}
+                  <span
+                    className={`w-[80px] shrink-0 text-[11px] ${
+                      isActive ? "font-semibold text-ink" : "text-mid"
+                    }`}
+                  >
+                    {stage.label}
+                  </span>
+                  <div className="relative h-5 flex-1 overflow-hidden rounded-[5px] bg-bg">
+                    {stage.value > 0 && (
+                      <div
+                        className="flex h-full items-center rounded-[5px] px-1.5 text-[10px] font-semibold text-white"
+                        style={{
+                          width: `${Math.max(pct, 8)}%`,
+                          background: stage.color,
+                        }}
+                      >
+                        {stage.value}
+                      </div>
+                    )}
+                  </div>
+                  <span className="w-[34px] shrink-0 text-right text-[10px] text-light">
+                    {Math.round(pct)}%
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -645,120 +849,160 @@ function FilterChip({
     <button
       type="button"
       onClick={onClick}
-      className={`cursor-pointer rounded-full border px-3 py-1 text-[13px] transition ${
+      className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-[12px] transition-colors ${
         active
           ? statusColor
-            ? `border-transparent ${STATUS_CLASSES[statusColor]}`
-            : "border-accent bg-accent text-white"
-          : "border-border bg-card text-mid hover:border-accent-dim hover:text-ink"
+            ? STATUS_CLASSES[statusColor]
+            : "bg-accent text-white"
+          : "bg-bg-elevated text-mid hover:bg-bg-subtle hover:text-ink"
       }`}
     >
-      {label}{" "}
-      <span className={active ? "opacity-80" : "text-dim"}>{count}</span>
+      {label}
+      <span className={`text-[11px] ${active ? "opacity-75" : "text-dim"}`}>
+        {count}
+      </span>
     </button>
+  );
+}
+
+const STATUS_PILL_CLASSES: Record<Status, string> = {
+  sent: "bg-accent-bg text-accent",
+  no_response: "bg-[rgba(160,174,192,0.15)] text-mid",
+  replied: "bg-[var(--warning-soft)] text-warning",
+  interview: "bg-[var(--success-soft)] text-success",
+  offer: "bg-[rgba(74,222,128,0.22)] text-success",
+  rejected: "bg-[rgba(248,113,113,0.12)] text-danger",
+  withdrawn: "bg-[rgba(160,174,192,0.15)] text-mid",
+};
+
+const STATUS_DOT_BG: Record<Status, string> = {
+  sent: "bg-accent",
+  no_response: "bg-mid",
+  replied: "bg-warning",
+  interview: "bg-success",
+  offer: "bg-success",
+  rejected: "bg-danger",
+  withdrawn: "bg-mid",
+};
+
+function StatusPill({ status }: { status: Status }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.4px] ${STATUS_PILL_CLASSES[status]}`}
+    >
+      <span className={`size-1.5 rounded-full ${STATUS_DOT_BG[status]}`} />
+      {STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+function CompactTimeline({ events }: { events: Event[] }) {
+  if (events.length === 0) return null;
+  // Vis max sidste 3 events for at undgå at trampe pladsen
+  const visible = events.slice(-3);
+  return (
+    <div className="flex min-w-0 items-center gap-1 text-[10px]">
+      {visible.map((e, i) => (
+        <span key={e.id} className="inline-flex shrink-0 items-center gap-1">
+          {i > 0 && <span className="text-dim">›</span>}
+          <span
+            className={`size-1.5 rounded-full ${STATUS_DOT_BG[e.status]}`}
+          />
+          <span className="uppercase tracking-[0.3px] text-mid">
+            {STATUS_LABELS[e.status]}
+          </span>
+          <span className="text-dim">{shortDate(e.occurredAt)}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function daysSinceISO(iso: string): number {
+  return Math.floor(
+    (Date.now() - parseIso(iso).getTime()) / 86_400_000,
   );
 }
 
 function RowCard({
   app,
   timeline,
-  onStatusChange,
-  onEdit,
-  onDelete,
 }: {
   app: App;
   timeline: Event[];
-  onStatusChange: (s: Status) => void;
-  onEdit: () => void;
-  onDelete: () => void;
 }) {
-  return (
-    <div className="rounded-md border border-border bg-card px-4 py-3 transition-colors hover:border-accent-dim sm:px-5 sm:py-4">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-ink text-[15px] leading-tight break-words">
-                {app.company}
-                {app.role && (
-                  <span className="text-mid"> · {app.role}</span>
-                )}
-              </div>
-            </div>
-            <select
-              value={app.status}
-              onChange={(e) => onStatusChange(e.target.value as Status)}
-              className={`!w-auto shrink-0 !border-0 !p-1.5 !text-[10px] uppercase tracking-[0.3px] !rounded-full ${STATUS_CLASSES[app.status]}`}
-            >
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s} className="bg-card text-ink">
-                  {STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {app.documents.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {app.documents.map((d) => (
-                <a
-                  key={d.id}
-                  href={`/api/files/document/${d.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex max-w-full items-center gap-1 rounded-[3px] border border-border-light bg-bg px-2 py-0.5 text-[12px] text-ink hover:border-accent-dim hover:text-accent-bright"
-                  title={d.filename}
-                >
-                  <Paperclip className="size-3 shrink-0" />
-                  <span className="truncate">{d.title}</span>
-                </a>
-              ))}
-            </div>
-          )}
-          {app.files && <FileLinks value={app.files} />}
-          {app.url && <ExternalLink href={app.url} />}
-
-          {timeline.length > 1 ? (
-            <Timeline events={timeline} />
-          ) : (
-            <div className="flex flex-wrap gap-x-3 text-[11px] uppercase tracking-[0.3px] text-light">
-              {app.sentAt && <span>Sendt {danishLongDate(app.sentAt)}</span>}
-            </div>
-          )}
-          {app.contactPerson && (
-            <div className="text-[11px] uppercase tracking-[0.3px] text-light">
-              {app.contactPerson}
-            </div>
-          )}
-          {app.notes && (
-            <div className="line-clamp-2 whitespace-pre-wrap text-[13px] text-mid">
-              {app.notes}
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-1 pt-1">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-md border border-transparent text-mid hover:border-border hover:bg-bg hover:text-ink"
-              title="Redigér"
-              aria-label="Redigér"
-            >
-              <Pencil className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="inline-flex min-h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-md border border-transparent text-dim hover:border-border hover:bg-bg hover:text-danger"
-              title="Slet"
-              aria-label="Slet"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        </div>
+  const days = app.sentAt ? daysSinceISO(app.sentAt) : null;
+  const sentShort = app.sentAt
+    ? danishLongDate(app.sentAt).split(" ").slice(0, 2).join(" ")
+    : null;
+  const meta =
+    app.contactPerson || app.documents.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-light">
+        {app.contactPerson && (
+          <span className="inline-flex items-center gap-1">
+            <span className="opacity-70">●</span>
+            {app.contactPerson}
+          </span>
+        )}
+        {app.documents.length > 0 && (
+          <span className="inline-flex items-center gap-1">
+            <Paperclip className="size-3 shrink-0" />
+            {app.documents.length}{" "}
+            {app.documents.length === 1 ? "dokument" : "dokumenter"}
+          </span>
+        )}
       </div>
-    </div>
+    ) : null;
+  const sentDate = sentShort && (
+    <span className="text-[11px] uppercase tracking-[0.3px] text-light">
+      <strong className="font-medium text-mid">{sentShort}</strong>
+      {days !== null && <span className="ml-1">· {days} dage</span>}
+    </span>
+  );
+
+  return (
+    <Link
+      href={`/jobs/${app.id}`}
+      className="block rounded-[10px] bg-bg-elevated p-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] transition-colors hover:bg-bg-subtle md:px-4 md:py-3"
+    >
+      {/* Mobile layout: 3 rækker — top (firma + status), meta (docs + dato), timeline */}
+      <div className="md:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 text-[14px] font-medium text-ink">
+            {app.company}
+            {app.role && <span className="text-mid"> · {app.role}</span>}
+          </div>
+          <StatusPill status={app.status} />
+        </div>
+        {(meta || sentDate) && (
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <div className="min-w-0">{meta}</div>
+            {sentDate}
+          </div>
+        )}
+        {timeline.length > 0 && (
+          <div className="mt-2 border-t border-hair pt-2">
+            <CompactTimeline events={timeline} />
+          </div>
+        )}
+      </div>
+
+      {/* Desktop layout: én linje med 4 kolonner */}
+      <div className="hidden md:grid md:grid-cols-[110px_1fr_240px_120px] md:items-center md:gap-4">
+        <StatusPill status={app.status} />
+        <div className="min-w-0">
+          <div className="text-[14px] font-medium text-ink">
+            {app.company}
+            {app.role && <span className="text-mid"> · {app.role}</span>}
+          </div>
+          {meta && <div className="mt-1">{meta}</div>}
+        </div>
+        <div className="min-w-0">
+          <CompactTimeline events={timeline} />
+        </div>
+        <div className="text-right">{sentDate}</div>
+      </div>
+    </Link>
   );
 }
 
@@ -1066,5 +1310,149 @@ function Field({
       {hint && <p className="mb-1.5 text-[11px] italic text-dim">{hint}</p>}
       {children}
     </div>
+  );
+}
+
+// --- Week goal banner --------------------------------------------------------
+
+function WeekGoalBanner({
+  apps,
+  weekStart,
+  weekTarget,
+}: {
+  apps: App[];
+  weekStart: string;
+  weekTarget: number | null;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState(weekTarget?.toString() ?? "");
+  const [saving, startSave] = useTransition();
+
+  const weekEnd = fmtIso(addDays(parseIso(weekStart), 6));
+  const sentThisWeek = apps.filter(
+    (a) => a.sentAt && a.sentAt >= weekStart && a.sentAt <= weekEnd,
+  ).length;
+
+  function openModal() {
+    setInput(weekTarget?.toString() ?? "");
+    setOpen(true);
+  }
+
+  function save() {
+    const trimmed = input.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    if (value !== null && (!Number.isFinite(value) || value < 0 || value > 1000)) {
+      return;
+    }
+    startSave(async () => {
+      await setWeekGoal({
+        weekStart,
+        text: "",
+        applicationsTarget: value,
+        focusHoursTargetX10: null,
+      });
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  const banner =
+    weekTarget === null ? (
+      <button
+        type="button"
+        onClick={openModal}
+        className="mb-5 flex w-full items-center gap-3 rounded-[10px] border border-dashed border-hair-strong px-4 py-3 text-left text-[12px] italic text-light hover:border-accent hover:text-accent"
+      >
+        <span>Sæt et ugentligt mål for ansøgninger sendt</span>
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={openModal}
+        title="Klik for at ændre mål"
+        className="mb-5 flex w-full cursor-pointer flex-wrap items-center gap-3 rounded-[10px] border border-[var(--accent-soft-strong)] bg-gradient-to-r from-[var(--accent-bg)] to-transparent px-4 py-2.5 text-left transition-colors hover:bg-[var(--accent-bg)]"
+      >
+        <span className="text-[12px] text-mid">Ugens mål — ansøgninger sendt:</span>
+        <span className="font-serif text-[16px] text-ink">
+          {sentThisWeek}
+          <span className="text-[13px] text-light">/{weekTarget}</span>
+        </span>
+        <div className="h-[5px] min-w-[140px] flex-1 overflow-hidden rounded-[4px] bg-bg">
+          <div
+            className="h-full rounded-[4px] bg-accent transition-all"
+            style={{
+              width: `${weekTarget > 0 ? Math.min(100, (sentThisWeek / weekTarget) * 100) : 0}%`,
+            }}
+          />
+        </div>
+        <span className="text-[11px] italic text-light">
+          {sentThisWeek >= weekTarget
+            ? "Målet er nået for denne uge"
+            : `${weekTarget - sentThisWeek} tilbage til søndag`}
+        </span>
+      </button>
+    );
+
+  return (
+    <>
+      {banner}
+      {open && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !saving && setOpen(false)}
+        >
+          <div
+            className="w-full max-w-[400px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-2 font-serif text-[20px] text-ink">
+              Ugentligt mål
+            </h3>
+            <p className="mb-4 text-[13px] text-mid">
+              Hvor mange ansøgninger vil du sende per uge?
+            </p>
+            <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Mål per uge
+            </div>
+            <input
+              type="number"
+              min="0"
+              max="1000"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="fx 5"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") setOpen(false);
+              }}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[16px]"
+            />
+            <p className="mt-2 text-[11px] italic text-light">
+              Sæt til tomt for at fjerne målet for denne uge.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                disabled={saving}
+                className="cursor-pointer rounded-[8px] px-3 py-2 text-[13px] text-mid hover:text-ink disabled:opacity-50"
+              >
+                Annullér
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+              >
+                {saving ? "Gemmer…" : "Gem"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

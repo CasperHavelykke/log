@@ -1,15 +1,24 @@
 import { and, eq, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
-import { getAllApplicationEvents, getAllJobApplications } from "@/lib/queries";
+import {
+  getAllApplicationEvents,
+  getAllJobApplications,
+  getWeekGoal,
+} from "@/lib/queries";
 import { listDocuments } from "../documents/actions";
 import { JobsPage } from "./jobs-page";
-import { JobsPeriodHeader, type PeriodOption } from "./jobs-period-header";
 import { listJobSearchPeriods } from "./period-actions";
-import { WeekGoalCard } from "@/components/week-goal-card";
-import { getWeekGoal } from "@/lib/queries";
 import { mondayOf } from "@/lib/date";
 import type { JobStatus } from "@/db/schema";
+
+type PeriodOption = {
+  id: number;
+  name: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  isActive: boolean;
+};
 
 export const metadata = { title: "Job | Log" };
 
@@ -130,26 +139,18 @@ export default async function Jobs({
     isActive: p.endedAt === null,
   }));
 
+  const selectedPeriodOption = selectedPeriod
+    ? (periodOptions.find((p) => p.id === selectedPeriod.id) ?? null)
+    : null;
+
   return (
     <div>
-      <JobsPeriodHeader
-        periods={periodOptions}
-        selectedPeriodId={selectedPeriod?.id ?? null}
-        showingAll={showAll}
-      />
-      <div className="mx-auto max-w-[1100px] px-4 pb-4">
-        <WeekGoalCard
-          weekStart={weekStart}
-          field="applications"
-          label="Ugens mål — ansøgninger sendt"
-          initialTarget={weekGoal?.applicationsTarget ?? null}
-          otherTarget={weekGoal?.focusHoursTargetX10 ?? null}
-          existingText={weekGoal?.text ?? ""}
-          unit="ansøg."
-          placeholder="fx 5"
-        />
-      </div>
       <JobsPage
+        periods={periodOptions}
+        selectedPeriod={selectedPeriodOption}
+        showingAll={showAll}
+        weekTarget={weekGoal?.applicationsTarget ?? null}
+        weekStart={weekStart}
         initial={filteredApps.map((a) => ({
           id: a.id,
           company: a.company,
