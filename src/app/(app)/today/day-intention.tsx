@@ -12,8 +12,17 @@ export function DayIntention({
   initialNote: string;
 }) {
   const [note, setNote] = useState(initialNote);
+  const [focused, setFocused] = useState(false);
   const [, start] = useTransition();
   const isFirstRender = useRef(true);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [note]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -34,17 +43,21 @@ export function DayIntention({
   }, [note, date]);
 
   return (
-    <div className="mb-4 rounded-[10px] border border-[var(--accent-soft-strong)] bg-gradient-to-r from-[var(--accent-bg)] to-transparent px-4 py-3">
-      <label className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.5px] text-light">
+    <div className="mb-4 rounded-[10px] bg-gradient-to-r from-[var(--accent-bg)] to-transparent px-8 py-6">
+      <label className="mb-1.5 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.5px] text-light">
         <Pencil className="size-3" />
         Mål for i dag
       </label>
       <textarea
+        ref={textareaRef}
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        rows={note.length > 80 ? 3 : 1}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        spellCheck={focused}
+        rows={1}
         placeholder="Hvad er din intention for dagen?"
-        className="!border-0 !bg-transparent !p-0 !text-[16px] text-ink sm:!text-[14px]"
+        className="font-serif font-semibold !rounded-none !resize-none !border-0 !bg-transparent !p-0 !text-[18px] !leading-snug !min-h-0 !overflow-hidden text-ink sm:!text-[19px]"
       />
     </div>
   );
