@@ -354,70 +354,122 @@ export async function performImport(
   await db.delete(schema.photos).where(eq(schema.photos.userId, uid));
   await db.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
 
-  // Indsæt (forældre før børn).
-  if (d.projects.length > 0) {
-    await db.insert(schema.projects).values(
-      d.projects.map((p) => ({
-        id: p.id,
+  // Lad SQLite generere nye autoincrement-id'er — backup-id'er kan
+  // kollidere på tværs af brugere (PK er global, ikke per user).
+  // For parent-tabeller indsætter vi én ad gangen og bygger map old→new.
+  async function insertParent<R extends { id: number }>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    table: any,
+    rows: R[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    toValues: (row: R) => any,
+  ): Promise<Map<number, number>> {
+    const map = new Map<number, number>();
+    for (const row of rows) {
+      const inserted = await db
+        .insert(table)
+        .values(toValues(row))
+        .returning({ id: table.id });
+      const newId = (inserted[0] as { id: number }).id;
+      map.set(row.id, newId);
+    }
+    return map;
+  }
+
+  const projectMap = await insertParent(schema.projects, d.projects, (p) => ({
+    userId: uid,
+    name: p.name,
+    color: p.color ?? null,
+    archived: p.archived ?? false,
+    sortOrder: p.sortOrder ?? 0,
+    createdAt: p.createdAt ?? nowIso(),
+  }));
+
+  const jobAppMap = await insertParent(
+    schema.jobApplications,
+    d.jobApplications,
+    (a) => ({
+      userId: uid,
+      company: a.company,
+      role: a.role ?? null,
+      status: a.status,
+      files: a.files ?? null,
+      url: a.url ?? null,
+      contactPerson: a.contactPerson ?? null,
+      notes: a.notes ?? null,
+      applicationText: a.applicationText ?? null,
+      sentAt: a.sentAt ?? null,
+      createdAt: a.createdAt ?? nowIso(),
+      updatedAt: a.updatedAt ?? nowIso(),
+    }),
+  );
+
+  const supplementMap = await insertParent(
+    schema.supplements,
+    d.supplements,
+    (s) => ({
+      userId: uid,
+      name: s.name,
+      defaultDoseAmountX100: s.defaultDoseAmountX100 ?? null,
+      defaultDoseUnit: s.defaultDoseUnit ?? null,
+      defaultTimeOfDay: s.defaultTimeOfDay ?? null,
+      notes: s.notes ?? null,
+      archived: s.archived ?? false,
+      sortOrder: s.sortOrder ?? 0,
+      createdAt: s.createdAt ?? nowIso(),
+    }),
+  );
+
+  const customParamMap = await insertParent(
+    schema.customParameters,
+    d.customParameters,
+    (p) => ({
+      userId: uid,
+      name: p.name,
+      kind: p.kind,
+      unit: p.unit ?? null,
+      archived: p.archived ?? false,
+      sortOrder: p.sortOrder ?? 0,
+      createdAt: p.createdAt ?? nowIso(),
+    }),
+  );
+
+  const trackerMap = await insertParent(schema.trackers, d.trackers, (t) => ({
+    userId: uid,
+    name: t.name,
+    kind: t.kind,
+    notes: t.notes ?? null,
+    archived: t.archived ?? false,
+    createdAt: t.createdAt ?? nowIso(),
+  }));
+
+  const drinkSessionMap = await insertParent(
+    schema.drinkSessions,
+    d.drinkSessions,
+    (s) => ({
+      userId: uid,
+      sessionDate: s.sessionDate,
+      startedAt: s.startedAt,
+      endedAt: s.endedAt ?? null,
+      createdAt: s.createdAt ?? nowIso(),
+    }),
+  );
+
+  // Parents uden børn — batch-insert uden eksplicit id.
+  if (d.jobSearchPeriods.length > 0) {
+    await db.insert(schema.jobSearchPeriods).values(
+      d.jobSearchPeriods.map((p) => ({
         userId: uid,
-        name: p.name,
-        color: p.color ?? null,
-        archived: p.archived ?? false,
-        sortOrder: p.sortOrder ?? 0,
+        name: p.name ?? null,
+        startedAt: p.startedAt,
+        endedAt: p.endedAt ?? null,
         createdAt: p.createdAt ?? nowIso(),
-      })),
-    );
-  }
-  if (d.jobApplications.length > 0) {
-    await db.insert(schema.jobApplications).values(
-      d.jobApplications.map((a) => ({
-        id: a.id,
-        userId: uid,
-        company: a.company,
-        role: a.role ?? null,
-        status: a.status,
-        files: a.files ?? null,
-        url: a.url ?? null,
-        contactPerson: a.contactPerson ?? null,
-        notes: a.notes ?? null,
-        applicationText: a.applicationText ?? null,
-        sentAt: a.sentAt ?? null,
-        createdAt: a.createdAt ?? nowIso(),
-        updatedAt: a.updatedAt ?? nowIso(),
-      })),
-    );
-  }
-  if (d.timeEntries.length > 0) {
-    await db.insert(schema.timeEntries).values(
-      d.timeEntries.map((t) => ({
-        id: t.id,
-        userId: uid,
-        projectId: t.projectId,
-        date: t.date,
-        hoursX10: t.hoursX10,
-        notes: t.notes ?? null,
-        createdAt: t.createdAt ?? nowIso(),
-        updatedAt: t.updatedAt ?? nowIso(),
-      })),
-    );
-  }
-  if (d.applicationEvents.length > 0) {
-    await db.insert(schema.applicationEvents).values(
-      d.applicationEvents.map((e) => ({
-        id: e.id,
-        userId: uid,
-        applicationId: e.applicationId,
-        status: e.status,
-        note: e.note ?? null,
-        occurredAt: e.occurredAt,
-        createdAt: e.createdAt ?? nowIso(),
       })),
     );
   }
   if (d.dayEntries.length > 0) {
     await db.insert(schema.dayEntries).values(
       d.dayEntries.map((e) => ({
-        id: e.id,
         userId: uid,
         date: e.date,
         mood: e.mood ?? null,
@@ -454,7 +506,6 @@ export async function performImport(
   if (d.weekGoals.length > 0) {
     await db.insert(schema.weekGoals).values(
       d.weekGoals.map((g) => ({
-        id: g.id,
         userId: uid,
         weekStart: g.weekStart,
         text: g.text,
@@ -465,26 +516,9 @@ export async function performImport(
       })),
     );
   }
-  if (d.supplements.length > 0) {
-    await db.insert(schema.supplements).values(
-      d.supplements.map((s) => ({
-        id: s.id,
-        userId: uid,
-        name: s.name,
-        defaultDoseAmountX100: s.defaultDoseAmountX100 ?? null,
-        defaultDoseUnit: s.defaultDoseUnit ?? null,
-        defaultTimeOfDay: s.defaultTimeOfDay ?? null,
-        notes: s.notes ?? null,
-        archived: s.archived ?? false,
-        sortOrder: s.sortOrder ?? 0,
-        createdAt: s.createdAt ?? nowIso(),
-      })),
-    );
-  }
   if (d.fasts.length > 0) {
     await db.insert(schema.fasts).values(
       d.fasts.map((f) => ({
-        id: f.id,
         userId: uid,
         startedAt: f.startedAt,
         endedAt: f.endedAt ?? null,
@@ -493,25 +527,9 @@ export async function performImport(
       })),
     );
   }
-  if (d.supplementIntakes.length > 0) {
-    await db.insert(schema.supplementIntakes).values(
-      d.supplementIntakes.map((i) => ({
-        id: i.id,
-        userId: uid,
-        supplementId: i.supplementId,
-        date: i.date,
-        doseAmountX100: i.doseAmountX100 ?? null,
-        doseUnit: i.doseUnit ?? null,
-        timeOfDay: i.timeOfDay ?? null,
-        note: i.note ?? null,
-        createdAt: i.createdAt ?? nowIso(),
-      })),
-    );
-  }
   if (d.sleepEntries.length > 0) {
     await db.insert(schema.sleepEntries).values(
       d.sleepEntries.map((s) => ({
-        id: s.id,
         userId: uid,
         date: s.date,
         source: s.source ?? "garmin",
@@ -540,31 +558,71 @@ export async function performImport(
       })),
     );
   }
-  if (d.customParameters.length > 0) {
-    await db.insert(schema.customParameters).values(
-      d.customParameters.map((p) => ({
-        id: p.id,
-        userId: uid,
-        name: p.name,
-        kind: p.kind,
-        unit: p.unit ?? null,
-        archived: p.archived ?? false,
-        sortOrder: p.sortOrder ?? 0,
-        createdAt: p.createdAt ?? nowIso(),
-      })),
-    );
+
+  // Børn — oversæt foreign keys via parent-mapsene.
+  if (d.timeEntries.length > 0) {
+    const rows = d.timeEntries
+      .map((t) => {
+        const newProjectId = projectMap.get(t.projectId);
+        if (newProjectId === undefined) return null;
+        return {
+          userId: uid,
+          projectId: newProjectId,
+          date: t.date,
+          hoursX10: t.hoursX10,
+          notes: t.notes ?? null,
+          createdAt: t.createdAt ?? nowIso(),
+          updatedAt: t.updatedAt ?? nowIso(),
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await db.insert(schema.timeEntries).values(rows);
+  }
+  if (d.applicationEvents.length > 0) {
+    const rows = d.applicationEvents
+      .map((e) => {
+        const newAppId = jobAppMap.get(e.applicationId);
+        if (newAppId === undefined) return null;
+        return {
+          userId: uid,
+          applicationId: newAppId,
+          status: e.status,
+          note: e.note ?? null,
+          occurredAt: e.occurredAt,
+          createdAt: e.createdAt ?? nowIso(),
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await db.insert(schema.applicationEvents).values(rows);
+  }
+  if (d.supplementIntakes.length > 0) {
+    const rows = d.supplementIntakes
+      .map((i) => {
+        const newSuppId = supplementMap.get(i.supplementId);
+        if (newSuppId === undefined) return null;
+        return {
+          userId: uid,
+          supplementId: newSuppId,
+          date: i.date,
+          doseAmountX100: i.doseAmountX100 ?? null,
+          doseUnit: i.doseUnit ?? null,
+          timeOfDay: i.timeOfDay ?? null,
+          note: i.note ?? null,
+          createdAt: i.createdAt ?? nowIso(),
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0)
+      await db.insert(schema.supplementIntakes).values(rows);
   }
   if (d.customParameterValues.length > 0) {
-    const paramIds = new Set(d.customParameters.map((p) => p.id));
-    const validValues = d.customParameterValues.filter((v) =>
-      paramIds.has(v.parameterId),
-    );
-    if (validValues.length > 0) {
-      await db.insert(schema.customParameterValues).values(
-        validValues.map((v) => ({
-          id: v.id,
+    const rows = d.customParameterValues
+      .map((v) => {
+        const newParamId = customParamMap.get(v.parameterId);
+        if (newParamId === undefined) return null;
+        return {
           userId: uid,
-          parameterId: v.parameterId,
+          parameterId: newParamId,
           date: v.date,
           valueBool: v.valueBool ?? null,
           valueInt: v.valueInt ?? null,
@@ -572,33 +630,18 @@ export async function performImport(
           valueText: v.valueText ?? null,
           createdAt: v.createdAt ?? nowIso(),
           updatedAt: v.updatedAt ?? nowIso(),
-        })),
-      );
-    }
-  }
-  if (d.trackers.length > 0) {
-    await db.insert(schema.trackers).values(
-      d.trackers.map((t) => ({
-        id: t.id,
-        userId: uid,
-        name: t.name,
-        kind: t.kind,
-        notes: t.notes ?? null,
-        archived: t.archived ?? false,
-        createdAt: t.createdAt ?? nowIso(),
-      })),
-    );
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0)
+      await db.insert(schema.customParameterValues).values(rows);
   }
   if (d.photos.length > 0) {
-    const trackerIds = new Set(d.trackers.map((t) => t.id));
     await db.insert(schema.photos).values(
       d.photos.map((p) => ({
-        id: p.id,
         userId: uid,
         trackerId:
-          p.trackerId != null && trackerIds.has(p.trackerId)
-            ? p.trackerId
-            : null,
+          p.trackerId != null ? trackerMap.get(p.trackerId) ?? null : null,
         category: p.category,
         bodyArea: p.bodyArea ?? null,
         caption: p.caption ?? null,
@@ -612,10 +655,8 @@ export async function performImport(
     );
   }
   if (d.documents.length > 0) {
-    const appIdsSet = new Set(d.jobApplications.map((a) => a.id));
     await db.insert(schema.documents).values(
       d.documents.map((doc) => ({
-        id: doc.id,
         userId: uid,
         kind: doc.kind,
         title: doc.title,
@@ -626,51 +667,27 @@ export async function performImport(
         sizeBytes: doc.sizeBytes,
         extractedText: doc.extractedText ?? null,
         jobApplicationId:
-          doc.jobApplicationId != null && appIdsSet.has(doc.jobApplicationId)
-            ? doc.jobApplicationId
+          doc.jobApplicationId != null
+            ? jobAppMap.get(doc.jobApplicationId) ?? null
             : null,
         createdAt: doc.createdAt ?? nowIso(),
       })),
     );
   }
-  if (d.jobSearchPeriods.length > 0) {
-    await db.insert(schema.jobSearchPeriods).values(
-      d.jobSearchPeriods.map((p) => ({
-        id: p.id,
-        userId: uid,
-        name: p.name ?? null,
-        startedAt: p.startedAt,
-        endedAt: p.endedAt ?? null,
-        createdAt: p.createdAt ?? nowIso(),
-      })),
-    );
-  }
-  if (d.drinkSessions.length > 0) {
-    await db.insert(schema.drinkSessions).values(
-      d.drinkSessions.map((s) => ({
-        id: s.id,
-        userId: uid,
-        sessionDate: s.sessionDate,
-        startedAt: s.startedAt,
-        endedAt: s.endedAt ?? null,
-        createdAt: s.createdAt ?? nowIso(),
-      })),
-    );
-  }
   if (d.drinkLogs.length > 0) {
-    const sessionIdSet = new Set(d.drinkSessions.map((s) => s.id));
-    const validLogs = d.drinkLogs.filter((l) => sessionIdSet.has(l.sessionId));
-    if (validLogs.length > 0) {
-      await db.insert(schema.drinkLogs).values(
-        validLogs.map((l) => ({
-          id: l.id,
-          sessionId: l.sessionId,
+    const rows = d.drinkLogs
+      .map((l) => {
+        const newSessionId = drinkSessionMap.get(l.sessionId);
+        if (newSessionId === undefined) return null;
+        return {
+          sessionId: newSessionId,
           unitCount: l.unitCount,
           kind: l.kind,
           occurredAt: l.occurredAt,
-        })),
-      );
-    }
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await db.insert(schema.drinkLogs).values(rows);
   }
 
   // Skriv binær fil-data fra ZIP'en til lokal disk.
