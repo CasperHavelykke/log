@@ -1,10 +1,14 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { inArray, eq } from "drizzle-orm";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
+
+const BLOB_ROOT = resolve(process.cwd(), "data");
 
 // --- import -----------------------------------------------------------------
 
@@ -215,6 +219,30 @@ const documentRow = z.object({
   createdAt: z.string().optional(),
 });
 
+const jobSearchPeriodRow = z.object({
+  id: z.number().int(),
+  name: z.string().nullable().optional(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+});
+
+const drinkSessionRow = z.object({
+  id: z.number().int(),
+  sessionDate: z.string(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+});
+
+const drinkLogRow = z.object({
+  id: z.number().int(),
+  sessionId: z.number().int(),
+  unitCount: z.number().int(),
+  kind: z.string(),
+  occurredAt: z.string(),
+});
+
 const backupSchema = z.object({
   format: z.literal("log-backup"),
   version: z.number(),
@@ -238,7 +266,27 @@ const backupSchema = z.object({
     trackers: z.array(trackerRow).optional().default([]),
     photos: z.array(photoRow).optional().default([]),
     documents: z.array(documentRow).optional().default([]),
+    // Nye i v3 — alle optional
+    jobSearchPeriods: z.array(jobSearchPeriodRow).optional().default([]),
+    drinkSessions: z.array(drinkSessionRow).optional().default([]),
+    drinkLogs: z.array(drinkLogRow).optional().default([]),
   }),
+});
+
+// Input til importData kan være:
+//   - rå backup-JSON (legacy: bare backupSchema)
+//   - { backup, files } hvor files er [{ path, base64 }] fra en udpakket ZIP
+const importEnvelopeSchema = z.object({
+  backup: backupSchema,
+  files: z
+    .array(
+      z.object({
+        path: z.string(),
+        base64: z.string(),
+      }),
+    )
+    .optional()
+    .default([]),
 });
 
 const nowIso = () => new Date().toISOString();
@@ -246,19 +294,30 @@ const nowIso = () => new Date().toISOString();
 export async function importData(
   raw: unknown,
 ): Promise<
-  | { ok: true; counts: Record<string, number> }
+  | { ok: true; counts: Record<string, number>; filesWritten: number }
   | { ok: false; error: string }
 > {
   const user = await requireUser();
 
-  const parsed = backupSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: "Filen er ikke en gyldig Log-backup (forkert format eller felter).",
-    };
+  // Acceptér både den nye envelope-form ({ backup, files }) og rå backup-JSON.
+  let backup: z.infer<typeof backupSchema>;
+  let files: { path: string; base64: string }[];
+  const envelope = importEnvelopeSchema.safeParse(raw);
+  if (envelope.success) {
+    backup = envelope.data.backup;
+    files = envelope.data.files;
+  } else {
+    const legacy = backupSchema.safeParse(raw);
+    if (!legacy.success) {
+      return {
+        ok: false,
+        error: "Filen er ikke en gyldig Log-backup (forkert format eller felter).",
+      };
+    }
+    backup = legacy.data;
+    files = [];
   }
-  const d = parsed.data.data;
+  const d = backup.data;
 
   // Referentiel integritet — valideres FØR noget slettes.
   const projectIds = new Set(d.projects.map((p) => p.id));
@@ -295,10 +354,23 @@ export async function importData(
   }
 
   // Slet eksisterende data (børn før forældre).
+  // drinkLogs har ingen userId — slet via sessionIds.
+  const existingDrinkSessions = await db
+    .select({ id: schema.drinkSessions.id })
+    .from(schema.drinkSessions)
+    .where(eq(schema.drinkSessions.userId, uid));
+  const existingDrinkSessionIds = existingDrinkSessions.map((s) => s.id);
+  if (existingDrinkSessionIds.length > 0) {
+    await db
+      .delete(schema.drinkLogs)
+      .where(inArray(schema.drinkLogs.sessionId, existingDrinkSessionIds));
+  }
+  await db.delete(schema.drinkSessions).where(eq(schema.drinkSessions.userId, uid));
   await db.delete(schema.applicationEvents).where(eq(schema.applicationEvents.userId, uid));
   await db.delete(schema.timeEntries).where(eq(schema.timeEntries.userId, uid));
   await db.delete(schema.documents).where(eq(schema.documents.userId, uid));
   await db.delete(schema.jobApplications).where(eq(schema.jobApplications.userId, uid));
+  await db.delete(schema.jobSearchPeriods).where(eq(schema.jobSearchPeriods.userId, uid));
   await db.delete(schema.projects).where(eq(schema.projects.userId, uid));
   await db.delete(schema.dayEntries).where(eq(schema.dayEntries.userId, uid));
   await db.delete(schema.weekGoals).where(eq(schema.weekGoals.userId, uid));
@@ -594,6 +666,60 @@ export async function importData(
     );
   }
 
+  // --- v3-tabeller ---
+  if (d.jobSearchPeriods.length > 0) {
+    await db.insert(schema.jobSearchPeriods).values(
+      d.jobSearchPeriods.map((p) => ({
+        id: p.id,
+        userId: uid,
+        name: p.name ?? null,
+        startedAt: p.startedAt,
+        endedAt: p.endedAt ?? null,
+        createdAt: p.createdAt ?? nowIso(),
+      })),
+    );
+  }
+  if (d.drinkSessions.length > 0) {
+    await db.insert(schema.drinkSessions).values(
+      d.drinkSessions.map((s) => ({
+        id: s.id,
+        userId: uid,
+        sessionDate: s.sessionDate,
+        startedAt: s.startedAt,
+        endedAt: s.endedAt ?? null,
+        createdAt: s.createdAt ?? nowIso(),
+      })),
+    );
+  }
+  if (d.drinkLogs.length > 0) {
+    const sessionIdSet = new Set(d.drinkSessions.map((s) => s.id));
+    const validLogs = d.drinkLogs.filter((l) => sessionIdSet.has(l.sessionId));
+    if (validLogs.length > 0) {
+      await db.insert(schema.drinkLogs).values(
+        validLogs.map((l) => ({
+          id: l.id,
+          sessionId: l.sessionId,
+          unitCount: l.unitCount,
+          kind: l.kind,
+          occurredAt: l.occurredAt,
+        })),
+      );
+    }
+  }
+
+  // --- Skriv binær fil-data fra ZIP'en til lokal disk ---
+  let filesWritten = 0;
+  for (const f of files) {
+    // Sikkerhed: tillad kun stier under photos/ eller documents/
+    if (!/^(photos|documents)\//.test(f.path)) continue;
+    if (f.path.includes("..")) continue;
+    const buf = Buffer.from(f.base64, "base64");
+    const absolutePath = join(BLOB_ROOT, f.path);
+    await mkdir(dirname(absolutePath), { recursive: true });
+    await writeFile(absolutePath, buf);
+    filesWritten += 1;
+  }
+
   for (const path of [
     "/",
     "/today",
@@ -617,11 +743,14 @@ export async function importData(
       projects: d.projects.length,
       timeEntries: d.timeEntries.length,
       jobApplications: d.jobApplications.length,
+      jobSearchPeriods: d.jobSearchPeriods.length,
       applicationEvents: d.applicationEvents.length,
       weekGoals: d.weekGoals.length,
       supplements: d.supplements.length,
       supplementIntakes: d.supplementIntakes.length,
       fasts: d.fasts.length,
+      drinkSessions: d.drinkSessions.length,
+      drinkLogs: d.drinkLogs.length,
       sleepEntries: d.sleepEntries.length,
       customParameters: d.customParameters.length,
       customParameterValues: d.customParameterValues.length,
@@ -629,5 +758,6 @@ export async function importData(
       photos: d.photos.length,
       documents: d.documents.length,
     },
+    filesWritten,
   };
 }

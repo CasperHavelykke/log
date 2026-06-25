@@ -4,8 +4,6 @@ import { requireUser } from "@/lib/session";
 import { getAllProjects, getAllTimeEntries, getWeekGoal } from "@/lib/queries";
 import { todayIsoDate, mondayOf } from "@/lib/date";
 import { ProjectsPage } from "./projects-page";
-import { ReflectionCard } from "./reflection-card";
-import { WeekGoalCard } from "@/components/week-goal-card";
 
 export const metadata = { title: "Projekter | Log" };
 
@@ -31,40 +29,28 @@ export default async function Projects() {
   ]);
 
   return (
-    <div className="space-y-6">
-      <div className="mx-auto max-w-[1100px] space-y-4 px-4 pt-4">
-        <WeekGoalCard
-          weekStart={weekStart}
-          field="focusHours"
-          label="Ugens mål — fokus-timer"
-          initialTarget={weekGoal?.focusHoursTargetX10 ?? null}
-          otherTarget={weekGoal?.applicationsTarget ?? null}
-          existingText={weekGoal?.text ?? ""}
-          unit="timer"
-          placeholder="fx 20"
-        />
-        <ReflectionCard
-          date={date}
-          initialWorkNotes={todayEntry?.workNotes ?? ""}
-          initialWentWell={todayEntry?.wentWell ?? ""}
-          initialNextStep={todayEntry?.nextStep ?? ""}
-        />
-      </div>
-      <ProjectsPage
-        focusProjectId={user.focusProjectId}
-        projects={projects.map((p) => ({
-          id: p.id,
-          name: p.name,
-          archived: p.archived,
-        }))}
-        entries={timeEntries.map((t) => ({
-          id: t.id,
-          projectId: t.projectId,
-          date: t.date,
-          hoursX10: t.hoursX10,
-          notes: t.notes ?? "",
-        }))}
-      />
-    </div>
+    <ProjectsPage
+      focusProjectId={user.focusProjectId}
+      weekStart={weekStart}
+      weekFocusTargetX10={weekGoal?.focusHoursTargetX10 ?? null}
+      reflectionInitial={{
+        date,
+        workNotes: todayEntry?.workNotes ?? "",
+        wentWell: todayEntry?.wentWell ?? "",
+        nextStep: todayEntry?.nextStep ?? "",
+      }}
+      projects={projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        archived: p.archived,
+      }))}
+      entries={timeEntries.map((t) => ({
+        id: t.id,
+        projectId: t.projectId,
+        date: t.date,
+        hoursX10: t.hoursX10,
+        notes: t.notes ?? "",
+      }))}
+    />
   );
 }

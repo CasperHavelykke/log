@@ -49,32 +49,37 @@ export function ReflectionCard({
   }, [workNotes, wentWell, nextStep, date]);
 
   return (
-    <section className="rounded-md border border-border bg-card px-5 py-5">
-      <div className="mb-4 flex items-baseline justify-between border-b border-border-light pb-3">
-        <h2 className="font-serif text-[20px] font-medium text-accent-bright">
-          Dagens refleksion
-        </h2>
+    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-hair pb-3">
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+            Dagens refleksion
+          </div>
+          <h2 className="mt-0.5 font-serif text-[18px] leading-none text-ink">
+            Hvordan gik i dag?
+          </h2>
+        </div>
         <SaveIndicator state={saveState} savedAt={savedAt} />
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-[13px] font-medium text-mid">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
             Arbejdsnoter
-            <span className="ml-1 text-[11px] italic text-dim">— valgfri</span>
+            <span className="ml-1 normal-case tracking-normal text-dim">— valgfri</span>
           </label>
           <textarea
             value={workNotes}
             onChange={(e) => setWorkNotes(e.target.value)}
             rows={3}
             placeholder="Hvad arbejdede du med? Detaljer, beslutninger, frustrationer."
-            className="!text-[14px]"
+            className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[14px]"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-mid">
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
               Gik godt
             </label>
             <textarea
@@ -82,11 +87,11 @@ export function ReflectionCard({
               onChange={(e) => setWentWell(e.target.value)}
               rows={3}
               placeholder="Selv små ting tæller."
-              className="!text-[14px]"
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[14px]"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-mid">
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
               Næste skridt
             </label>
             <textarea
@@ -94,7 +99,7 @@ export function ReflectionCard({
               onChange={(e) => setNextStep(e.target.value)}
               rows={3}
               placeholder="Hvad starter du med i morgen?"
-              className="!text-[14px]"
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[14px]"
             />
           </div>
         </div>

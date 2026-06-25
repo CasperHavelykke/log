@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { LogOut } from "lucide-react";
+import { AlertTriangle, Briefcase, Check, Clock, LogOut, Moon, Plus, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import { importData } from "./actions";
 import {
@@ -14,7 +14,6 @@ import type { CustomParamSummary } from "@/lib/custom-parameters";
 import {
   startJobSearchPeriod,
 } from "../jobs/period-actions";
-import { Briefcase, Clock, Moon, AlertTriangle } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
 import { setFasteEnabled, setGarminSleepEnabled } from "@/lib/user-prefs";
 import {
@@ -65,20 +64,20 @@ export function SettingsPage({
   initialGarminSleepEnabled: boolean;
 }) {
   return (
-    <div className="mx-auto max-w-[680px] px-5 py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
+    <div className="mx-auto max-w-[680px] px-4 py-8">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-hair pb-5">
         <div>
-          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
+          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
             Indstillinger
-          </h1>
-          <p className="mt-1 font-serif text-sm italic text-mid">
+          </div>
+          <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
             Logget ind som {username}
-          </p>
+          </h1>
         </div>
         <form action={logoutAction}>
           <button
             type="submit"
-            className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-border bg-transparent px-3 py-2 text-[13px] text-mid hover:border-danger hover:text-danger"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-[8px] border border-hair-strong bg-transparent px-3 py-2 text-[13px] text-mid hover:border-danger hover:text-danger"
           >
             <LogOut className="size-4" />
             Log ud
@@ -104,17 +103,26 @@ export function SettingsPage({
 }
 
 function Card({
+  label,
   title,
   children,
 }: {
-  title: string;
+  label: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-md border border-border bg-card px-6 py-5">
-      <h2 className="mb-4 border-b border-border-light pb-2.5 font-serif text-[20px] font-medium text-accent-bright">
-        {title}
-      </h2>
+    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+      <div className="mb-4 border-b border-hair pb-3">
+        <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+          {label}
+        </div>
+        {title && (
+          <h2 className="mt-0.5 font-serif text-[18px] leading-none text-ink">
+            {title}
+          </h2>
+        )}
+      </div>
       {children}
     </section>
   );
@@ -122,7 +130,9 @@ function Card({
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-1.5 block text-[13px] font-medium text-mid">{children}</label>
+    <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+      {children}
+    </label>
   );
 }
 
@@ -161,7 +171,7 @@ function FeaturesCard({
   }
 
   return (
-    <Card title="Funktioner">
+    <Card label="Funktioner" title="Aktivér det du bruger">
       <p className="mb-4 text-[13px] text-mid">
         Slå funktioner til/fra. Du kan altid komme tilbage og ændre det.
       </p>
@@ -205,8 +215,8 @@ function FeatureToggle({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-4 py-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent-bright">
+    <div className="flex items-center gap-3 rounded-[10px] bg-bg-subtle px-3 py-3 sm:px-4">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
         {icon}
       </span>
       <div className="min-w-0 flex-1">
@@ -216,14 +226,16 @@ function FeatureToggle({
       <button
         type="button"
         onClick={onToggle}
-        className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition ${
-          enabled ? "bg-accent" : "bg-bg"
-        } border ${enabled ? "border-accent" : "border-border-light"}`}
+        className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors ${
+          enabled
+            ? "border-accent bg-accent"
+            : "border-hair-strong bg-bg"
+        }`}
         aria-pressed={enabled}
       >
         <span
-          className={`absolute top-0.5 inline-block size-5 rounded-full bg-white shadow transition-transform ${
-            enabled ? "translate-x-[22px]" : "translate-x-0.5"
+          className={`absolute top-1/2 size-4 -translate-y-1/2 rounded-full bg-white shadow transition-all ${
+            enabled ? "left-[22px]" : "left-0.5"
           }`}
         />
       </button>
@@ -272,7 +284,7 @@ function JobSearchCard({
   }
 
   return (
-    <Card title="Jobsøgning">
+    <Card label="Jobsøgning" title="Perioder og statistik">
       <div className="mb-3 space-y-2 text-[13px] text-mid">
         <p>
           Aktivér en jobsøgningsperiode når du leder efter job. Når perioden
@@ -300,7 +312,7 @@ function JobSearchCard({
       </div>
 
       {active ? (
-        <div className="rounded-[3px] border border-success bg-[rgba(74,222,128,0.06)] p-3">
+        <div className="rounded-[10px] border border-[rgba(74,222,128,0.3)] bg-[var(--success-soft)] p-3">
           <div className="mb-2 flex items-center gap-2 text-[13px]">
             <Briefcase className="size-4 text-success" />
             <span className="font-medium text-ink">
@@ -315,30 +327,29 @@ function JobSearchCard({
           </p>
         </div>
       ) : showStart ? (
-        <div className="space-y-3 rounded-[3px] border border-border-light bg-bg p-3">
+        <div className="space-y-3 rounded-[10px] bg-bg-subtle p-3">
           <div>
-            <label className="mb-1 block text-[12px] font-medium text-mid">
+            <Label>
               Navn på perioden{" "}
-              <span className="text-[10px] italic text-dim">— valgfri</span>
-            </label>
+              <span className="text-[10px] italic text-dim normal-case tracking-normal">— valgfri</span>
+            </Label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Fx 'Sommer 2026' eller 'Efter studiet'"
               autoFocus
+              className="!rounded-[8px] !border-hair !bg-bg"
             />
           </div>
           <div>
-            <label className="mb-1 block text-[12px] font-medium text-mid">
-              Start-dato
-            </label>
+            <Label>Start-dato</Label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               max={todayIso()}
-              className="!w-44"
+              className="!w-44 !rounded-[8px] !border-hair !bg-bg"
             />
             <p className="mt-1 text-[11px] italic text-dim">
               Vælg en tidligere dato hvis du allerede er begyndt at søge —
@@ -351,9 +362,9 @@ function JobSearchCard({
               type="button"
               onClick={startNow}
               disabled={pending}
-              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+              className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
             >
-              {pending ? "Starter..." : "Start"}
+              {pending ? "Starter…" : "Start"}
             </button>
             <button
               type="button"
@@ -362,7 +373,7 @@ function JobSearchCard({
                 setName("");
                 setErr(null);
               }}
-              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[12px] text-mid hover:text-ink"
             >
               Annullér
             </button>
@@ -372,7 +383,7 @@ function JobSearchCard({
         <button
           type="button"
           onClick={() => setShowStart(true)}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
         >
           <Briefcase className="size-4" />
           Start jobsøgningsperiode
@@ -380,8 +391,8 @@ function JobSearchCard({
       )}
 
       {pastPeriods.length > 0 && (
-        <div className="mt-5 border-t border-border-light pt-4">
-          <div className="mb-2 text-[11px] uppercase tracking-[0.5px] text-light">
+        <div className="mt-5 border-t border-hair pt-4">
+          <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
             Afsluttede perioder
           </div>
           <div className="space-y-1.5">
@@ -389,7 +400,7 @@ function JobSearchCard({
               <a
                 key={p.id}
                 href={`/jobs?period=${p.id}`}
-                className="flex items-center justify-between gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[12px] transition hover:border-accent-bright"
+                className="flex items-center justify-between gap-3 rounded-[10px] bg-bg-subtle px-3 py-2.5 text-[12px] transition-colors hover:bg-bg"
               >
                 <div className="min-w-0">
                   <div className="truncate font-medium text-ink">
@@ -400,10 +411,10 @@ function JobSearchCard({
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[13px] font-medium text-accent-bright">
+                  <div className="font-serif text-[16px] leading-none text-accent">
                     {p.applicationCount}
                   </div>
-                  <div className="text-[10px] uppercase tracking-[0.3px] text-light">
+                  <div className="mt-0.5 text-[10px] uppercase tracking-[0.3px] text-light">
                     ansøgn.
                   </div>
                 </div>
@@ -418,17 +429,17 @@ function JobSearchCard({
 
 function ExportCard() {
   return (
-    <Card title="Eksportér data">
+    <Card label="Eksportér data" title="Sikkerhedskopi">
       <p className="mb-4 text-[13px] text-mid">
-        Hent en komplet sikkerhedskopi af alle dine data som en JSON-fil — dage,
-        projekter, tid, ansøgninger og hændelser. Gem den et sikkert sted.
+        Hent en komplet sikkerhedskopi som en ZIP-fil — alle data fra
+        databasen samt dine billeder og dokumenter. Gem den et sikkert sted.
       </p>
       <a
         href="/api/export"
         download
-        className="inline-block cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
+        className="inline-block cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
       >
-        Download backup (.json)
+        Download backup (.zip)
       </a>
     </Card>
   );
@@ -438,6 +449,7 @@ function ImportCard() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [payload, setPayload] = useState<unknown>(null);
+  const [fileCount, setFileCount] = useState(0);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -445,13 +457,50 @@ function ImportCard() {
     setMsg(null);
     setPayload(null);
     setFileName(null);
+    setFileCount(0);
     if (!file) return;
     try {
-      const text = await file.text();
-      setPayload(JSON.parse(text));
-      setFileName(file.name);
-    } catch {
-      setMsg({ ok: false, text: "Filen kunne ikke læses som JSON." });
+      const lowerName = file.name.toLowerCase();
+      const isZip =
+        lowerName.endsWith(".zip") || file.type === "application/zip";
+
+      if (isZip) {
+        const { unzipSync, strFromU8 } = await import("fflate");
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const entries = unzipSync(buf);
+
+        const jsonBytes = entries["backup.json"];
+        if (!jsonBytes) {
+          setMsg({
+            ok: false,
+            text: "ZIP'en mangler backup.json — er det en gyldig Log-backup?",
+          });
+          return;
+        }
+        const backup = JSON.parse(strFromU8(jsonBytes));
+
+        const files: { path: string; base64: string }[] = [];
+        for (const [name, bytes] of Object.entries(entries)) {
+          if (!name.startsWith("files/")) continue;
+          if (name.endsWith("/")) continue;
+          const inner = name.slice("files/".length);
+          if (!/^(photos|documents)\//.test(inner)) continue;
+          files.push({ path: inner, base64: bytesToBase64(bytes) });
+        }
+
+        setPayload({ backup, files });
+        setFileCount(files.length);
+        setFileName(file.name);
+      } else {
+        const text = await file.text();
+        setPayload({ backup: JSON.parse(text), files: [] });
+        setFileName(file.name);
+      }
+    } catch (err) {
+      setMsg({
+        ok: false,
+        text: `Filen kunne ikke læses: ${err instanceof Error ? err.message : "ukendt fejl"}.`,
+      });
     }
   }
 
@@ -466,7 +515,13 @@ function ImportCard() {
       const res = await importData(payload);
       if (res.ok) {
         const total = Object.values(res.counts).reduce((a, b) => a + b, 0);
-        setMsg({ ok: true, text: `Importeret: ${total} rækker. Genindlæser...` });
+        const fileNote = res.filesWritten > 0
+          ? ` + ${res.filesWritten} fil(er)`
+          : "";
+        setMsg({
+          ok: true,
+          text: `Importeret: ${total} rækker${fileNote}. Genindlæser…`,
+        });
         setTimeout(() => window.location.reload(), 1200);
       } else {
         setMsg({ ok: false, text: res.error });
@@ -475,9 +530,9 @@ function ImportCard() {
   }
 
   return (
-    <Card title="Importér data">
+    <Card label="Importér data" title="Gendan fra backup">
       <p className="mb-4 text-[13px] text-mid">
-        Gendan fra en backup-fil.{" "}
+        Gendan fra en backup-fil (ZIP eller JSON).{" "}
         <span className="text-danger">
           Alle nuværende data slettes og erstattes.
         </span>{" "}
@@ -487,21 +542,24 @@ function ImportCard() {
         <input
           ref={fileRef}
           type="file"
-          accept="application/json,.json"
+          accept="application/zip,.zip,application/json,.json"
           onChange={(e) => onFile(e.target.files?.[0])}
-          className="!w-auto text-[13px] text-mid file:mr-3 file:cursor-pointer file:rounded-[3px] file:border file:border-border file:bg-bg file:px-3 file:py-1.5 file:text-[13px] file:text-ink"
+          className="!w-auto text-[13px] text-mid file:mr-3 file:cursor-pointer file:rounded-[8px] file:border-0 file:bg-bg-subtle file:px-3 file:py-1.5 file:text-[13px] file:text-ink"
         />
         <button
           type="button"
           onClick={runImport}
           disabled={pending || payload === null}
-          className="cursor-pointer rounded-[3px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-40"
+          className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-40"
         >
-          {pending ? "Importerer..." : "Importér og erstat alt"}
+          {pending ? "Importerer…" : "Importér og erstat alt"}
         </button>
       </div>
       {fileName && !msg && (
-        <p className="mt-2 text-[12px] text-light">Valgt: {fileName}</p>
+        <p className="mt-2 text-[12px] text-light">
+          Valgt: {fileName}
+          {fileCount > 0 && ` (inkluderer ${fileCount} fil${fileCount === 1 ? "" : "er"})`}
+        </p>
       )}
       {msg && (
         <p className={`mt-3 text-[13px] ${msg.ok ? "text-success" : "text-danger"}`}>
@@ -512,18 +570,31 @@ function ImportCard() {
   );
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  // Chunked for at undgå "Maximum call stack" på store filer.
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const slice = bytes.subarray(i, i + CHUNK);
+    binary += String.fromCharCode(...slice);
+  }
+  return btoa(binary);
+}
+
 function InfoCard() {
   return (
-    <Card title="Om dine data">
+    <Card label="Om dine data" title="Hvor ligger det?">
       <div className="space-y-2 text-[13px] text-mid">
         <p>
-          Dataen ligger i Turso (libSQL), hosted i Frankfurt-regionen. Appen
-          deployes til Vercel. Begge er kommercielle hostere — drifts-personale
-          har teknisk adgang. Det er ikke E2E-krypteret.
+          Loggen kører på en privat server — ikke i en kommerciel cloud. Trafikken
+          går gennem en krypteret tunnel (TLS) og hver bruger har sit eget
+          isolerede datasæt. Dataen er <em>ikke</em> end-to-end-krypteret, hvilket
+          betyder at server-administratoren teknisk har adgang.
         </p>
         <p>
-          En god rutine: tag en eksport en gang om måneden og læg filen lokalt
-          på din egen disk som ekstra sikkerhed.
+          Det betyder også, at dataen kun findes ét sted. Tag en eksport en
+          gang om måneden og læg JSON-filen et andet sted (ekstern disk, USB,
+          krypteret cloud) som backup.
         </p>
       </div>
     </Card>
@@ -559,11 +630,16 @@ function DeleteAccountCard({ email }: { email: string }) {
   }
 
   return (
-    <section className="rounded-md border border-danger/40 bg-card px-6 py-5">
-      <h2 className="mb-3 flex items-center gap-2 border-b border-danger/30 pb-2.5 font-serif text-[20px] font-medium text-danger">
-        <AlertTriangle className="size-5" />
-        Slet konto
-      </h2>
+    <section className="rounded-[10px] border border-[rgba(248,113,113,0.3)] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+      <div className="mb-4 border-b border-[rgba(248,113,113,0.2)] pb-3">
+        <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-danger">
+          Permanent handling
+        </div>
+        <h2 className="mt-0.5 inline-flex items-center gap-2 font-serif text-[18px] leading-none text-ink">
+          <AlertTriangle className="size-4 text-danger" />
+          Slet konto
+        </h2>
+      </div>
 
       <p className="mb-4 text-[13px] text-mid">
         Sletter din bruger og alt tilknyttet data permanent: dagbogsindlæg,
@@ -576,14 +652,14 @@ function DeleteAccountCard({ email }: { email: string }) {
           type="button"
           onClick={openSummary}
           disabled={pending}
-          className="cursor-pointer rounded-[3px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-50"
+          className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-50"
         >
-          {pending ? "Indlæser..." : "Slet min konto"}
+          {pending ? "Indlæser…" : "Slet min konto"}
         </button>
       )}
 
       {step === "summary" && summary && (
-        <div className="rounded-[3px] border border-danger/40 bg-[rgba(248,113,113,0.04)] p-3">
+        <div className="rounded-[10px] bg-[rgba(248,113,113,0.05)] p-3">
           <p className="mb-2 text-[13px] font-medium text-ink">
             Du sletter følgende:
           </p>
@@ -604,7 +680,7 @@ function DeleteAccountCard({ email }: { email: string }) {
             <button
               type="button"
               onClick={() => setStep("confirm")}
-              className="cursor-pointer rounded-[3px] border border-danger bg-danger px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
+              className="cursor-pointer rounded-[8px] bg-danger px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
             >
               Fortsæt
             </button>
@@ -614,7 +690,7 @@ function DeleteAccountCard({ email }: { email: string }) {
                 setStep("closed");
                 setSummary(null);
               }}
-              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[12px] text-mid hover:text-ink"
             >
               Annullér
             </button>
@@ -623,7 +699,7 @@ function DeleteAccountCard({ email }: { email: string }) {
       )}
 
       {step === "confirm" && (
-        <div className="rounded-[3px] border border-danger/40 bg-[rgba(248,113,113,0.04)] p-3">
+        <div className="rounded-[10px] bg-[rgba(248,113,113,0.05)] p-3">
           <p className="mb-2 text-[13px] text-ink">
             Skriv din email for at bekræfte:
           </p>
@@ -636,7 +712,7 @@ function DeleteAccountCard({ email }: { email: string }) {
             onChange={(e) => setConfirmEmail(e.target.value)}
             placeholder="dig@example.com"
             autoComplete="off"
-            className="!mb-3 !text-[14px]"
+            className="!mb-3 !rounded-[8px] !border-hair !bg-bg !text-[14px]"
           />
           {err && <p className="mb-2 text-[13px] text-danger">{err}</p>}
           <div className="flex gap-2">
@@ -644,9 +720,9 @@ function DeleteAccountCard({ email }: { email: string }) {
               type="button"
               onClick={runDelete}
               disabled={pending || !confirmEmail.trim()}
-              className="cursor-pointer rounded-[3px] border border-danger bg-danger px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="cursor-pointer rounded-[8px] bg-danger px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
-              {pending ? "Sletter..." : "Slet min konto permanent"}
+              {pending ? "Sletter…" : "Slet min konto permanent"}
             </button>
             <button
               type="button"
@@ -656,7 +732,7 @@ function DeleteAccountCard({ email }: { email: string }) {
                 setErr(null);
               }}
               disabled={pending}
-              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[12px] text-mid hover:text-ink"
             >
               Tilbage
             </button>
@@ -669,7 +745,7 @@ function DeleteAccountCard({ email }: { email: string }) {
 
 function SummaryRow({ label, value }: { label: string; value: number }) {
   return (
-    <li className="flex items-baseline justify-between gap-2 border-b border-border-light/50 py-0.5">
+    <li className="flex items-baseline justify-between gap-2 border-b border-hair py-0.5">
       <span>{label}</span>
       <span className={`font-medium ${value > 0 ? "text-ink" : "text-dim"}`}>
         {value}
@@ -751,16 +827,16 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
   const mcpUrl = origin ? `${origin}/api/mcp` : null;
 
   return (
-    <Card title="Custom Connector">
+    <Card label="Custom Connector" title="MCP-adgang for AI">
       <p className="mb-4 text-[13px] text-mid">
         Forbind appen til Claude, Mistral eller anden AI-assistent der
-        understøtter MCP. Brug URL'en nedenfor som server-adresse, og opret
+        understøtter MCP. Brug URL&apos;en nedenfor som server-adresse, og opret
         derefter en client til at autentificere forbindelsen.
       </p>
 
       {mcpUrl && (
-        <div className="mb-4 rounded-[3px] border border-border-light bg-bg p-3">
-          <div className="mb-1.5 text-[11px] uppercase tracking-[0.5px] text-light">
+        <div className="mb-4 rounded-[10px] bg-bg-subtle p-3">
+          <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
             Server URL
           </div>
           <CredentialLine label="URL" value={mcpUrl} />
@@ -773,9 +849,10 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
       )}
 
       {created && (
-        <div className="mb-4 rounded-[3px] border border-success bg-[rgba(74,222,128,0.08)] p-4">
-          <p className="mb-3 text-[13px] font-medium text-success">
-            ✓ Client &quot;{created.name}&quot; oprettet
+        <div className="mb-4 rounded-[10px] border border-[rgba(74,222,128,0.3)] bg-[var(--success-soft)] p-4">
+          <p className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-success">
+            <Check className="size-3.5" />
+            Client &quot;{created.name}&quot; oprettet
           </p>
           <p className="mb-3 text-[12px] italic text-warning">
             Client Secret vises kun nu. Kopier det med det samme — det kan ikke
@@ -786,7 +863,7 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
           <button
             type="button"
             onClick={() => setCreated(null)}
-            className="mt-3 cursor-pointer text-[12px] text-mid hover:text-ink"
+            className="mt-3 cursor-pointer rounded-[8px] px-3 py-2 text-[12px] text-mid hover:text-ink"
           >
             Jeg har kopieret begge — luk
           </button>
@@ -796,8 +873,12 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
       {clients.length === 0 ? (
         <p className="text-[13px] italic text-light">Ingen clients endnu.</p>
       ) : (
-        <div className="space-y-1.5">
-          {clients.map((c) => {
+        <div>
+          <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+            Aktive connectors
+          </div>
+          <div className="space-y-1.5">
+            {clients.map((c) => {
             const uris = (() => {
               try {
                 const arr = JSON.parse(c.redirectUris);
@@ -809,7 +890,7 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
             return (
               <div
                 key={c.id}
-                className="rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[12px]"
+                className="rounded-[10px] bg-bg-subtle px-3 py-2.5 text-[12px]"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-medium text-ink">{c.name}</span>
@@ -819,8 +900,9 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
                     onClick={() => remove(c.id)}
                     disabled={pending}
                     className="ml-auto cursor-pointer text-dim hover:text-danger"
+                    title="Slet"
                   >
-                    Slet
+                    <Trash2 className="size-3.5" />
                   </button>
                 </div>
                 {uris.length > 0 && (
@@ -831,17 +913,19 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
       {showForm ? (
-        <div className="mt-4 space-y-3 rounded-[3px] border border-border-light bg-bg p-3">
+        <div className="mt-4 space-y-3 rounded-[10px] bg-bg-subtle p-3">
           <div>
             <Label>Navn</Label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Claude"
+              className="!rounded-[8px] !border-hair !bg-bg"
             />
           </div>
           <div>
@@ -851,7 +935,7 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
               onChange={(e) => setRedirectInput(e.target.value)}
               rows={3}
               placeholder={CLAUDE_REDIRECT_URI}
-              className="!w-full font-mono text-[12px]"
+              className="!w-full !rounded-[8px] !border-hair !bg-bg font-mono text-[12px]"
             />
             <p className="mt-1 text-[11px] text-light">
               For claude.ai web: {CLAUDE_REDIRECT_URI}
@@ -863,9 +947,9 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
               type="button"
               onClick={submit}
               disabled={pending || !name.trim()}
-              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+              className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
             >
-              {pending ? "Opretter..." : "Opret"}
+              {pending ? "Opretter…" : "Opret"}
             </button>
             <button
               type="button"
@@ -873,7 +957,7 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
                 setShowForm(false);
                 setErr(null);
               }}
-              className="cursor-pointer text-[12px] text-mid hover:text-ink"
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[12px] text-mid hover:text-ink"
             >
               Annullér
             </button>
@@ -883,9 +967,10 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="mt-4 cursor-pointer rounded-[3px] border border-dashed border-border bg-transparent px-3 py-2 text-[13px] text-light hover:border-accent hover:text-accent-bright"
+          className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-dashed border-hair-strong bg-transparent px-3 py-2 text-[13px] text-light hover:border-accent hover:text-accent"
         >
-          + Opret OAuth-client
+          <Plus className="size-3.5" strokeWidth={2.5} />
+          Opret OAuth-client
         </button>
       )}
     </Card>
@@ -901,17 +986,17 @@ function CredentialLine({ label, value }: { label: string; value: string }) {
     });
   }
   return (
-    <div className="mb-2 flex items-center gap-2 rounded-[3px] border border-border-light bg-bg px-2 py-1.5">
-      <span className="w-24 shrink-0 text-[11px] uppercase tracking-[0.5px] text-light">
+    <div className="mb-2 flex items-center gap-2 rounded-[8px] bg-bg px-2 py-1.5">
+      <span className="w-24 shrink-0 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         {label}
       </span>
       <code className="flex-1 truncate text-[12px] text-ink">{value}</code>
       <button
         type="button"
         onClick={copy}
-        className="shrink-0 cursor-pointer rounded-[2px] border border-border px-2 py-0.5 text-[11px] text-mid hover:border-accent hover:text-accent-bright"
+        className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[6px] bg-bg-subtle px-2 py-1 text-[11px] text-mid hover:bg-bg-elevated hover:text-ink"
       >
-        {copied ? "✓" : "Kopiér"}
+        {copied ? <Check className="size-3 text-success" /> : "Kopiér"}
       </button>
     </div>
   );

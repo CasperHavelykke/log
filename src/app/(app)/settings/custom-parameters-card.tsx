@@ -42,10 +42,15 @@ export function CustomParametersCard({
   const visible = showArchived ? params : params.filter((p) => !p.archived);
 
   return (
-    <section className="rounded-md border border-border bg-card px-6 py-5">
-      <h2 className="mb-4 border-b border-border-light pb-2.5 font-serif text-[20px] font-medium text-accent-bright">
-        Mine parametre
-      </h2>
+    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+      <div className="mb-4 border-b border-hair pb-3">
+        <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+          Mine parametre
+        </div>
+        <h2 className="mt-0.5 font-serif text-[18px] leading-none text-ink">
+          Egne målinger til helbred
+        </h2>
+      </div>
       <p className="mb-4 text-[13px] text-mid">
         Tilføj dine egne målinger der vises i Helbred-loggen og automatisk
         dukker op som metrics i Statistik. AI (via MCP) får adgang til alle
@@ -87,9 +92,9 @@ export function CustomParametersCard({
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-3 py-1.5 text-[13px] font-medium text-white hover:bg-accent-bright"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5" strokeWidth={2.5} />
             Ny parameter
           </button>
         )}
@@ -156,8 +161,8 @@ function PresetSection({
   }
 
   return (
-    <div className="mt-4 rounded-[3px] border border-border-light bg-bg p-3">
-      <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.5px] text-light">
+    <div className="mt-4 rounded-[10px] bg-bg-subtle p-3">
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         Hurtigt tilføj — helbreds-præsets
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -170,10 +175,10 @@ function PresetSection({
               type="button"
               onClick={() => addPreset(preset)}
               disabled={added || pending}
-              className={`inline-flex items-center gap-1.5 rounded-[3px] border px-2.5 py-1 text-[12px] transition ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
                 added
-                  ? "border-border-light bg-bg text-dim"
-                  : "border-border bg-card text-ink hover:border-accent hover:text-accent-bright"
+                  ? "border-hair bg-bg-elevated text-dim"
+                  : "border-hair-strong bg-bg-elevated text-mid hover:border-accent hover:text-accent"
               } ${pending ? "cursor-not-allowed" : "cursor-pointer"}`}
               title={preset.description}
             >
@@ -183,7 +188,7 @@ function PresetSection({
                 <span className="ml-1 text-[10px] text-dim">tilføjet</span>
               )}
               {loading && (
-                <span className="ml-1 text-[10px] text-mid">...</span>
+                <span className="ml-1 text-[10px] text-mid">…</span>
               )}
             </button>
           );
@@ -226,7 +231,7 @@ function ParameterRow({
   }
   return (
     <div
-      className={`flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-2 text-[13px] ${
+      className={`flex items-center gap-3 rounded-[10px] bg-bg-subtle px-3 py-2.5 text-[13px] ${
         parameter.archived ? "opacity-60" : ""
       }`}
     >
@@ -247,23 +252,23 @@ function ParameterRow({
         type="button"
         onClick={toggleArchive}
         disabled={pending}
-        className="inline-flex cursor-pointer items-center gap-1 rounded border border-transparent px-2 py-1 text-[11px] text-mid hover:border-border hover:bg-bg hover:text-ink"
+        className="inline-flex cursor-pointer items-center rounded-[6px] p-1.5 text-mid hover:bg-bg hover:text-ink"
         title={parameter.archived ? "Genaktiver" : "Arkiver"}
       >
         {parameter.archived ? (
-          <ArchiveRestore className="size-3.5" />
+          <ArchiveRestore className="size-4" />
         ) : (
-          <Archive className="size-3.5" />
+          <Archive className="size-4" />
         )}
       </button>
       <button
         type="button"
         onClick={remove}
         disabled={pending}
-        className="inline-flex cursor-pointer items-center gap-1 rounded border border-transparent px-2 py-1 text-[11px] text-dim hover:border-border hover:bg-bg hover:text-danger"
+        className="inline-flex cursor-pointer items-center rounded-[6px] p-1.5 text-dim hover:bg-bg hover:text-danger"
         title="Slet"
       >
-        <Trash2 className="size-3.5" />
+        <Trash2 className="size-4" />
       </button>
     </div>
   );
@@ -312,20 +317,20 @@ function CreateForm({
   }
 
   return (
-    <div className="mt-4 space-y-3 rounded-[3px] border border-border-light bg-bg p-3">
+    <div className="mt-4 space-y-3 rounded-[10px] bg-bg-subtle p-3">
       <div className="flex items-center justify-between">
         <h3 className="font-serif text-[15px] text-ink">Ny parameter</h3>
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer text-dim hover:text-ink"
+          className="inline-flex cursor-pointer items-center rounded-[6px] p-1 text-dim hover:bg-bg hover:text-ink"
         >
           <X className="size-4" />
         </button>
       </div>
 
       <div>
-        <label className="mb-1 block text-[12px] font-medium text-mid">
+        <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
           Navn
         </label>
         <input
@@ -334,14 +339,19 @@ function CreateForm({
           onChange={(e) => setName(e.target.value)}
           placeholder="Fx 'Stress-niveau' eller 'Blodtryk systolisk'"
           autoFocus
+          className="!rounded-[8px] !border-hair !bg-bg"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-[12px] font-medium text-mid">
+        <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
           Type
         </label>
-        <select value={kind} onChange={(e) => setKind(e.target.value)}>
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+          className="!rounded-[8px] !border-hair !bg-bg"
+        >
           {Object.entries(KIND_LABELS).map(([k, label]) => (
             <option key={k} value={k}>
               {label}
@@ -355,7 +365,7 @@ function CreateForm({
 
       {showUnit && (
         <div>
-          <label className="mb-1 block text-[12px] font-medium text-mid">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
             Enhed (valgfri)
           </label>
           <input
@@ -363,7 +373,7 @@ function CreateForm({
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
             placeholder="Fx mg, kg, °C, mmHg"
-            className="!w-32"
+            className="!w-32 !rounded-[8px] !border-hair !bg-bg"
           />
         </div>
       )}
@@ -375,14 +385,14 @@ function CreateForm({
           type="button"
           onClick={submit}
           disabled={pending || !name.trim()}
-          className="cursor-pointer rounded-[3px] border border-accent bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+          className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
         >
-          {pending ? "Opretter..." : "Opret"}
+          {pending ? "Opretter…" : "Opret"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer text-[12px] text-mid hover:text-ink"
+          className="cursor-pointer rounded-[8px] px-3 py-2 text-[12px] text-mid hover:text-ink"
         >
           Annullér
         </button>
