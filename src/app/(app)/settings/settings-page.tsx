@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertTriangle, Briefcase, Check, Clock, LogOut, Moon, Plus, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
-import { importData } from "./actions";
 import {
   createOAuthClient,
   deleteOAuthClient,
@@ -447,84 +446,51 @@ function ExportCard() {
 
 function ImportCard() {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [payload, setPayload] = useState<unknown>(null);
-  const [fileCount, setFileCount] = useState(0);
+  const [file, setFile] = useState<File | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
-  async function onFile(file: File | undefined) {
+  function onFile(picked: File | undefined) {
     setMsg(null);
-    setPayload(null);
-    setFileName(null);
-    setFileCount(0);
-    if (!file) return;
-    try {
-      const lowerName = file.name.toLowerCase();
-      const isZip =
-        lowerName.endsWith(".zip") || file.type === "application/zip";
-
-      if (isZip) {
-        const { unzipSync, strFromU8 } = await import("fflate");
-        const buf = new Uint8Array(await file.arrayBuffer());
-        const entries = unzipSync(buf);
-
-        const jsonBytes = entries["backup.json"];
-        if (!jsonBytes) {
-          setMsg({
-            ok: false,
-            text: "ZIP'en mangler backup.json — er det en gyldig Log-backup?",
-          });
-          return;
-        }
-        const backup = JSON.parse(strFromU8(jsonBytes));
-
-        const files: { path: string; base64: string }[] = [];
-        for (const [name, bytes] of Object.entries(entries)) {
-          if (!name.startsWith("files/")) continue;
-          if (name.endsWith("/")) continue;
-          const inner = name.slice("files/".length);
-          if (!/^(photos|documents)\//.test(inner)) continue;
-          files.push({ path: inner, base64: bytesToBase64(bytes) });
-        }
-
-        setPayload({ backup, files });
-        setFileCount(files.length);
-        setFileName(file.name);
-      } else {
-        const text = await file.text();
-        setPayload({ backup: JSON.parse(text), files: [] });
-        setFileName(file.name);
-      }
-    } catch (err) {
-      setMsg({
-        ok: false,
-        text: `Filen kunne ikke læses: ${err instanceof Error ? err.message : "ukendt fejl"}.`,
-      });
-    }
+    setFile(picked ?? null);
   }
 
   function runImport() {
-    if (payload === null) return;
+    if (!file) return;
     const confirmed = confirm(
       "Import ERSTATTER alle nuværende data med indholdet af filen. " +
         "Dette kan ikke fortrydes. Har du taget en eksport først?\n\nFortsæt?",
     );
     if (!confirmed) return;
     start(async () => {
-      const res = await importData(payload);
-      if (res.ok) {
-        const total = Object.values(res.counts).reduce((a, b) => a + b, 0);
-        const fileNote = res.filesWritten > 0
-          ? ` + ${res.filesWritten} fil(er)`
-          : "";
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const r = await fetch("/api/import", { method: "POST", body: fd });
+        const res = (await r.json()) as
+          | {
+              ok: true;
+              counts: Record<string, number>;
+              filesWritten: number;
+            }
+          | { ok: false; error: string };
+        if (res.ok) {
+          const total = Object.values(res.counts).reduce((a, b) => a + b, 0);
+          const fileNote =
+            res.filesWritten > 0 ? ` + ${res.filesWritten} fil(er)` : "";
+          setMsg({
+            ok: true,
+            text: `Importeret: ${total} rækker${fileNote}. Genindlæser…`,
+          });
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          setMsg({ ok: false, text: res.error });
+        }
+      } catch (err) {
         setMsg({
-          ok: true,
-          text: `Importeret: ${total} rækker${fileNote}. Genindlæser…`,
+          ok: false,
+          text: `Upload fejlede: ${err instanceof Error ? err.message : "ukendt fejl"}.`,
         });
-        setTimeout(() => window.location.reload(), 1200);
-      } else {
-        setMsg({ ok: false, text: res.error });
       }
     });
   }
@@ -549,16 +515,15 @@ function ImportCard() {
         <button
           type="button"
           onClick={runImport}
-          disabled={pending || payload === null}
+          disabled={pending || file === null}
           className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-40"
         >
           {pending ? "Importerer…" : "Importér og erstat alt"}
         </button>
       </div>
-      {fileName && !msg && (
+      {file && !msg && (
         <p className="mt-2 text-[12px] text-light">
-          Valgt: {fileName}
-          {fileCount > 0 && ` (inkluderer ${fileCount} fil${fileCount === 1 ? "" : "er"})`}
+          Valgt: {file.name} ({Math.round(file.size / 1024)} KB)
         </p>
       )}
       {msg && (
@@ -568,17 +533,6 @@ function ImportCard() {
       )}
     </Card>
   );
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  // Chunked for at undgå "Maximum call stack" på store filer.
-  const CHUNK = 0x8000;
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    const slice = bytes.subarray(i, i + CHUNK);
-    binary += String.fromCharCode(...slice);
-  }
-  return btoa(binary);
 }
 
 function InfoCard() {
