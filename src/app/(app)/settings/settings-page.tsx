@@ -467,24 +467,43 @@ function ImportCard() {
         const fd = new FormData();
         fd.append("file", file);
         const r = await fetch("/api/import", { method: "POST", body: fd });
-        const res = (await r.json()) as
+        const bodyText = await r.text();
+        let parsed:
           | {
               ok: true;
               counts: Record<string, number>;
               filesWritten: number;
             }
-          | { ok: false; error: string };
-        if (res.ok) {
-          const total = Object.values(res.counts).reduce((a, b) => a + b, 0);
+          | { ok: false; error: string }
+          | null = null;
+        if (bodyText) {
+          try {
+            parsed = JSON.parse(bodyText);
+          } catch {
+            // ikke JSON — formodentlig HTML-error-page eller proxy-fejl
+          }
+        }
+        if (!r.ok || !parsed) {
+          const snippet = bodyText.slice(0, 200) || "(tom respons)";
+          setMsg({
+            ok: false,
+            text: `Server svarede ${r.status} ${r.statusText}: ${snippet}`,
+          });
+          return;
+        }
+        if (parsed.ok) {
+          const total = Object.values(parsed.counts).reduce((a, b) => a + b, 0);
           const fileNote =
-            res.filesWritten > 0 ? ` + ${res.filesWritten} fil(er)` : "";
+            parsed.filesWritten > 0
+              ? ` + ${parsed.filesWritten} fil(er)`
+              : "";
           setMsg({
             ok: true,
             text: `Importeret: ${total} rækker${fileNote}. Genindlæser…`,
           });
           setTimeout(() => window.location.reload(), 1200);
         } else {
-          setMsg({ ok: false, text: res.error });
+          setMsg({ ok: false, text: parsed.error });
         }
       } catch (err) {
         setMsg({
