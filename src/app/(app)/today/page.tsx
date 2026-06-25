@@ -15,7 +15,7 @@ import {
 } from "@/lib/queries";
 import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
 import { listDocuments } from "../documents/actions";
-import { listTrackers } from "../health/trackere/actions";
+import { listTrackersWithPhotoStats } from "../health/trackere/actions";
 import { getActiveJobSearchPeriod } from "../jobs/period-actions";
 import {
   listCustomParameters,
@@ -84,7 +84,7 @@ export default async function Today() {
     getActiveFast(user.id),
     getRecentFasts(user.id, 5),
     listDocuments(),
-    listTrackers(false),
+    listTrackersWithPhotoStats(),
     listCustomParameters(false),
     listCustomValuesForDate(date),
     getActiveJobSearchPeriod(),
@@ -226,7 +226,7 @@ export default async function Today() {
         })),
       }))}
       unattachedDocuments={unattachedDocs}
-      trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
+      trackers={trackers}
       customParameters={customParameters}
       customValues={customValues}
       initialDay={{

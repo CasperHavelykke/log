@@ -1441,7 +1441,7 @@ function HealthBody({
         </FieldSection>
       )}
 
-      <FieldSection icon={<Camera className="size-3.5" />} title="Fotos">
+      <FieldSection icon={<Camera className="size-3.5" />} title="Foto-opfølgning">
         <TrackerPhotoSection date={date} trackers={trackers} />
       </FieldSection>
     </div>

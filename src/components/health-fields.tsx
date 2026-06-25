@@ -14,7 +14,7 @@ export function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 md:mb-0">
+    <div className="mb-7">
       <div className="mb-2 flex items-center gap-1.5 border-b border-hair pb-1.5 text-[10px] uppercase tracking-[0.6px] text-light md:mb-3">
         <span className="text-mid">{icon}</span>
         <span className="font-semibold">{title}</span>

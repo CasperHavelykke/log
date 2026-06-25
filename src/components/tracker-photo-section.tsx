@@ -1,214 +1,176 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Camera, Check, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import Link from "next/link";
+import {
+  Camera,
+  Check,
+  ChevronRight,
+  ImagePlus,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import { compressImage, formatFileSize } from "@/lib/image-compress";
 import {
   createTracker,
   uploadTrackerPhoto,
 } from "@/app/(app)/health/trackere/actions";
+import { danishLongDate } from "@/lib/date";
 
 export type TrackerRef = {
   id: number;
   name: string;
   kind: string;
+  photoCount: number;
+  latestTakenAt: string | null;
 };
 
-type Preset = {
-  key: string;
-  label: string;
-  name: string;
-  kind: "skin_spot" | "dermatitis" | "other";
-};
-
-const PRESETS: Preset[] = [
-  { key: "skin_spot", label: "Skønhedsplet", name: "Skønhedsplet", kind: "skin_spot" },
-  { key: "dermatitis", label: "Skæleksem", name: "Skæleksem", kind: "dermatitis" },
+const FOTO_PRESETS: { name: string; kind: "skin_spot" | "dermatitis" }[] = [
+  { name: "Skønhedsplet", kind: "skin_spot" },
+  { name: "Skæleksem", kind: "dermatitis" },
 ];
 
 export function TrackerPhotoSection({
-  date,
   trackers: initialTrackers,
 }: {
   date: string;
   trackers: TrackerRef[];
 }) {
   const [trackers, setTrackers] = useState<TrackerRef[]>(initialTrackers);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [showCustom, setShowCustom] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [customName, setCustomName] = useState("");
-  const [creating, setCreating] = useState<string | null>(null); // preset key while creating
+  const [creating, setCreating] = useState(false);
 
-  const selected = trackers.find((t) => t.id === selectedId) ?? null;
+  const usedNames = new Set(trackers.map((t) => t.name.trim().toLowerCase()));
 
-  // Filter out presets the user already has (match by name).
-  const usedNames = new Set(
-    trackers.map((t) => t.name.trim().toLowerCase()),
-  );
-
-  async function createFromPreset(p: Preset) {
-    setCreating(p.key);
-    const res = await createTracker({
-      name: p.name,
-      kind: p.kind,
-      notes: null,
-    });
-    setCreating(null);
+  async function createPreset(name: string, kind: "skin_spot" | "dermatitis") {
+    if (creating) return;
+    setCreating(true);
+    const res = await createTracker({ name, kind, notes: null });
+    setCreating(false);
     if (res.ok) {
-      const t = {
+      const t: TrackerRef = {
         id: res.tracker.id,
         name: res.tracker.name,
         kind: res.tracker.kind,
+        photoCount: 0,
+        latestTakenAt: null,
       };
       setTrackers((prev) => [...prev, t]);
-      setSelectedId(t.id);
+      setAdding(false);
+      setCustomName("");
     }
   }
 
   async function createCustom() {
     const name = customName.trim();
-    if (!name) return;
-    setCreating("custom");
-    const res = await createTracker({
-      name,
-      kind: "other",
-      notes: null,
-    });
-    setCreating(null);
+    if (!name || creating) return;
+    setCreating(true);
+    const res = await createTracker({ name, kind: "other", notes: null });
+    setCreating(false);
     if (res.ok) {
-      const t = {
+      const t: TrackerRef = {
         id: res.tracker.id,
         name: res.tracker.name,
         kind: res.tracker.kind,
+        photoCount: 0,
+        latestTakenAt: null,
       };
       setTrackers((prev) => [...prev, t]);
-      setSelectedId(t.id);
+      setAdding(false);
       setCustomName("");
-      setShowCustom(false);
     }
   }
 
-  if (selected) {
-    return (
-      <PhotoUploader
-        tracker={selected}
-        date={date}
-        onBack={() => setSelectedId(null)}
-      />
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      <p className="text-[12px] italic leading-snug text-light">
-        Følg et område med billeder over tid — fx en plet eller eksem du
-        vil holde øje med. Tilføj et nyt billede når du tjekker det.
-      </p>
+    <div>
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        {trackers.map((t) => (
+          <Link
+            key={t.id}
+            href={`/health/trackere/${t.id}`}
+            className="flex cursor-pointer items-center gap-3 rounded-[10px] bg-bg-elevated p-3 text-left transition-colors hover:bg-bg-subtle md:bg-bg md:hover:bg-bg-subtle"
+          >
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
+              <Camera className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-medium text-ink">{t.name}</div>
+              <div className="mt-0.5 text-[11px] text-light">
+                {t.photoCount === 0
+                  ? "Ingen billeder endnu"
+                  : t.latestTakenAt
+                    ? `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"} · seneste ${danishLongDate(t.latestTakenAt)}`
+                    : `${t.photoCount} ${t.photoCount === 1 ? "billede" : "billeder"}`}
+              </div>
+            </div>
+            <ChevronRight className="size-4 shrink-0 text-dim" />
+          </Link>
+        ))}
+        <button
+          type="button"
+          onClick={() => setAdding((v) => !v)}
+          className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-hair-strong p-3 text-[13px] text-light transition-colors hover:border-accent hover:text-accent sm:col-span-2 ${
+            adding ? "border-accent text-accent" : ""
+          }`}
+        >
+          <Plus className="size-4" />
+          Tilføj opfølgning
+        </button>
+      </div>
 
-      {trackers.length > 0 && (
-        <div>
-          <div className="mb-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
-            Fortsæt opfølgning
+      {adding && (
+        <div className="mt-3 rounded-[8px] bg-bg-elevated p-3 md:bg-bg">
+          <div className="mb-2 text-[10px] uppercase tracking-[0.5px] text-light">
+            Vælg forslag eller skriv eget
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {trackers.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setSelectedId(t.id)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-accent-dim bg-accent-bg px-3 py-1 text-[12px] font-medium text-accent-bright transition hover:border-accent"
-              >
-                <Camera className="size-3" />
-                {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <div className="mb-1.5 text-[10px] uppercase tracking-[0.5px] text-light">
-          {trackers.length > 0 ? "Start ny opfølgning" : "Start en opfølgning"}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {PRESETS.map((p) => {
-            const already = usedNames.has(p.name.toLowerCase());
-            const loading = creating === p.key;
-            return (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => createFromPreset(p)}
-                disabled={already || creating !== null}
-                className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition ${
-                  already
-                    ? "cursor-not-allowed border-border-light bg-bg text-dim"
-                    : "border-border-light bg-bg text-mid hover:border-accent hover:text-accent-bright"
-                } ${creating ? "cursor-not-allowed opacity-60" : ""}`}
-                title={
-                  already
-                    ? "Du har allerede en opfølgning med dette navn"
-                    : `Opret en opfølgning af ${p.label.toLowerCase()}`
-                }
-              >
-                {loading ? (
-                  <Loader2 className="size-3 animate-spin" />
-                ) : (
+            {FOTO_PRESETS.map((p) => {
+              const already = usedNames.has(p.name.toLowerCase());
+              return (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => createPreset(p.name, p.kind)}
+                  disabled={already || creating}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+                    already
+                      ? "cursor-not-allowed border-hair bg-bg-elevated text-dim md:bg-bg-subtle"
+                      : "cursor-pointer border-hair-strong bg-bg-elevated text-mid hover:border-accent hover:text-accent md:bg-bg-subtle"
+                  }`}
+                >
                   <Plus className="size-3" />
-                )}
-                {p.label}
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setShowCustom(true)}
-            disabled={creating !== null}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-border-light bg-bg px-2.5 py-1 text-[11px] text-mid transition hover:border-accent hover:text-accent-bright"
-          >
-            <Plus className="size-3" />
-            Andet område
-          </button>
-        </div>
-        {showCustom && (
-          <div className="mt-2 flex items-center gap-1">
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex items-center gap-1.5">
             <input
               type="text"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
-              placeholder="Fx 'Plet på arm'"
-              autoFocus
+              placeholder="Andet område (fx 'plet på arm')"
               onKeyDown={(e) => {
                 if (e.key === "Enter") createCustom();
                 if (e.key === "Escape") {
-                  setShowCustom(false);
+                  setAdding(false);
                   setCustomName("");
                 }
               }}
-              className="!text-[12px] !py-1"
-              style={{ maxWidth: "200px" }}
+              className="!rounded-[8px] !border-hair !bg-bg-elevated !py-1.5 !text-[16px] md:!rounded-[6px] md:!border-transparent md:!bg-bg-subtle md:!text-[13px]"
             />
             <button
               type="button"
               onClick={createCustom}
-              disabled={!customName.trim() || creating !== null}
-              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-2.5 py-1 text-[11px] text-white hover:bg-accent-bright disabled:opacity-50"
+              disabled={!customName.trim() || creating}
+              className="shrink-0 cursor-pointer rounded-[8px] border border-accent bg-accent px-3 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-accent-bright disabled:opacity-50 md:rounded-[6px]"
             >
               Opret
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowCustom(false);
-                setCustomName("");
-              }}
-              className="cursor-pointer p-1 text-dim hover:text-ink"
-            >
-              <X className="size-3.5" />
-            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

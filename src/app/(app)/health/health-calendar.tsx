@@ -22,7 +22,6 @@ import {
 import { saveDayEntry } from "../today/actions";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createTracker } from "./trackere/actions";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
 import {
@@ -1459,7 +1458,6 @@ function FotoOpfoelgningCard({
   trackers: TrackerRef[];
   onTrackerCreated: (t: TrackerRef) => void;
 }) {
-  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [customName, setCustomName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -1479,7 +1477,8 @@ function FotoOpfoelgningCard({
         photoCount: 0,
         latestTakenAt: null,
       });
-      router.push(`/health/trackere/${res.tracker.id}`);
+      setAdding(false);
+      setCustomName("");
     }
   }
 
@@ -1497,7 +1496,8 @@ function FotoOpfoelgningCard({
         photoCount: 0,
         latestTakenAt: null,
       });
-      router.push(`/health/trackere/${res.tracker.id}`);
+      setAdding(false);
+      setCustomName("");
     }
   }
 
