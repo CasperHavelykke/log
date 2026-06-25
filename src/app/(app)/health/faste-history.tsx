@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
-import { Check, Clock } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
+import { FasteRow } from "./faste-row";
 
 function durationMinutes(startIso: string, endIso: string): number {
   const start = new Date(startIso).getTime();
@@ -13,21 +13,6 @@ function fmtDuration(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}t ${String(m).padStart(2, "0")}m`;
-}
-
-function fmtRelative(iso: string): string {
-  const d = new Date(iso);
-  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (days === 0) return "i dag";
-  if (days === 1) return "i går";
-  if (days === 2) return "i forgårs";
-  if (days < 7) return `for ${days} dage siden`;
-  return `${d.getDate()}. ${["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"][d.getMonth()]}`;
-}
-
-function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export async function FasteHistory() {
@@ -95,39 +80,15 @@ export async function FasteHistory() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        {fasts.slice(0, 10).map((f) => {
-          const mins = durationMinutes(f.startedAt, f.endedAt!);
-          const qualified = mins >= 16 * 60;
-          return (
-            <div
-              key={f.id}
-              className="flex items-center gap-2.5 rounded-[10px] bg-bg-elevated px-3 py-2.5 text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:rounded-[8px] md:bg-bg md:py-2 md:shadow-none"
-            >
-              <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
-                  qualified
-                    ? "bg-[var(--success-soft)] text-success"
-                    : "bg-[var(--warning-soft)] text-warning"
-                }`}
-              >
-                {qualified ? (
-                  <Check className="size-3.5" strokeWidth={2.5} />
-                ) : (
-                  <Clock className="size-3.5" />
-                )}
-              </span>
-              <span
-                className={`font-semibold ${qualified ? "text-ink" : "text-warning"}`}
-              >
-                {fmtDuration(mins)}
-              </span>
-              <span className="ml-auto text-[12px] text-mid">
-                {fmtRelative(f.startedAt)} · {fmtTime(f.startedAt)} →{" "}
-                {fmtTime(f.endedAt!)}
-              </span>
-            </div>
-          );
-        })}
+        {fasts.slice(0, 10).map((f) => (
+          <FasteRow
+            key={f.id}
+            id={f.id}
+            startedAt={f.startedAt}
+            endedAt={f.endedAt!}
+            mins={durationMinutes(f.startedAt, f.endedAt!)}
+          />
+        ))}
       </div>
 
       {shortCount > 0 && (

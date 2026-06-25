@@ -1696,12 +1696,6 @@ function FastCard({
     });
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Slet denne faste-registrering?")) return;
-    setRecent((xs) => xs.filter((f) => f.id !== id));
-    await deleteFast(id);
-  }
-
   if (active) {
     const mins = fastDurationMinutes(active.startedAt, null, now);
     const qualified = isQualifiedFast(mins);
@@ -1778,7 +1772,11 @@ function FastCard({
                   type="button"
                   onClick={() => handleEnd()}
                   disabled={pending}
-                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-bg px-4 py-3 text-[14px] font-medium text-ink hover:bg-bg-subtle disabled:opacity-50"
+                  className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] px-4 py-3 text-[14px] font-medium disabled:opacity-50 ${
+                    qualified
+                      ? "bg-success text-white hover:brightness-110"
+                      : "bg-bg text-ink hover:bg-bg-subtle"
+                  }`}
                 >
                   <Utensils className="size-4" />
                   Bryd faste
@@ -1829,7 +1827,6 @@ function FastCard({
             )}
           </div>
         </div>
-        <RecentFasts list={recent} onDelete={handleDelete} />
       </div>
     );
   }
@@ -1921,10 +1918,6 @@ function FastCard({
           </div>
         </div>
       )}
-      <p className="text-center text-[12px] italic text-dim">
-        En faste tæller som “kvalificeret” når du har fastet mindst 16 timer.
-      </p>
-      <RecentFasts list={recent} onDelete={handleDelete} />
     </div>
   );
 }
@@ -1974,56 +1967,6 @@ const MONTH_SHORT = [
   "nov",
   "dec",
 ];
-
-function RecentFasts({
-  list,
-  onDelete,
-}: {
-  list: RecentFast[];
-  onDelete: (id: number) => void;
-}) {
-  if (list.length === 0) return null;
-  return (
-    <div className="space-y-1 border-t border-border-light pt-3">
-      <div className="text-[11px] uppercase tracking-[0.4px] text-light">
-        Seneste
-      </div>
-      {list.map((f) => {
-        if (!f.endedAt) return null;
-        const mins = fastDurationMinutes(f.startedAt, f.endedAt);
-        const qualified = isQualifiedFast(mins);
-        return (
-          <div
-            key={f.id}
-            className="flex items-center gap-3 rounded-[3px] border border-border-light bg-bg px-3 py-1.5 text-[12px]"
-          >
-            {qualified ? (
-              <Check className="size-3.5 text-success" />
-            ) : (
-              <Circle className="size-3.5 text-dim" />
-            )}
-            <span className="text-mid">
-              {formatTimestampShort(f.startedAt)} → {formatTimestampShort(f.endedAt)}
-            </span>
-            <span
-              className={`ml-auto font-medium ${qualified ? "text-success" : "text-mid"}`}
-            >
-              {formatFastDuration(mins)}
-            </span>
-            <button
-              type="button"
-              onClick={() => onDelete(f.id)}
-              className="cursor-pointer text-dim hover:text-danger"
-              title="Slet"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function SupplementsBody({
   date,

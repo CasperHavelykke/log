@@ -14,7 +14,10 @@ export function ElasticTimerBar({ hours }: { hours: number }) {
   const max = computeMax(hours);
   const fillPct = Math.min(100, (hours / max) * 100);
   const targetReached = hours >= 16;
-  const fillColor = targetReached ? "var(--success)" : "var(--accent-bright)";
+  const fillColor = "var(--success)";
+  const fillBackground = targetReached
+    ? "var(--success)"
+    : "linear-gradient(to right, var(--accent-bright), var(--success))";
 
   // Hak-mærker: kun de der er <= max
   const visibleMilestones = MILESTONES.filter((m) => m <= max);
@@ -24,8 +27,8 @@ export function ElasticTimerBar({ hours }: { hours: number }) {
       {/* Track + fill */}
       <div className="absolute left-1 right-1 top-[28px] h-2 overflow-hidden rounded-full bg-bg">
         <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
-          style={{ width: `${fillPct}%`, background: fillColor }}
+          className="h-full rounded-l-full transition-all duration-700 ease-out"
+          style={{ width: `${fillPct}%`, background: fillBackground }}
         />
       </div>
 
@@ -33,7 +36,7 @@ export function ElasticTimerBar({ hours }: { hours: number }) {
       <div
         className="absolute top-[22px] z-10 h-[18px] w-[3px] rounded-sm transition-all duration-700 ease-out"
         style={{
-          left: `calc(${fillPct}% * 0.98 + 4px)`,
+          left: `calc(${fillPct / 100} * (100% - 8px) + 4px - 2px)`,
           background: fillColor,
         }}
       />
@@ -48,10 +51,10 @@ export function ElasticTimerBar({ hours }: { hours: number }) {
             <div
               className="absolute top-[22px] h-[18px] w-[2px] -translate-x-1/2 rounded-sm transition-all duration-700 ease-out"
               style={{
-                left: `calc(${pct}% * 0.98 + 4px)`,
+                left: `calc(${pct / 100} * (100% - 8px) + 4px)`,
                 background: isTarget
                   ? "var(--success)"
-                  : "var(--border-strong)",
+                  : "var(--light)",
                 height: isTarget ? "22px" : "18px",
                 top: isTarget ? "20px" : "22px",
               }}
@@ -59,7 +62,7 @@ export function ElasticTimerBar({ hours }: { hours: number }) {
             <div
               className="absolute top-[46px] -translate-x-1/2 whitespace-nowrap text-[10px] transition-all duration-700 ease-out"
               style={{
-                left: `calc(${pct}% * 0.98 + 4px)`,
+                left: `calc(${pct / 100} * (100% - 8px) + 4px)`,
                 color: isTarget
                   ? "var(--success)"
                   : reached
