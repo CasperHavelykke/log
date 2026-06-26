@@ -107,8 +107,8 @@ export async function GET() {
     },
   };
 
-  // Saml binære filer fra lokal disk. Gamle Vercel Blob URL'er (http://...)
-  // udelades — vi har ikke længere adgang dér.
+  // Saml binære filer fra lokal disk under data/. Eventuelle legacy-http://
+  // URL'er springes over (de er ikke længere tilgængelige).
   const zipPayload: Zippable = {
     "backup.json": strToU8(JSON.stringify(backup, null, 2)),
   };
@@ -160,7 +160,7 @@ function buildReadme(
   const missingBlock =
     missing.length === 0
       ? "Alle filer er inkluderet."
-      : `${missing.length} fil(er) kunne ikke pakkes ind (sandsynligvis gamle Vercel Blob-URL'er — disse fungerer ikke længere). Ramte stier:\n${missing.map((m) => `  - ${m}`).join("\n")}`;
+      : `${missing.length} fil(er) kunne ikke pakkes ind (filen findes ikke på disk eller pegen er legacy http://). Ramte stier:\n${missing.map((m) => `  - ${m}`).join("\n")}`;
 
   return [
     "Log – fuld backup",

@@ -6,9 +6,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Hosting
 
-Web-appen deployes til Vercel; databasen ligger på Turso (libSQL); filer på Vercel Blob.
-Det lokale repo bruges som dev-environment — kode-ændringer skubbes til Vercel via git.
-Den lokale SQLite-fil (`data/app.db`) er kun til lokal udvikling. Produktion er Turso.
+Web-appen er selvhostet på en privat Ubuntu-server (ThinkCentre M920q): Next.js
+kører som systemd-service `log`, Caddy står foran med TLS, libSQL kører lokalt
+på filen `data/app.db`, og fotos + dokumenter ligger som filer under `data/`.
+Det lokale repo bruges som dev-environment — `next dev` køres aldrig her,
+men ændringer pulles til serveren via `git pull && npm install && npm run
+build && sudo systemctl restart log`.
 
 # Kode-stil
 

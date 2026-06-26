@@ -4,9 +4,8 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import * as schema from "./schema";
 
-// libsql understøtter både lokal SQLite-fil ("file:./data/app.db") og remote
-// Turso ("libsql://...turso.io" + authToken). Vi bruger samme driver overalt;
-// URL'en bestemmer mode. Default: lokal fil for backwards-kompatibilitet.
+// Selvhostet: vi bruger lokal SQLite-fil via libSQL-driveren.
+// DATABASE_URL eller DATABASE_PATH kan overstyre default-stien.
 function resolveUrl(): string {
   const fromEnv = process.env.DATABASE_URL;
   if (fromEnv) return fromEnv;

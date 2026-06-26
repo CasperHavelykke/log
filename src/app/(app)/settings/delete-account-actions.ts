@@ -86,8 +86,8 @@ export async function deleteAccount(input: {
       .where(eq(schema.documents.userId, user.id)),
   ]);
 
-  // Best-effort blob cleanup. deleteBlob swallows not-found errors,
-  // so orphaned blobs are the only risk if Vercel Blob is down — acceptable.
+  // Best-effort cleanup af filer på disk. deleteBlob swallows not-found
+  // errors, så forældreløse filer er den eneste risiko ved fs-fejl.
   await Promise.all(
     [...photoBlobs, ...docBlobs].map((b) =>
       deleteBlob(b.pathname || b.url).catch(() => undefined),

@@ -5,7 +5,6 @@ import { createReadStream } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
-import { del as vercelDel, get as vercelGet } from "@vercel/blob";
 
 export const PHOTO_PREFIX = "photos";
 export const DOCUMENT_PREFIX = "documents";
@@ -74,40 +73,19 @@ export async function uploadBlob(params: {
   };
 }
 
-export async function deleteBlob(urlOrPathname: string): Promise<void> {
-  if (urlOrPathname.startsWith("http")) {
-    // Backwards-compat: gammel Vercel Blob URL — slet via SDK
-    try {
-      await vercelDel(urlOrPathname);
-    } catch {
-      // Allerede væk eller netværksfejl — ok
-    }
-    return;
-  }
-  // Lokal fil
+export async function deleteBlob(pathname: string): Promise<void> {
   try {
-    await unlink(blobAbsolutePath(urlOrPathname));
+    await unlink(blobAbsolutePath(pathname));
   } catch {
     // Allerede væk — ok
   }
 }
 
-export async function getBlobStream(urlOrPathname: string): Promise<{
+export async function getBlobStream(pathname: string): Promise<{
   stream: ReadableStream<Uint8Array> | null;
   contentLength?: number;
 }> {
-  if (urlOrPathname.startsWith("http")) {
-    // Backwards-compat: gammel Vercel Blob URL
-    const result = await vercelGet(urlOrPathname, { access: "private" });
-    if (!result || result.statusCode !== 200) {
-      return { stream: null };
-    }
-    return {
-      stream: result.stream as unknown as ReadableStream<Uint8Array>,
-    };
-  }
-  // Lokal fil
-  const absolutePath = blobAbsolutePath(urlOrPathname);
+  const absolutePath = blobAbsolutePath(pathname);
   try {
     const stats = await stat(absolutePath);
     const nodeStream = createReadStream(absolutePath);
