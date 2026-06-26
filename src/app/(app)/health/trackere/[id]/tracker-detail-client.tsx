@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   Camera,
   ChevronLeft,
   ChevronRight,
   ImagePlus,
+  MoreVertical,
   Trash2,
   X,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   YAxis,
 } from "recharts";
 import { compressImage, formatFileSize } from "@/lib/image-compress";
+import { useHorizontalSwipe } from "@/lib/use-swipe";
 import { deletePhoto, deleteTracker, uploadTrackerPhoto } from "../actions";
 
 type TrackerInfo = {
@@ -76,15 +78,19 @@ export function TrackerDetailClient({
   tracker,
   initialPhotos,
   metricData,
+  backTo,
 }: {
   tracker: TrackerInfo;
   initialPhotos: Photo[];
   metricData: { date: string; value: number }[];
+  backTo: "today" | "health";
 }) {
   const [photos, setPhotos] = useState(initialPhotos);
   const [showUpload, setShowUpload] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [, startDelete] = useTransition();
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const hasMetric = metricData.length > 0;
   const photoDates = useMemo(
@@ -92,7 +98,6 @@ export function TrackerDetailClient({
     [photos],
   );
 
-  // Combine metric + photo markers on same x-axis
   const chartData = useMemo(() => {
     if (!hasMetric) return [];
     return metricData.map((m) => ({
@@ -102,7 +107,19 @@ export function TrackerDetailClient({
     }));
   }, [metricData, photoDates, hasMetric]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [menuOpen]);
+
   function removeTracker() {
+    setMenuOpen(false);
     if (
       !confirm(
         `Slet trackeren "${tracker.name}" og alle ${photos.length} billeder? Dette kan ikke fortrydes.`,
@@ -113,70 +130,98 @@ export function TrackerDetailClient({
     startDelete(async () => {
       const res = await deleteTracker(tracker.id);
       if (res.ok) {
-        window.location.href = "/health/trackere";
+        window.location.href = backTo === "today" ? "/today" : "/health";
       }
     });
   }
 
+  const backHref = backTo === "today" ? "/today" : "/health";
+  const backLabel = backTo === "today" ? "I dag" : "Helbred";
+
   return (
-    <div className="mx-auto max-w-[880px] px-5 py-8">
-      <header className="mb-6 border-b border-border pb-4">
-        <Link
-          href="/health/trackere"
-          className="mb-2 inline-flex items-center gap-1 text-[12px] text-light hover:text-accent-bright"
-        >
-          <ArrowLeft className="size-3" /> Alle trackere
-        </Link>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-serif text-[32px] font-medium leading-none text-ink">
+    <div className="mx-auto max-w-[880px] px-4 py-6 sm:py-8">
+      <Link
+        href={backHref}
+        className="mb-3 inline-flex items-center gap-1 text-[12px] text-light hover:text-accent"
+      >
+        <ArrowLeft className="size-3.5" />
+        {backLabel}
+      </Link>
+
+      <header className="mb-5 border-b border-hair pb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
+              {KIND_LABELS[tracker.kind] ?? tracker.kind}
+            </div>
+            <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
               {tracker.name}
             </h1>
-            <p className="mt-1 text-[12px] uppercase tracking-[0.4px] text-light">
-              {KIND_LABELS[tracker.kind] ?? tracker.kind}
-            </p>
             {tracker.notes && (
               <p className="mt-2 text-[13px] text-mid">{tracker.notes}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative shrink-0" ref={menuRef}>
             <button
               type="button"
-              onClick={() => setShowUpload(true)}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="inline-flex cursor-pointer items-center rounded-[8px] p-2 text-mid hover:bg-bg-subtle hover:text-ink"
+              aria-label="Mere"
             >
-              <ImagePlus className="size-4" />
-              Tilføj billede
+              <MoreVertical className="size-5" />
             </button>
-            <button
-              type="button"
-              onClick={removeTracker}
-              className="cursor-pointer rounded-[3px] border border-border bg-transparent px-3 py-2 text-[12px] text-mid hover:border-danger hover:text-danger"
-            >
-              Slet tracker
-            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-10 mt-1 min-w-[160px] rounded-[10px] bg-bg-elevated p-1 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                <button
+                  type="button"
+                  onClick={removeTracker}
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[13px] text-danger hover:bg-[rgba(248,113,113,0.1)]"
+                >
+                  <Trash2 className="size-3.5" />
+                  Slet tracker
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
+      <button
+        type="button"
+        onClick={() => setShowUpload(true)}
+        className="mb-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-3 text-[14px] font-medium text-white hover:bg-accent-bright sm:w-auto"
+      >
+        <ImagePlus className="size-4" />
+        Tilføj billede
+      </button>
+
       {hasMetric && (
-        <section className="mb-5 rounded-md border border-border bg-card p-4">
-          <div className="mb-2 flex items-baseline justify-between border-b border-border-light pb-2">
-            <h2 className="font-serif text-[18px] text-ink">
-              {KIND_LABELS[tracker.kind]} over tid
-            </h2>
-            <span className="text-[11px] text-light">
-              {metricData.length} målinger · {photoDates.size} med billede
+        <section className="mb-5 rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+          <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-hair pb-3">
+            <div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+                {KIND_LABELS[tracker.kind]} over tid
+              </div>
+              <div className="mt-0.5 font-serif text-[18px] leading-none text-ink">
+                {metricData[metricData.length - 1]?.value.toFixed(1).replace(".", ",")}
+                <span className="ml-0.5 text-[12px] text-light">
+                  {METRIC_UNITS[tracker.kind] ?? ""}
+                </span>
+              </div>
+            </div>
+            <span className="shrink-0 text-[11px] text-light">
+              {metricData.length} målinger
+              {photoDates.size > 0 && ` · ${photoDates.size} m. billede`}
             </span>
           </div>
-          <div className="h-[200px] w-full">
+          <div className="h-[180px] w-full sm:h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
-                margin={{ top: 8, right: 12, left: -10, bottom: 0 }}
+                margin={{ top: 8, right: 8, left: -14, bottom: 0 }}
               >
                 <CartesianGrid
-                  stroke="var(--border-light)"
+                  stroke="var(--hair-strong)"
                   strokeDasharray="2 4"
                   vertical={false}
                 />
@@ -195,9 +240,9 @@ export function TrackerDetailClient({
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "var(--page)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "3px",
+                    backgroundColor: "var(--bg-elevated)",
+                    border: "1px solid var(--hair-strong)",
+                    borderRadius: "8px",
                     fontSize: "12px",
                   }}
                   labelFormatter={(label) =>
@@ -211,9 +256,9 @@ export function TrackerDetailClient({
                 <Line
                   type="monotone"
                   dataKey="value"
-                  stroke="#5fa3f0"
+                  stroke="var(--accent)"
                   strokeWidth={1.8}
-                  dot={{ r: 2, fill: "#5fa3f0", strokeWidth: 0 }}
+                  dot={{ r: 2, fill: "var(--accent)", strokeWidth: 0 }}
                   isAnimationActive={false}
                 />
                 {chartData
@@ -224,34 +269,40 @@ export function TrackerDetailClient({
                       x={d.date}
                       y={d.value}
                       r={5}
-                      fill="#fbbf24"
-                      stroke="#fff"
+                      fill="var(--warning)"
+                      stroke="var(--bg-elevated)"
                       strokeWidth={1}
                     />
                   ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-[11px] text-light">
-            <span className="mr-1 inline-block size-2 rounded-full bg-[#fbbf24] align-middle" />
-            Gule prikker markerer datoer med billede
+          <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-light">
+            <span className="inline-block size-2 rounded-full bg-[var(--warning)]" />
+            Datoer med billede
           </p>
         </section>
       )}
 
-      <section className="rounded-md border border-border bg-card p-4">
-        <div className="mb-3 flex items-baseline justify-between border-b border-border-light pb-2">
-          <h2 className="font-serif text-[18px] text-ink">Billeder</h2>
-          <span className="text-[11px] text-light">
-            {photos.length} {photos.length === 1 ? "billede" : "billeder"}
-          </span>
+      <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+        <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-hair pb-3">
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Billeder
+            </div>
+            <h2 className="mt-0.5 font-serif text-[18px] leading-none text-ink">
+              {photos.length === 0
+                ? "Ingen billeder endnu"
+                : `${photos.length} ${photos.length === 1 ? "billede" : "billeder"}`}
+            </h2>
+          </div>
         </div>
         {photos.length === 0 ? (
-          <p className="py-4 text-center text-[13px] italic text-light">
-            Ingen billeder endnu — tilføj det første.
+          <p className="py-6 text-center text-[13px] italic text-light">
+            Tryk &quot;Tilføj billede&quot; for at oprette det første.
           </p>
         ) : (
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {photos.map((p, i) => (
               <PhotoCard
                 key={p.id}
@@ -310,31 +361,35 @@ function PhotoCard({
     });
   }
   return (
-    <div className="relative w-32 shrink-0">
+    <div className="group relative">
       <button
         type="button"
         onClick={onPick}
-        className="block w-full cursor-pointer overflow-hidden rounded-[3px] border border-border-light hover:border-accent-dim"
+        className="block w-full cursor-pointer overflow-hidden rounded-[10px] bg-bg-subtle"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/api/files/photo/${photo.id}`}
           alt={photo.caption ?? fmtDate(photo.takenAt)}
-          className="aspect-square w-full object-cover"
+          className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
         />
       </button>
-      <div className="mt-1 text-[11px] text-mid">{fmtDate(photo.takenAt)}</div>
+      <div className="mt-1.5 text-[11px] font-medium text-mid">
+        {fmtDate(photo.takenAt)}
+      </div>
       {photo.caption && (
-        <div className="text-[10px] text-light line-clamp-2">{photo.caption}</div>
+        <div className="line-clamp-2 text-[10px] text-light">
+          {photo.caption}
+        </div>
       )}
       <button
         type="button"
         onClick={remove}
         disabled={pending}
-        className="absolute right-1 top-1 cursor-pointer rounded-[3px] bg-black/60 p-1 text-light hover:text-danger"
+        className="absolute right-1.5 top-1.5 inline-flex cursor-pointer items-center rounded-[6px] bg-black/55 p-1.5 text-white opacity-0 backdrop-blur-sm transition-opacity hover:text-danger group-hover:opacity-100 group-focus-within:opacity-100"
         title="Slet"
       >
-        <Trash2 className="size-3" />
+        <Trash2 className="size-3.5" />
       </button>
     </div>
   );
@@ -372,15 +427,23 @@ function PhotoViewer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, photos.length]);
 
+  const swipe = useHorizontalSwipe({
+    onSwipeLeft: () => hasNext && go(1),
+    onSwipeRight: () => hasPrev && go(-1),
+  });
+
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-black/85 p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
       onClick={onClose}
+      onTouchStart={swipe.onTouchStart}
+      onTouchEnd={swipe.onTouchEnd}
     >
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 cursor-pointer rounded-full bg-black/60 p-2 text-light hover:text-ink"
+        className="absolute right-4 top-4 inline-flex cursor-pointer items-center rounded-full bg-black/60 p-2 text-white/85 backdrop-blur-sm hover:text-white"
+        aria-label="Luk"
       >
         <X className="size-5" />
       </button>
@@ -392,8 +455,8 @@ function PhotoViewer({
             e.stopPropagation();
             go(-1);
           }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-light hover:text-ink sm:left-6"
-          title="Forrige (← pil)"
+          className="absolute left-2 top-1/2 hidden -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-white/85 backdrop-blur-sm hover:text-white sm:left-6 sm:inline-flex"
+          aria-label="Forrige"
         >
           <ChevronLeft className="size-6" />
         </button>
@@ -405,8 +468,8 @@ function PhotoViewer({
             e.stopPropagation();
             go(1);
           }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-light hover:text-ink sm:right-6"
-          title="Næste (→ pil)"
+          className="absolute right-2 top-1/2 hidden -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-white/85 backdrop-blur-sm hover:text-white sm:right-6 sm:inline-flex"
+          aria-label="Næste"
         >
           <ChevronRight className="size-6" />
         </button>
@@ -416,16 +479,17 @@ function PhotoViewer({
       <img
         src={`/api/files/photo/${photo.id}`}
         alt={photo.caption ?? ""}
-        className="max-h-[85vh] max-w-full object-contain"
+        className="max-h-[85vh] max-w-full select-none object-contain"
         onClick={(e) => e.stopPropagation()}
+        draggable={false}
       />
 
-      <div className="absolute bottom-4 left-4 right-4 text-center text-[13px] text-mid">
+      <div className="absolute bottom-4 left-4 right-4 text-center text-[13px] text-white/80">
         <div>
           {fmtDate(photo.takenAt)}
           {photo.caption && <span> · {photo.caption}</span>}
         </div>
-        <div className="mt-1 text-[11px] text-dim">
+        <div className="mt-1 text-[11px] text-white/50">
           {index + 1} / {photos.length}
         </div>
       </div>
@@ -518,28 +582,39 @@ function UploadDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-md border border-border bg-card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-serif text-[20px] text-accent-bright">
-            Tilføj billede
-          </h2>
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !pending && onClose()}
+    >
+      <div
+        className="w-full max-w-[440px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Nyt billede
+            </div>
+            <h2 className="mt-0.5 font-serif text-[20px] leading-none text-ink">
+              Tilføj billede
+            </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer text-dim hover:text-ink"
+            className="inline-flex cursor-pointer items-center rounded-[6px] p-1 text-dim hover:bg-bg hover:text-ink"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-mid">
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
               Billede
             </label>
-            <div className="flex flex-wrap gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-border bg-bg px-3 py-1.5 text-[13px] text-ink hover:border-accent">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-subtle px-3 py-2.5 text-[13px] text-ink hover:bg-bg">
                 <Camera className="size-4" />
                 Tag billede
                 <input
@@ -550,9 +625,9 @@ function UploadDialog({
                   className="hidden"
                 />
               </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-border bg-bg px-3 py-1.5 text-[13px] text-ink hover:border-accent">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-subtle px-3 py-2.5 text-[13px] text-ink hover:bg-bg">
                 <ImagePlus className="size-4" />
-                Fra bibliotek
+                Bibliotek
                 <input
                   type="file"
                   accept="image/*"
@@ -562,58 +637,60 @@ function UploadDialog({
               </label>
             </div>
             {compressing && (
-              <p className="mt-2 text-[11px] italic text-light">Komprimerer...</p>
+              <p className="mt-2 text-[11px] italic text-light">Komprimerer…</p>
             )}
             {compressed && file && (
               <p className="mt-2 text-[11px] text-success">
-                ✓ {formatFileSize(file.size)} → {formatFileSize(compressed.bytes)}
+                {formatFileSize(file.size)} → {formatFileSize(compressed.bytes)}
                 {" "}({compressed.width}×{compressed.height})
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-mid">
-                Dato taget
-              </label>
-              <input
-                type="date"
-                value={takenAt}
-                onChange={(e) => setTakenAt(e.target.value)}
-                max={todayIso()}
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-mid">
-                Note (valgfri)
-              </label>
-              <input
-                type="text"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="fx 'lidt rødere'"
-              />
-            </div>
+          <div>
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Dato taget
+            </label>
+            <input
+              type="date"
+              value={takenAt}
+              onChange={(e) => setTakenAt(e.target.value)}
+              max={todayIso()}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Note <span className="normal-case tracking-normal text-dim">— valgfri</span>
+            </label>
+            <input
+              type="text"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="fx 'lidt rødere'"
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
+            />
           </div>
 
           {error && <p className="text-[13px] text-danger">{error}</p>}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={pending}
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[13px] text-mid hover:text-ink disabled:opacity-50"
+            >
+              Annullér
+            </button>
             <button
               type="button"
               onClick={submit}
               disabled={pending || !compressed || compressing}
-              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+              className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
             >
-              {pending ? "Uploader..." : "Upload"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer text-[12px] text-mid hover:text-ink"
-            >
-              Annullér
+              {pending ? "Uploader…" : "Upload"}
             </button>
           </div>
         </div>

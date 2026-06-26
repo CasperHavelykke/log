@@ -88,7 +88,7 @@ export function TrackerPhotoSection({
         {trackers.map((t) => (
           <Link
             key={t.id}
-            href={`/health/trackere/${t.id}`}
+            href={`/health/trackere/${t.id}?from=today`}
             className="flex cursor-pointer items-center gap-3 rounded-[10px] bg-bg-elevated p-3 text-left transition-colors hover:bg-bg-subtle md:bg-bg md:hover:bg-bg-subtle"
           >
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">

@@ -8,14 +8,18 @@ import { TrackerDetailClient } from "./tracker-detail-client";
 export const metadata = { title: "Tracker | Log" };
 
 type Params = Promise<{ id: string }>;
+type Search = Promise<{ from?: string }>;
 
 export default async function TrackerDetailPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: Search;
 }) {
   const user = await requireUser();
   const { id: idStr } = await params;
+  const { from } = await searchParams;
   const id = Number(idStr);
   if (!Number.isFinite(id)) notFound();
 
@@ -39,9 +43,8 @@ export default async function TrackerDetailPage({
       .map((r) => ({ date: r.date, value: r.value / 10 }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
-  // Note: dermatitis/staph-trackere viste tidligere en metric-graf fra
-  // day_entries-kolonner. De felter er nu custom parameters — se /statistik
-  // for graf-visning af "Skæleksem" / "Stafylokokker" hvis du har dem.
+
+  const backTo = from === "today" ? "today" : "health";
 
   return (
     <TrackerDetailClient
@@ -60,6 +63,7 @@ export default async function TrackerDetailPage({
         sizeBytes: p.sizeBytes,
       }))}
       metricData={metricData}
+      backTo={backTo}
     />
   );
 }

@@ -138,11 +138,17 @@ export async function setPhotoTracker(photoId: number, trackerId: number | null)
   return { ok: true as const };
 }
 
+const captionSchema = z.string().max(500);
+
 export async function updatePhotoCaption(photoId: number, caption: string) {
   const user = await requireUser();
+  const parsed = captionSchema.safeParse(caption);
+  if (!parsed.success) {
+    return { ok: false as const, error: "Billedtekst må højst være 500 tegn" };
+  }
   await db
     .update(schema.photos)
-    .set({ caption: caption.trim() || null })
+    .set({ caption: parsed.data.trim() || null })
     .where(
       and(eq(schema.photos.id, photoId), eq(schema.photos.userId, user.id)),
     );
