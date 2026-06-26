@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Search, X } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
 
 type Entry = {
@@ -48,45 +49,54 @@ export function JournalPage({ entries }: { entries: Entry[] }) {
   }, [entries, search, year]);
 
   return (
-    <div className="mx-auto max-w-[760px] px-5 py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <h1 className="font-serif text-[36px] font-medium leading-none text-ink">
-            Journal
-          </h1>
-          <p className="mt-1 font-serif text-sm italic text-mid">
-            {entries.length === 0
-              ? "Ingen notater endnu"
-              : `${entries.length} dag${entries.length === 1 ? "" : "e"} med notater`}
-          </p>
+    <div className="mx-auto max-w-[760px] px-4 py-8">
+      <header className="mb-5 border-b border-hair pb-5">
+        <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
+          Journal
         </div>
+        <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+          {entries.length === 0
+            ? "Ingen notater endnu"
+            : `${entries.length} dag${entries.length === 1 ? "" : "e"} med notater`}
+        </h1>
       </header>
 
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex items-center gap-2 rounded-[10px] bg-bg-elevated px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+        <Search className="size-4 text-light" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Søg i dine notater..."
-          className="!min-w-[240px] flex-1"
+          placeholder="Søg i dine notater…"
+          className="!w-full !rounded-none !border-0 !bg-transparent !p-0 !text-[14px]"
         />
-        {years.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            <YearChip active={year === "all"} onClick={() => setYear("all")} label="Alle" />
-            {years.map((y) => (
-              <YearChip
-                key={y}
-                active={year === y}
-                onClick={() => setYear(y)}
-                label={y}
-              />
-            ))}
-          </div>
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="inline-flex cursor-pointer items-center rounded-[6px] p-1 text-dim hover:bg-bg hover:text-ink"
+          >
+            <X className="size-4" />
+          </button>
         )}
       </div>
 
+      {years.length > 1 && (
+        <div className="mb-5 inline-flex shrink-0 gap-0.5 rounded-[8px] bg-bg p-0.5">
+          <YearChip active={year === "all"} onClick={() => setYear("all")} label="Alle" />
+          {years.map((y) => (
+            <YearChip
+              key={y}
+              active={year === y}
+              onClick={() => setYear(y)}
+              label={y}
+            />
+          ))}
+        </div>
+      )}
+
       {filtered.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm italic text-dim">
+        <div className="rounded-[10px] border border-dashed border-hair-strong p-8 text-center text-sm italic text-dim">
           {entries.length === 0
             ? "Skriv dine første dagsnotater på I dag-siden."
             : "Ingen notater matcher din søgning."}
@@ -115,10 +125,8 @@ function YearChip({
     <button
       type="button"
       onClick={onClick}
-      className={`cursor-pointer rounded-full border px-3 py-1 text-[13px] transition ${
-        active
-          ? "border-accent bg-accent text-white"
-          : "border-border bg-card text-mid hover:border-accent-dim hover:text-ink"
+      className={`shrink-0 cursor-pointer whitespace-nowrap rounded-[6px] px-3 py-1 text-[12px] transition-colors ${
+        active ? "bg-accent text-white" : "text-mid hover:text-ink"
       }`}
     >
       {label}
@@ -128,14 +136,27 @@ function YearChip({
 
 function JournalCard({ entry, highlight }: { entry: Entry; highlight: string }) {
   return (
-    <article className="rounded-md border border-border bg-card px-6 py-5 transition-colors hover:border-accent-dim">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border-light pb-2.5">
-        <h2 className="font-serif text-[19px] text-accent-bright">
-          {formatDanishDate(entry.date)}
-        </h2>
-        <div className="flex gap-2 text-[11px] uppercase tracking-[0.3px] text-light">
-          {entry.mood !== null && <span>Humør {entry.mood}/5</span>}
-          {entry.energy !== null && <span>Energi {entry.energy}/5</span>}
+    <article className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-hair pb-3">
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+            {entry.date.slice(0, 4)}
+          </div>
+          <h2 className="mt-0.5 font-serif text-[18px] leading-none text-ink">
+            {formatDanishDate(entry.date)}
+          </h2>
+        </div>
+        <div className="flex shrink-0 gap-1.5 text-[11px] text-light">
+          {entry.mood !== null && (
+            <span className="rounded-full bg-bg-subtle px-2 py-0.5">
+              Humør {entry.mood}/5
+            </span>
+          )}
+          {entry.energy !== null && (
+            <span className="rounded-full bg-bg-subtle px-2 py-0.5">
+              Energi {entry.energy}/5
+            </span>
+          )}
         </div>
       </div>
       <div className="space-y-3">
@@ -144,7 +165,7 @@ function JournalCard({ entry, highlight }: { entry: Entry; highlight: string }) 
           if (!text) return null;
           return (
             <div key={s.key}>
-              <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.5px] text-light">
+              <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
                 {s.label}
               </div>
               <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-ink">
@@ -172,7 +193,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
     }
     if (idx > i) parts.push(text.slice(i, idx));
     parts.push(
-      <mark key={key++} className="rounded bg-accent/30 text-ink">
+      <mark key={key++} className="rounded bg-[var(--accent-bg)] text-ink">
         {text.slice(idx, idx + q.length)}
       </mark>,
     );

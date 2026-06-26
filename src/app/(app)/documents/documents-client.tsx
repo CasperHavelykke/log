@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { FileText, Search, Trash2, Upload, X } from "lucide-react";
+import { Check, FileText, Search, Trash2, Upload, X } from "lucide-react";
 import { deleteDocument, uploadDocument } from "./actions";
 
 type Doc = {
@@ -29,11 +29,11 @@ const KIND_LABELS: Record<string, string> = {
 };
 
 const KIND_COLORS: Record<string, string> = {
-  application: "bg-[rgba(74,144,226,0.15)] text-[var(--accent-bright)]",
+  application: "bg-[var(--accent-bg)] text-accent",
   cv: "bg-[rgba(74,222,128,0.15)] text-[var(--success)]",
   job_posting: "bg-[rgba(167,139,250,0.15)] text-[#a78bfa]",
-  reference: "bg-[rgba(251,191,36,0.15)] text-[var(--warning)]",
-  other: "bg-[rgba(160,174,192,0.15)] text-[var(--mid)]",
+  reference: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  other: "bg-bg-subtle text-mid",
 };
 
 const ACCEPT =
@@ -82,17 +82,24 @@ export function DocumentsClient({
   }, [docs, query]);
 
   return (
-    <div className="mx-auto max-w-[880px] px-5 py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <h1 className="font-serif text-[32px] font-medium leading-none text-ink">
-          Dokumenter
-        </h1>
+    <div className="mx-auto max-w-[880px] px-4 py-8">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-hair pb-5">
+        <div>
+          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
+            Dokumenter
+          </div>
+          <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+            {docs.length === 0
+              ? "Ingen dokumenter endnu"
+              : `${docs.length} fil${docs.length === 1 ? "" : "er"} i arkivet`}
+          </h1>
+        </div>
         <button
           type="button"
           onClick={() => setShowUpload(true)}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
         >
-          <Upload className="size-4" />
+          <Upload className="size-3.5" strokeWidth={2.5} />
           Upload dokument
         </button>
       </header>
@@ -103,20 +110,20 @@ export function DocumentsClient({
         skriver fremtidige ansøgninger med Claude kan den trække på din historik.
       </p>
 
-      <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
+      <div className="mb-4 flex items-center gap-2 rounded-[10px] bg-bg-elevated px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
         <Search className="size-4 text-light" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søg i titler, filnavne, kategorier..."
-          className="!w-full !border-0 !bg-transparent !p-0 !text-[14px]"
+          placeholder="Søg i titler, filnavne, kategorier…"
+          className="!w-full !rounded-none !border-0 !bg-transparent !p-0 !text-[14px]"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery("")}
-            className="cursor-pointer text-dim hover:text-ink"
+            className="inline-flex cursor-pointer items-center rounded-[6px] p-1 text-dim hover:bg-bg hover:text-ink"
           >
             <X className="size-4" />
           </button>
@@ -124,7 +131,7 @@ export function DocumentsClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border bg-card/40 px-6 py-12 text-center text-[13px] italic text-light">
+        <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
           {docs.length === 0
             ? "Ingen dokumenter endnu — upload dit første."
             : "Ingen match."}
@@ -179,20 +186,22 @@ function DocumentRow({
   }
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-border bg-card px-4 py-3">
-      <FileText className="mt-0.5 size-5 shrink-0 text-light" />
+    <div className="flex items-start gap-3 rounded-[10px] bg-bg-elevated p-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-4">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
+        <FileText className="size-4" />
+      </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
           <a
             href={`/api/files/document/${doc.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-ink hover:text-accent-bright"
+            className="font-medium text-ink hover:text-accent"
           >
             {doc.title}
           </a>
           <span
-            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.3px] ${
+            className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.3px] ${
               KIND_COLORS[doc.kind] ?? KIND_COLORS.other
             }`}
           >
@@ -203,12 +212,13 @@ function DocumentRow({
           <span>{doc.filename}</span>
           <span>{fmtSize(doc.sizeBytes)}</span>
           {doc.hasExtractedText && (
-            <span className="text-success">
-              ✓ {doc.extractedChars.toLocaleString("da-DK")} tegn ekstraheret
+            <span className="inline-flex items-center gap-1 text-success">
+              <Check className="size-3" />
+              {doc.extractedChars.toLocaleString("da-DK")} tegn ekstraheret
             </span>
           )}
           {linkedApp && (
-            <span className="text-accent-bright">
+            <span className="text-accent">
               → {linkedApp.company}
               {linkedApp.role && ` · ${linkedApp.role}`}
             </span>
@@ -219,7 +229,7 @@ function DocumentRow({
         type="button"
         onClick={remove}
         disabled={pending}
-        className="shrink-0 cursor-pointer text-dim hover:text-danger"
+        className="inline-flex shrink-0 cursor-pointer items-center rounded-[6px] p-1.5 text-dim hover:bg-bg hover:text-danger disabled:opacity-50"
         title="Slet"
       >
         <Trash2 className="size-4" />
@@ -290,31 +300,42 @@ function UploadDialog({
   const hint = file ? extractableHint(file.type) : null;
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-md border border-border bg-card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-serif text-[20px] text-accent-bright">
-            Upload dokument
-          </h2>
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !pending && onClose()}
+    >
+      <div
+        className="w-full max-w-[440px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Nyt dokument
+            </div>
+            <h2 className="mt-0.5 font-serif text-[20px] leading-none text-ink">
+              Upload dokument
+            </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer text-dim hover:text-ink"
+            className="inline-flex cursor-pointer items-center rounded-[6px] p-1 text-dim hover:bg-bg hover:text-ink"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-mid">
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
               Fil
             </label>
             <input
               type="file"
               accept={ACCEPT}
               onChange={(e) => onPick(e.target.files?.[0])}
-              className="!text-[13px] file:mr-3 file:cursor-pointer file:rounded-[3px] file:border file:border-border file:bg-bg file:px-3 file:py-1.5 file:text-[13px] file:text-ink"
+              className="!w-auto !text-[13px] text-mid file:mr-3 file:cursor-pointer file:rounded-[8px] file:border-0 file:bg-bg-subtle file:px-3 file:py-1.5 file:text-[13px] file:text-ink"
             />
             {file && (
               <p className="mt-1 text-[11px] text-light">
@@ -322,7 +343,10 @@ function UploadDialog({
               </p>
             )}
             {hint && (
-              <p className="mt-1 text-[11px] italic text-success">{hint}</p>
+              <p className="mt-1 inline-flex items-center gap-1 text-[11px] italic text-success">
+                <Check className="size-3" />
+                {hint}
+              </p>
             )}
             {file && !hint && (
               <p className="mt-1 text-[11px] italic text-light">
@@ -335,10 +359,14 @@ function UploadDialog({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-mid">
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
               Type
             </label>
-            <select value={kind} onChange={(e) => setKind(e.target.value)}>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
+            >
               <option value="application">Ansøgning</option>
               <option value="cv">CV</option>
               <option value="job_posting">Job-opslag</option>
@@ -348,7 +376,7 @@ function UploadDialog({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-mid">
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
               Titel
             </label>
             <input
@@ -356,17 +384,19 @@ function UploadDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="fx 'CV version 4' eller 'Ansøgning TDC frontend'"
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
             />
           </div>
 
           {applications.length > 0 && (
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-mid">
-                Tilknyt job (valgfrit)
+              <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+                Tilknyt job <span className="normal-case tracking-normal text-dim">— valgfrit</span>
               </label>
               <select
                 value={jobAppId}
                 onChange={(e) => setJobAppId(e.target.value)}
+                className="!rounded-[8px] !border-hair !bg-bg-subtle"
               >
                 <option value="">— Ingen —</option>
                 {applications.map((a) => (
@@ -381,21 +411,22 @@ function UploadDialog({
 
           {error && <p className="text-[13px] text-danger">{error}</p>}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={pending}
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[13px] text-mid hover:text-ink disabled:opacity-50"
+            >
+              Annullér
+            </button>
             <button
               type="button"
               onClick={submit}
               disabled={pending || !file}
-              className="cursor-pointer rounded-[3px] border border-accent bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+              className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
             >
-              {pending ? "Uploader..." : "Upload"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer text-[12px] text-mid hover:text-ink"
-            >
-              Annullér
+              {pending ? "Uploader…" : "Upload"}
             </button>
           </div>
         </div>
