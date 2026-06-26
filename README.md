@@ -1,134 +1,91 @@
-# Log
+# Loggen
 
-Personlig logbog til daglige aktiviteter, projekter, jobansøgninger og helbred.
-Kører lokalt på din PC. Ingen cloud, ingen tredjeparter — alt ligger i en SQLite-fil
-i `data/app.db`.
+Personlig dashboard til daglige aktiviteter, projekter, jobansøgninger og
+helbred. Selvhostet på `loggen.app` — egen Ubuntu-server, egen SQLite-fil, egne
+disk-filer. Ingen tredjepart med teknisk adgang til data.
 
-> ## ❌ Dette projekt må aldrig pushes til GitHub eller andre remotes
+> ## ⚠️ Repoet ligger på `F:\ikke-synkroniseret\`
 >
-> Repoet indeholder personlig helbreds- og jobsøgningsdata og ligger med
-> vilje på `F:\ikke-synkroniseret\` (uden for cloud-sync). Det er bygget
-> som lokal-kun, og data hører ikke hjemme på en offentlig — eller for
-> den sags skyld privat — remote.
->
-> Push aldrig. Tilføj aldrig en `origin`. Hvis du har brug for versioning,
-> så hold det lokalt (`git log`, lokale branches er fine).
+> Mappen ligger med vilje uden for cloud-sync. Lokalt arbejde er fint;
+> push sker til den private GitHub-remote der bruges som deploy-kanal til
+> hjem-serveren. Tilføj **aldrig** offentlige remotes eller fork repoet —
+> alt indhold er personligt.
 
-## Stak
+## Stack
 
 - Next.js 16 (App Router) + React 19 + TypeScript
-- SQLite via `better-sqlite3`, Drizzle ORM
-- Tailwind v4
-- Egen session-baseret auth (bcrypt + signed cookies)
+- SQLite via libSQL-driver, Drizzle ORM
+- Tailwind v4, Lucide-ikoner, DM Sans + EB Garamond
+- Auth.js m. magic-link (Resend)
+- OAuth 2.0 for MCP-clients
+- Recharts (statistik), Sharp (icon-gen), fflate (ZIP-backup)
+- Selvhostet på Ubuntu 26.04 + Caddy + Let's Encrypt + systemd
 
-## Førstegangsopsætning
+## Sider
 
-Dobbeltklik `setup.bat` — det installerer afhængigheder og kører migrationer.
-Du skal selv tilføje `.env.local` med `AUTH_SECRET` og `AUTH_RESEND_KEY` og logge
-ind via magic link på `/login` første gang.
+`/` dashboard, `/today` (I dag), `/jobs`, `/projects` (Projekter),
+`/health` (Helbred), `/statistik`, `/journal`, `/documents`,
+`/indstillinger`.
 
-Alternativt manuelt:
+## Lokal udvikling
+
+`next dev` køres **aldrig** for dette projekt — det hænger PC'en. Verificér
+i stedet med:
 
 ```bash
 npm install
-npx tsx scripts/ensure-auth-schema.ts
+npx tsc --noEmit         # type-check
+npm run build            # produktions-build (når du vil være sikker)
 ```
 
-## Daglig brug
-
-Dobbeltklik `start.bat`. Appen åbnes i din browser på
-[http://localhost:3000](http://localhost:3000).
-
-Serveren binder også til dit lokale netværk på port 3000, så du kan logge ind fra
-din telefon på samme WiFi. Find PC'ens IP med `ipconfig` (fx
-`192.168.1.42`) og åbn `http://192.168.1.42:3000` på telefonen.
-
-For at lukke serveren: tryk `Ctrl+C` i terminalvinduet.
-
-## Udvikling
+Database-schema-ændringer:
 
 ```bash
-npm run dev          # hot-reload dev-server
-npm run db:studio    # database GUI i browseren
+npm run db:generate      # genererer migration ud fra schema.ts
+npm run db:migrate       # anvender migrationen
 ```
 
-Når schemaet ændres:
+## Deploy
+
+Repoet pushes til den private GitHub-remote (`origin/main`). På serveren:
 
 ```bash
-npm run db:generate  # genererer ny migration ud fra schema.ts
-npm run db:migrate   # anvender migrationen på app.db
+cd ~/log && git pull && npm install && npm run build && sudo systemctl restart log
 ```
+
+Service-navnet er `log.service` (systemd). Caddy står foran med TLS.
 
 ## Datalagring
 
-Alt ligger i `data/app.db`. Tag jævnligt en kopi af den fil til et sikkert sted —
-det er hele din historik.
+Alt under `data/`:
 
-## Claude Desktop-integration (MCP)
+- `data/app.db` — SQLite-databasen
+- `data/photos/` — foto-filer (tracker-billeder)
+- `data/documents/` — uploadede CV/ansøgninger/job-opslag
 
-Appen kommer med en lokal MCP-server der lader Claude Desktop læse og skrive i din
-logbog. Claude starter automatisk serveren når den skal bruge den.
+**Backup**: Hent en ZIP via `/indstillinger → Eksportér data`. Den
+indeholder hele DB'en + alle filer + en `README.txt`. Læg en kopi et
+andet sted (eksternt drev, krypteret cloud) — dataen findes kun ét sted nu.
 
-### Opsætning
+Import samme sted: ZIP eller JSON erstatter al nuværende data.
 
-1. Åbn `%APPDATA%\Claude\claude_desktop_config.json` i en editor.
-   (Fra Stifinder: skriv `%APPDATA%\Claude` i adressefeltet. Hvis filen ikke
-   findes, opret den med indholdet nedenfor.)
+## MCP — AI-adgang
 
-2. Tilføj denne sektion (flet ind hvis du allerede har andre `mcpServers`).
-   Absolutte stier bruges, så det ikke afhænger af PATH eller hvilken Node-version
-   der er aktiv i terminalen:
+Appen eksponerer en MCP-server på `/api/mcp` med OAuth 2.0. Forbind Claude
+(eller anden MCP-klient) via Custom Connector:
 
-   ```json
-   {
-     "mcpServers": {
-       "dagbog": {
-         "command": "C:\\Program Files\\nodejs\\node.exe",
-         "args": [
-           "F:\\ikke-synkroniseret\\log\\node_modules\\tsx\\dist\\cli.mjs",
-           "F:\\ikke-synkroniseret\\log\\src\\mcp\\server.ts"
-         ],
-         "cwd": "F:\\ikke-synkroniseret\\log"
-       }
-     }
-   }
-   ```
+1. Indtast `https://loggen.app/api/mcp` som server-URL.
+2. Opret en OAuth-client via `/indstillinger → Custom Connector` →
+   indtast Client ID + Secret i Claude.
+3. Godkend adgang via magic-link-login.
 
-3. Genstart Claude Desktop helt (afslut fra system-trayen, ikke bare luk vinduet).
+AI får så ~25 værktøjer (læsning + skrivning på dage, projekter, jobs,
+fotos, dokumenter, kosttilskud, ugemål osv.).
 
-4. I en ny samtale skulle "dagbog" nu være tilgængelig som connector. Prøv at
-   spørge fx *"Hvad har jeg skrevet i min logbog i dag?"* eller *"Log at jeg har
-   haft hovedpine 6/10 i dag"*.
+## Sikkerhed
 
-### Værktøjer Claude har til rådighed
-
-| Værktøj | Hvad det gør |
-|---|---|
-| `get_day_entry` | Henter logbog for en bestemt dag (standard: i dag) |
-| `list_day_entries` | Henter en datointerval — fx hele ugen |
-| `health_summary` | Aggregerer hovedpine, søvn, humør, energi over N dage |
-| `upsert_day_entry` | Skriver/opdaterer felter for en bestemt dag |
-
-Du kan også teste serveren manuelt fra terminal med `npm run mcp` — den lytter
-på stdin og taler MCP-protokollen (mest interessant under fejlfinding).
-
-### Sikkerhed
-
-MCP-serveren kører kun lokalt og kommunikerer kun gennem den proces Claude
-Desktop selv starter. Den lytter ikke på noget netværk og kan kun tilgå din
-SQLite-fil. Hvis du vil deaktivere den, fjern blot `dagbog`-sektionen fra
-Claude Desktop-konfigurationen.
-
-## Hvad er bygget indtil videre
-
-- Fase 1: Auth, login, beskyttede ruter, app-layout
-- Fase 2: "I dag"-siden med daglig helbredslog (hovedpine, søvn, humør, energi)
-  og dagsnotater
-- Fase 3: Ny mørk UI (DM Sans + EB Garamond), ugemål-banner, jobansøgninger med
-  status-livscyklus, fokus-projekt med tidsregistrering, refleksionsfelter
-  (hvad gik godt, næste skridt)
-- MCP-server til Claude Desktop med 16 værktøjer dækkende dagslog, ugemål,
-  projekter, tidsregistrering og jobansøgninger
-
-Kommende faser: jobansøgninger, projekter + tidsregistrering, helbredskalender,
-journal-søgning, dashboard, backup/restore.
+Enkelt-brugers app — ingen registrering. Auth via Auth.js magic-link
+(Resend transport). Sessions er DB-baserede så de kan revokes. UFW + SSH
+key-auth + LUKS+LVM på serveren. Datatrafikken går gennem TLS (Let's
+Encrypt). Dataen er **ikke** end-to-end-krypteret — server-administrator
+(dig selv) har teknisk DB-adgang.
