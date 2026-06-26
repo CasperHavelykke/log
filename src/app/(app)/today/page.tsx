@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
 import { db, schema } from "@/db";
 import {
@@ -145,7 +145,7 @@ export default async function Today() {
       initialDayGoals={{
         applicationsTarget: entry?.applicationsTarget ?? null,
         focusHoursTargetX10: entry?.focusHoursTargetX10 ?? null,
-        goalNote: entry?.goalNote ?? "",
+        goalNote: await resolveGoalNote(user.id, date, entry?.goalNote),
       }}
       projects={projects.map((p) => ({ id: p.id, name: p.name }))}
       initialFocusProjectId={focusProjectId}
@@ -255,4 +255,30 @@ export default async function Today() {
       lastSavedAt={entry?.updatedAt ?? null}
     />
   );
+}
+
+// Hvis dagens day_entry endnu ikke har et goalNote sat (null), fald tilbage
+// til det seneste mål brugeren har skrevet i en tidligere dag. Tom streng ""
+// betyder at brugeren bevidst har ryddet feltet i dag → respekter det.
+async function resolveGoalNote(
+  userId: number,
+  today: string,
+  todaysGoalNote: string | null | undefined,
+): Promise<string> {
+  if (todaysGoalNote !== null && todaysGoalNote !== undefined) {
+    return todaysGoalNote;
+  }
+  const rows = await db
+    .select({ goalNote: schema.dayEntries.goalNote })
+    .from(schema.dayEntries)
+    .where(
+      and(
+        eq(schema.dayEntries.userId, userId),
+        lt(schema.dayEntries.date, today),
+        isNotNull(schema.dayEntries.goalNote),
+      ),
+    )
+    .orderBy(desc(schema.dayEntries.date))
+    .limit(1);
+  return rows[0]?.goalNote ?? "";
 }

@@ -182,10 +182,13 @@ export async function saveDayGoals(input: z.infer<typeof dayGoalsSchema>) {
     )
     .limit(1);
 
+  // Bevidst IKKE nullIfEmpty for goalNote: tom streng betyder "brugeren har
+  // ryddet feltet i dag" og skal NOT autoudfyldes med gårsdagens mål.
+  // null = aldrig rørt for denne dato → page.tsx må falde tilbage til seneste.
   const fields = {
     applicationsTarget,
     focusHoursTargetX10,
-    goalNote: nullIfEmpty(goalNote),
+    goalNote,
   };
 
   if (existing[0]) {
