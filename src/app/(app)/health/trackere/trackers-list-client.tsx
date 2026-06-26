@@ -56,12 +56,20 @@ export function TrackersListClient({
 
   return (
     <div className="mx-auto max-w-[880px] px-4 py-8">
-      <Link
-        href="/health"
-        className="mb-3 inline-flex items-center gap-1 text-[12px] text-light hover:text-accent"
-      >
-        ← Helbred
-      </Link>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <Link
+          href="/health"
+          className="inline-flex items-center gap-1 text-[12px] text-light hover:text-accent"
+        >
+          ← Helbred
+        </Link>
+        <Link
+          href="/health/photos"
+          className="text-[12px] text-accent hover:underline"
+        >
+          Alle fotos →
+        </Link>
+      </div>
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-hair pb-5">
         <div>
           <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">

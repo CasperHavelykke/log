@@ -318,7 +318,7 @@ function Lightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 inline-flex cursor-pointer items-center rounded-full bg-black/60 p-2 text-white/85 backdrop-blur-sm hover:text-white"
+        className="absolute right-4 inline-flex cursor-pointer items-center rounded-full bg-black/60 p-2 text-white/85 backdrop-blur-sm hover:text-white top-[max(1rem,env(safe-area-inset-top))]"
         aria-label="Luk"
       >
         <X className="size-5" />
@@ -360,7 +360,7 @@ function Lightbox({
         draggable={false}
       />
 
-      <div className="absolute bottom-4 left-4 right-4 text-center text-[13px] text-white/80">
+      <div className="absolute left-4 right-4 text-center text-[13px] text-white/80 bottom-[max(1rem,env(safe-area-inset-bottom))]">
         <div>
           {formatDanishDate(photo.takenAt.slice(0, 10))}
           {tracker && <span> · {tracker.name}</span>}
