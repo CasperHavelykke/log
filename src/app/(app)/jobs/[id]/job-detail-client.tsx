@@ -72,12 +72,12 @@ const STATUS_ORDER: Status[] = [
 
 const STATUS_PILL_CLASSES: Record<Status, string> = {
   sent: "bg-accent-bg text-accent",
-  no_response: "bg-[rgba(160,174,192,0.15)] text-mid",
+  no_response: "bg-bg-subtle text-mid",
   replied: "bg-[var(--warning-soft)] text-warning",
   interview: "bg-[var(--success-soft)] text-success",
-  offer: "bg-[rgba(74,222,128,0.22)] text-success",
-  rejected: "bg-[rgba(248,113,113,0.12)] text-danger",
-  withdrawn: "bg-[rgba(160,174,192,0.15)] text-mid",
+  offer: "bg-[var(--success-strong)] text-success",
+  rejected: "bg-[var(--danger-soft)] text-danger",
+  withdrawn: "bg-bg-subtle text-mid",
 };
 
 const STATUS_DOT_BG: Record<Status, string> = {
@@ -233,7 +233,7 @@ export function JobDetailClient({
       <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.5fr_1fr] md:items-start">
         {/* Left: details */}
         <div className="space-y-5">
-          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[var(--shadow-card)]">
             <h2 className="mb-3 border-b border-hair pb-2 font-serif text-[16px] text-accent">
               Grundoplysninger
             </h2>
@@ -326,7 +326,7 @@ export function JobDetailClient({
             )}
           </section>
 
-          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[var(--shadow-card)]">
             <h2 className="mb-3 border-b border-hair pb-2 font-serif text-[16px] text-accent">
               Noter
             </h2>
@@ -350,7 +350,7 @@ export function JobDetailClient({
 
         {/* Right: documents + timeline */}
         <div className="space-y-5">
-          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[var(--shadow-card)]">
             <h2 className="mb-3 border-b border-hair pb-2 font-serif text-[16px] text-accent">
               Dokumenter
             </h2>
@@ -370,7 +370,7 @@ export function JobDetailClient({
             />
           </section>
 
-          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+          <section className="rounded-[10px] bg-bg-elevated p-5 shadow-[var(--shadow-card)]">
             <h2 className="mb-3 border-b border-hair pb-2 font-serif text-[16px] text-accent">
               Tidslinje
             </h2>

@@ -30,7 +30,7 @@ const KIND_LABELS: Record<string, string> = {
 
 const KIND_COLORS: Record<string, string> = {
   application: "bg-[var(--accent-bg)] text-accent",
-  cv: "bg-[rgba(74,222,128,0.15)] text-[var(--success)]",
+  cv: "bg-[var(--success-soft)] text-[var(--success)]",
   job_posting: "bg-[rgba(167,139,250,0.15)] text-[#a78bfa]",
   reference: "bg-[var(--warning-soft)] text-[var(--warning)]",
   other: "bg-bg-subtle text-mid",
@@ -110,7 +110,7 @@ export function DocumentsClient({
         skriver fremtidige ansøgninger med Claude kan den trække på din historik.
       </p>
 
-      <div className="mb-4 flex items-center gap-2 rounded-[10px] bg-bg-elevated px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mb-4 flex items-center gap-2 rounded-[10px] bg-bg-elevated px-3 py-2 shadow-[var(--shadow-card)]">
         <Search className="size-4 text-light" />
         <input
           type="text"
@@ -186,7 +186,7 @@ function DocumentRow({
   }
 
   return (
-    <div className="flex items-start gap-3 rounded-[10px] bg-bg-elevated p-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-4">
+    <div className="flex items-start gap-3 rounded-[10px] bg-bg-elevated p-3 shadow-[var(--shadow-card)] sm:p-4">
       <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
         <FileText className="size-4" />
       </span>

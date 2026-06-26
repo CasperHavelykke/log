@@ -58,7 +58,7 @@ export function Nav({
     email && email.length > 22 ? email.slice(0, 20) + "…" : email ?? "";
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[224px] shrink-0 flex-col border-r border-hair bg-[#070b14] px-3.5 py-5 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-[224px] shrink-0 flex-col border-r border-hair bg-page px-3.5 py-5 md:flex">
       <div className="mb-3.5 flex items-baseline gap-2 border-b border-hair pb-5">
         <span className="font-serif text-[24px] leading-none text-ink">
           Log

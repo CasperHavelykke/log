@@ -175,7 +175,7 @@ export function TrackerDetailClient({
                 <button
                   type="button"
                   onClick={removeTracker}
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[13px] text-danger hover:bg-[rgba(248,113,113,0.1)]"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[13px] text-danger hover:bg-[var(--danger-soft)]"
                 >
                   <Trash2 className="size-3.5" />
                   Slet tracker
@@ -196,7 +196,7 @@ export function TrackerDetailClient({
       </button>
 
       {hasMetric && (
-        <section className="mb-5 rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+        <section className="mb-5 rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
           <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-hair pb-3">
             <div>
               <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
@@ -215,7 +215,7 @@ export function TrackerDetailClient({
             </span>
           </div>
           <div className="h-[180px] w-full sm:h-[220px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <LineChart
                 data={chartData}
                 margin={{ top: 8, right: 8, left: -14, bottom: 0 }}
@@ -284,7 +284,7 @@ export function TrackerDetailClient({
         </section>
       )}
 
-      <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+      <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-hair pb-3">
           <div>
             <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">

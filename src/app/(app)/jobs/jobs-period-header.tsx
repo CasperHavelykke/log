@@ -39,7 +39,7 @@ export function JobsPeriodHeader({
               {selected.name ||
                 `Periode fra ${formatDanishDate(selected.startedAt)}`}
               {selected.isActive ? (
-                <span className="ml-2 rounded-[3px] bg-[rgba(74,222,128,0.12)] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-success">
+                <span className="ml-2 rounded-[3px] bg-[var(--success-soft)] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.4px] text-success">
                   Aktiv
                 </span>
               ) : null}

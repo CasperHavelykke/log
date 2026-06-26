@@ -243,7 +243,7 @@ export function ProjectsPage({
       )}
 
       {error && (
-        <div className="mb-4 rounded-[10px] border border-danger/40 bg-[rgba(248,113,113,0.08)] px-4 py-2.5 text-[13px] text-danger">
+        <div className="mb-4 rounded-[10px] border border-danger/40 bg-[var(--danger-soft)] px-4 py-2.5 text-[13px] text-danger">
           {error}
         </div>
       )}
@@ -385,7 +385,7 @@ function ProjectCard({
 
   return (
     <div
-      className={`group rounded-[10px] bg-bg-elevated shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] transition-colors ${
+      className={`group rounded-[10px] bg-bg-elevated shadow-[var(--shadow-card)] transition-colors ${
         project.archived ? "opacity-60" : ""
       } ${expanded ? "ring-1 ring-[var(--accent-soft-strong)]" : ""}`}
     >

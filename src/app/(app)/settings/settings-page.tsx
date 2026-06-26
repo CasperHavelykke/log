@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Briefcase, Check, Clock, LogOut, Moon, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Briefcase, Check, Clock, LogOut, Monitor, Moon, Plus, Sun, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import {
   createOAuthClient,
@@ -13,6 +13,8 @@ import type { CustomParamSummary } from "@/lib/custom-parameters";
 import {
   startJobSearchPeriod,
 } from "../jobs/period-actions";
+import type { Theme } from "@/lib/theme";
+import { setTheme } from "./theme-actions";
 import { formatDanishDate } from "@/lib/date";
 import { setFasteEnabled, setGarminSleepEnabled } from "@/lib/user-prefs";
 import {
@@ -52,6 +54,7 @@ export function SettingsPage({
   initialPastPeriods,
   initialFasteEnabled,
   initialGarminSleepEnabled,
+  initialTheme,
 }: {
   username: string;
   email: string;
@@ -61,6 +64,7 @@ export function SettingsPage({
   initialPastPeriods: PastPeriodRow[];
   initialFasteEnabled: boolean;
   initialGarminSleepEnabled: boolean;
+  initialTheme: Theme;
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-4 py-8">
@@ -85,6 +89,7 @@ export function SettingsPage({
       </header>
 
       <div className="space-y-4">
+        <ThemeCard initial={initialTheme} />
         <FeaturesCard
           initialFasteEnabled={initialFasteEnabled}
           initialGarminSleepEnabled={initialGarminSleepEnabled}
@@ -111,7 +116,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
       <div className="mb-4 border-b border-hair pb-3">
         <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
           {label}
@@ -138,6 +143,69 @@ function Label({ children }: { children: React.ReactNode }) {
 function todayIso(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const THEME_OPTIONS: { value: Theme; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: "auto", label: "Auto", icon: Monitor },
+  { value: "light", label: "Lys", icon: Sun },
+  { value: "dark", label: "Mørk", icon: Moon },
+];
+
+function ThemeCard({ initial }: { initial: Theme }) {
+  const [theme, setThemeState] = useState<Theme>(initial);
+  const [, start] = useTransition();
+
+  function pick(next: Theme) {
+    if (next === theme) return;
+    const previous = theme;
+    setThemeState(next);
+    // Optimistisk DOM-opdatering så bytte føles øjeblikkeligt; cookie
+    // sættes asynkront og næste navigation bevarer valget.
+    if (typeof document !== "undefined") {
+      if (next === "auto") {
+        const prefersLight =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: light)").matches;
+        if (prefersLight) document.documentElement.setAttribute("data-theme", "light");
+        else document.documentElement.removeAttribute("data-theme");
+      } else {
+        document.documentElement.setAttribute("data-theme", next);
+      }
+    }
+    start(async () => {
+      const res = await setTheme(next);
+      if (!res.ok) setThemeState(previous);
+    });
+  }
+
+  return (
+    <Card label="Udseende" title="Lys eller mørk">
+      <p className="mb-4 text-[13px] text-mid">
+        Auto følger din enheds system-præference. Vælg lys eller mørk hvis du
+        vil overstyre det.
+      </p>
+      <div className="inline-flex gap-0.5 rounded-[8px] bg-bg p-0.5">
+        {THEME_OPTIONS.map((opt) => {
+          const Icon = opt.icon;
+          const active = theme === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => pick(opt.value)}
+              className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[6px] px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                active ? "bg-accent text-white" : "text-mid hover:text-ink"
+              }`}
+              aria-pressed={active}
+            >
+              <Icon className="size-3.5" />
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
 }
 
 function FeaturesCard({
@@ -311,7 +379,7 @@ function JobSearchCard({
       </div>
 
       {active ? (
-        <div className="rounded-[10px] border border-[rgba(74,222,128,0.3)] bg-[var(--success-soft)] p-3">
+        <div className="rounded-[10px] border border-[var(--success-strong)] bg-[var(--success-soft)] p-3">
           <div className="mb-2 flex items-center gap-2 text-[13px]">
             <Briefcase className="size-4 text-success" />
             <span className="font-medium text-ink">
@@ -535,7 +603,7 @@ function ImportCard() {
           type="button"
           onClick={runImport}
           disabled={pending || file === null}
-          className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-40"
+          className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[var(--danger-soft)] disabled:opacity-40"
         >
           {pending ? "Importerer…" : "Importér og erstat alt"}
         </button>
@@ -603,8 +671,8 @@ function DeleteAccountCard({ email }: { email: string }) {
   }
 
   return (
-    <section className="rounded-[10px] border border-[rgba(248,113,113,0.3)] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
-      <div className="mb-4 border-b border-[rgba(248,113,113,0.2)] pb-3">
+    <section className="rounded-[10px] border border-[var(--danger-strong)] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
+      <div className="mb-4 border-b border-[var(--danger-strong)] pb-3">
         <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-danger">
           Permanent handling
         </div>
@@ -625,14 +693,14 @@ function DeleteAccountCard({ email }: { email: string }) {
           type="button"
           onClick={openSummary}
           disabled={pending}
-          className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[rgba(248,113,113,0.1)] disabled:opacity-50"
+          className="cursor-pointer rounded-[8px] border border-danger bg-transparent px-4 py-2 text-[13px] font-medium text-danger hover:bg-[var(--danger-soft)] disabled:opacity-50"
         >
           {pending ? "Indlæser…" : "Slet min konto"}
         </button>
       )}
 
       {step === "summary" && summary && (
-        <div className="rounded-[10px] bg-[rgba(248,113,113,0.05)] p-3">
+        <div className="rounded-[10px] bg-[var(--danger-soft)] p-3">
           <p className="mb-2 text-[13px] font-medium text-ink">
             Du sletter følgende:
           </p>
@@ -672,7 +740,7 @@ function DeleteAccountCard({ email }: { email: string }) {
       )}
 
       {step === "confirm" && (
-        <div className="rounded-[10px] bg-[rgba(248,113,113,0.05)] p-3">
+        <div className="rounded-[10px] bg-[var(--danger-soft)] p-3">
           <p className="mb-2 text-[13px] text-ink">
             Skriv din email for at bekræfte:
           </p>
@@ -822,7 +890,7 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
       )}
 
       {created && (
-        <div className="mb-4 rounded-[10px] border border-[rgba(74,222,128,0.3)] bg-[var(--success-soft)] p-4">
+        <div className="mb-4 rounded-[10px] border border-[var(--success-strong)] bg-[var(--success-soft)] p-4">
           <p className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-success">
             <Check className="size-3.5" />
             Client &quot;{created.name}&quot; oprettet

@@ -474,7 +474,7 @@ function MetricPicker({
   }, [data, allMetrics]);
 
   return (
-    <aside className="space-y-3 self-start md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <aside className="space-y-3 self-start md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       {CATEGORIES.map((cat) => {
         if (cat.id === "garmin" && !garminSleepEnabled) return null;
         const metrics = allMetrics
@@ -607,11 +607,11 @@ function StackedView({
       {metrics.map((m) => (
         <div
           key={m.key}
-          className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]"
+          className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]"
         >
           <MetricHeader metric={m} data={data} />
           <div className="mt-2 h-[160px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <LineChart
                 data={data}
                 syncId="statistik"
@@ -690,7 +690,7 @@ function OverlayView({
   const overflow = all.length - metrics.length;
 
   return (
-    <div className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-hair pb-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {metrics.map((m, i) => (
@@ -713,7 +713,7 @@ function OverlayView({
         )}
       </div>
       <div className="h-[460px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <LineChart
             data={data}
             margin={{ top: 8, right: 32, left: 8, bottom: 0 }}

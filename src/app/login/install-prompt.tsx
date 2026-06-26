@@ -53,7 +53,7 @@ export function InstallPrompt() {
   if (env === "loading" || env === "pwa" || env === "desktop") return null;
 
   return (
-    <div className="mb-8 rounded-[12px] border border-[var(--accent-soft-strong)] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="mb-8 rounded-[12px] border border-[var(--accent-soft-strong)] bg-bg-elevated p-5 shadow-[var(--shadow-card)]">
       <div className="mb-3">
         <h2 className="font-serif text-[20px] font-medium text-ink">
           Velkommen til Loggen

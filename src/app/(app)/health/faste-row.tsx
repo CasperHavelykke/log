@@ -52,7 +52,7 @@ export function FasteRow({
 
   return (
     <div
-      className={`group flex items-center gap-2.5 rounded-[10px] bg-bg-elevated px-3 py-2.5 text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:rounded-[8px] md:bg-bg md:py-2 md:shadow-none ${pending ? "opacity-50" : ""}`}
+      className={`group flex items-center gap-2.5 rounded-[10px] bg-bg-elevated px-3 py-2.5 text-[13px] shadow-[var(--shadow-card)] md:rounded-[8px] md:bg-bg md:py-2 md:shadow-none ${pending ? "opacity-50" : ""}`}
     >
       <span
         className={`flex size-7 shrink-0 items-center justify-center rounded-full ${

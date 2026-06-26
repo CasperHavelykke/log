@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  /* === Dark theme (default) === */
   --bg: #0a0f1a;
   --page: #111827;
   --card: #1a2436;
@@ -21,10 +22,44 @@
   --accent-soft-strong: rgba(110, 169, 242, 0.22);
   --success: #4ade80;
   --success-soft: rgba(74, 222, 128, 0.12);
+  --success-strong: rgba(74, 222, 128, 0.3);
   --warning: #fbbf24;
   --warning-soft: rgba(245, 185, 66, 0.12);
   --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --danger-strong: rgba(248, 113, 113, 0.3);
   --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="light"] {
+  /* === Light theme === */
+  --bg: #f5f3ee;
+  --page: #faf8f3;
+  --card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #ece9e2;
+  --border: #d8d3c8;
+  --border-light: #e4e0d6;
+  --hair: rgba(0, 0, 0, 0.07);
+  --hair-strong: rgba(0, 0, 0, 0.14);
+  --ink: #1a1a1a;
+  --mid: #4a4a4a;
+  --light: #6b6b6b;
+  --dim: #9a958a;
+  --accent: #3b82f6;
+  --accent-bright: #2563eb;
+  --accent-dim: #93c5fd;
+  --accent-bg: rgba(59, 130, 246, 0.10);
+  --accent-soft-strong: rgba(59, 130, 246, 0.20);
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.10);
+  --success-strong: rgba(22, 163, 74, 0.25);
+  --warning: #d97706;
+  --warning-soft: rgba(217, 119, 6, 0.10);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.10);
+  --danger-strong: rgba(220, 38, 38, 0.25);
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 @theme inline {
@@ -46,8 +81,13 @@
   --color-accent-dim: var(--accent-dim);
   --color-accent-bg: var(--accent-bg);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-strong: var(--success-strong);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-strong: var(--danger-strong);
   /* Kompatibilitet med tidligere komponenter */
   --color-background: var(--bg);
   --color-foreground: var(--ink);

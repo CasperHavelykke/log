@@ -67,13 +67,13 @@ const STATUS_LABELS: Record<Status, string> = {
 };
 
 const STATUS_CLASSES: Record<Status, string> = {
-  sent: "bg-[rgba(74,144,226,0.15)] text-[var(--accent-bright)]",
-  no_response: "bg-[rgba(160,174,192,0.15)] text-[var(--mid)]",
-  replied: "bg-[rgba(251,191,36,0.15)] text-[var(--warning)]",
-  interview: "bg-[rgba(74,222,128,0.15)] text-[var(--success)]",
-  offer: "bg-[rgba(74,222,128,0.25)] text-[var(--success)]",
-  rejected: "bg-[rgba(248,113,113,0.15)] text-[var(--danger)]",
-  withdrawn: "bg-[rgba(160,174,192,0.15)] text-[var(--mid)]",
+  sent: "bg-[var(--accent-bg)] text-[var(--accent-bright)]",
+  no_response: "bg-bg-subtle text-[var(--mid)]",
+  replied: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  interview: "bg-[var(--success-soft)] text-[var(--success)]",
+  offer: "bg-[var(--success-strong)] text-[var(--success)]",
+  rejected: "bg-[var(--danger-soft)] text-[var(--danger)]",
+  withdrawn: "bg-bg-subtle text-[var(--mid)]",
 };
 
 const STATUS_DOT: Record<Status, string> = {
@@ -424,7 +424,7 @@ export function JobsPage({
       )}
 
       {error && (
-        <div className="mb-4 rounded-md border border-danger bg-[rgba(248,113,113,0.1)] px-4 py-2 text-sm text-danger">
+        <div className="mb-4 rounded-md border border-danger bg-[var(--danger-soft)] px-4 py-2 text-sm text-danger">
           {error}
         </div>
       )}
@@ -594,7 +594,7 @@ function StatRow({ apps, events }: { apps: App[]; events: Event[] }) {
       {items.map((s) => (
         <div
           key={s.label}
-          className="min-w-[92px] shrink-0 rounded-[10px] bg-bg-elevated px-3.5 py-2.5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:min-w-0"
+          className="min-w-[92px] shrink-0 rounded-[10px] bg-bg-elevated px-3.5 py-2.5 shadow-[var(--shadow-card)] md:min-w-0"
         >
           <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
             {s.label}
@@ -757,7 +757,7 @@ function JobStats({ apps, events }: { apps: App[]; events: Event[] }) {
   const labelEvery = Math.ceil(buckets.items.length / 16);
 
   return (
-    <div className="mb-6 rounded-[10px] bg-bg-elevated p-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="mb-6 rounded-[10px] bg-bg-elevated p-5 shadow-[var(--shadow-card)]">
       <div className="mb-3.5 flex flex-wrap items-baseline justify-between gap-3 border-b border-hair pb-2.5">
         <h2 className="font-serif text-[19px] font-medium text-accent">Jobstatistik</h2>
         <div className="inline-flex shrink-0 gap-0.5 rounded-[8px] bg-bg p-0.5">
@@ -954,12 +954,12 @@ function FilterChip({
 
 const STATUS_PILL_CLASSES: Record<Status, string> = {
   sent: "bg-accent-bg text-accent",
-  no_response: "bg-[rgba(160,174,192,0.15)] text-mid",
+  no_response: "bg-bg-subtle text-mid",
   replied: "bg-[var(--warning-soft)] text-warning",
   interview: "bg-[var(--success-soft)] text-success",
-  offer: "bg-[rgba(74,222,128,0.22)] text-success",
-  rejected: "bg-[rgba(248,113,113,0.12)] text-danger",
-  withdrawn: "bg-[rgba(160,174,192,0.15)] text-mid",
+  offer: "bg-[var(--success-strong)] text-success",
+  rejected: "bg-[var(--danger-soft)] text-danger",
+  withdrawn: "bg-bg-subtle text-mid",
 };
 
 const STATUS_DOT_BG: Record<Status, string> = {
@@ -1050,7 +1050,7 @@ function RowCard({
   return (
     <Link
       href={`/jobs/${app.id}`}
-      className="block rounded-[10px] bg-bg-elevated p-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] transition-colors hover:bg-bg-subtle md:px-4 md:py-3"
+      className="block rounded-[10px] bg-bg-elevated p-3 shadow-[var(--shadow-card)] transition-colors hover:bg-bg-subtle md:px-4 md:py-3"
     >
       {/* Mobile layout: 3 rækker — top (firma + status), meta (docs + dato), timeline */}
       <div className="md:hidden">

@@ -121,7 +121,7 @@ function scoreColor(score: number | null): string {
   if (score === null) return "text-mid";
   if (score >= 80) return "bg-[var(--success-soft)] text-success";
   if (score >= 60) return "bg-[var(--warning-soft)] text-warning";
-  return "bg-[rgba(248,113,113,0.15)] text-danger";
+  return "bg-[var(--danger-soft)] text-danger";
 }
 function fmtMinutes(m: number | null): string {
   if (m === null) return "–";
@@ -437,7 +437,7 @@ function StatCard({
   trend?: { value: string; positive: boolean };
 }) {
   return (
-    <div className="min-w-[100px] shrink-0 rounded-[10px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:min-w-0 sm:shrink">
+    <div className="min-w-[100px] shrink-0 rounded-[10px] bg-bg-elevated px-3.5 py-3 shadow-[var(--shadow-card)] sm:min-w-0 sm:shrink">
       <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
         {label}
       </div>
@@ -475,7 +475,7 @@ function CalendarPane({
   onSelect: (iso: string) => void;
 }) {
   return (
-    <div className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       <div className="mb-3 md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
         <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
           Kalender
@@ -717,7 +717,7 @@ function DayEditorPanel({
       : null;
 
   return (
-    <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       <EditorHead date={date} saveState={saveState} savedAt={savedAt} errorMsg={errorMsg.current} />
 
       {(hasGarminScore || hasGarminDuration) && (
@@ -1502,7 +1502,7 @@ function FotoOpfoelgningCard({
   }
 
   return (
-    <div className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       <div className="mb-3 md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
         <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
           Foto-opfølgning

@@ -191,7 +191,7 @@ function PhotoCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-[10px] bg-bg-elevated shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="overflow-hidden rounded-[10px] bg-bg-elevated shadow-[var(--shadow-card)]">
       <button
         type="button"
         onClick={onOpen}

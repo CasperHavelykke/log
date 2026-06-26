@@ -177,13 +177,13 @@ const STATUS_LABELS: Record<Status, string> = {
 };
 
 const STATUS_CLASSES: Record<Status, string> = {
-  sent: "bg-[rgba(74,144,226,0.15)] text-[var(--accent-bright)]",
-  no_response: "bg-[rgba(160,174,192,0.15)] text-[var(--mid)]",
-  replied: "bg-[rgba(251,191,36,0.15)] text-[var(--warning)]",
-  interview: "bg-[rgba(74,222,128,0.15)] text-[var(--success)]",
-  offer: "bg-[rgba(74,222,128,0.25)] text-[var(--success)]",
-  rejected: "bg-[rgba(248,113,113,0.15)] text-[var(--danger)]",
-  withdrawn: "bg-[rgba(160,174,192,0.15)] text-[var(--mid)]",
+  sent: "bg-[var(--accent-bg)] text-[var(--accent-bright)]",
+  no_response: "bg-bg-subtle text-[var(--mid)]",
+  replied: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  interview: "bg-[var(--success-soft)] text-[var(--success)]",
+  offer: "bg-[var(--success-strong)] text-[var(--success)]",
+  rejected: "bg-[var(--danger-soft)] text-[var(--danger)]",
+  withdrawn: "bg-bg-subtle text-[var(--mid)]",
 };
 
 function hoursDisplay(x10: number | null): string {
@@ -507,7 +507,7 @@ function Card({
 }) {
   return (
     <div
-      className={`md:rounded-[10px] md:bg-bg-elevated md:px-6 md:py-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] ${full ? "col-span-full" : ""}`}
+      className={`md:rounded-[10px] md:bg-bg-elevated md:px-6 md:py-5 md:shadow-[var(--shadow-card)] ${full ? "col-span-full" : ""}`}
     >
       <div className="mb-3 flex items-baseline justify-between md:mb-4 md:border-b md:border-hair md:pb-2.5">
         <div className="font-serif text-[22px] font-medium text-ink md:text-[19px] md:text-accent">
@@ -862,7 +862,7 @@ function FocusEntryCard({
   }, [isEditing, entry.hoursX10]);
 
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:bg-bg">
+    <div className="flex items-center gap-3 rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[var(--shadow-card)] md:bg-bg">
       <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
         <FolderKanban className="size-4" />
       </span>
@@ -1021,7 +1021,7 @@ function ApplicationsList({
             return (
               <div
                 key={a.id}
-                className="rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:bg-bg"
+                className="rounded-[14px] bg-bg-elevated px-3.5 py-3 shadow-[var(--shadow-card)] md:bg-bg"
               >
                 <div className="flex items-center gap-3">
                   <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
@@ -1721,7 +1721,7 @@ function FastCard({
     return (
       <div className="space-y-4">
         <div
-          className="rounded-[10px] bg-bg-elevated px-5 py-5 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:grid md:grid-cols-[1fr_1.4fr] md:items-center md:gap-8 md:bg-transparent md:p-0 md:shadow-none"
+          className="rounded-[10px] bg-bg-elevated px-5 py-5 shadow-[var(--shadow-card)] md:grid md:grid-cols-[1fr_1.4fr] md:items-center md:gap-8 md:bg-transparent md:p-0 md:shadow-none"
         >
           {/* Left column: label + tæller + siden-info */}
           <div className="text-center">

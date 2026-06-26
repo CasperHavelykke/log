@@ -28,7 +28,7 @@ export async function FasteHistory() {
 
   if (fasts.length === 0) {
     return (
-      <div className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+      <div className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
         <div className="mb-3 md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
           <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
             Faste
@@ -55,7 +55,7 @@ export async function FasteHistory() {
     qualifiedDurations.length > 0 ? Math.max(...qualifiedDurations) : null;
 
   return (
-    <section className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)]">
+    <section className="mt-6 md:mt-8 md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       <div className="mb-3 flex items-baseline justify-between md:mb-3.5 md:border-b md:border-hair md:pb-2.5">
         <h2 className="font-serif text-[22px] font-medium leading-none text-ink md:text-[19px] md:text-accent">
           Faste
@@ -109,7 +109,7 @@ export async function FasteHistory() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[10px] bg-bg-elevated px-3 py-2.5 text-center shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] md:rounded-[8px] md:bg-bg md:shadow-none">
+    <div className="rounded-[10px] bg-bg-elevated px-3 py-2.5 text-center shadow-[var(--shadow-card)] md:rounded-[8px] md:bg-bg md:shadow-none">
       <div className="font-serif text-[22px] leading-none text-ink md:text-[20px]">
         {value}
       </div>

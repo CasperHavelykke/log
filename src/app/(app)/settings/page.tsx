@@ -1,6 +1,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
 import { db, schema } from "@/db";
+import { getThemePreference } from "@/lib/theme";
 import { SettingsPage } from "./settings-page";
 import { listOAuthClients } from "./oauth-actions";
 import { listCustomParameters } from "@/lib/custom-parameters";
@@ -15,6 +16,7 @@ export default async function Settings() {
   const user = await requireUser();
   const fasteEnabled = user.fasteEnabled ?? false;
   const garminSleepEnabled = user.garminSleepEnabled ?? false;
+  const themePreference = await getThemePreference();
   const [clients, customParameters, activePeriod, allPeriods, allApps] =
     await Promise.all([
       listOAuthClients(),
@@ -76,6 +78,7 @@ export default async function Settings() {
       initialPastPeriods={pastPeriods}
       initialFasteEnabled={fasteEnabled}
       initialGarminSleepEnabled={garminSleepEnabled}
+      initialTheme={themePreference}
     />
   );
 }

@@ -42,7 +42,7 @@ export function CustomParametersCard({
   const visible = showArchived ? params : params.filter((p) => !p.archived);
 
   return (
-    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[0_1px_0_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.3)] sm:p-5">
+    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
       <div className="mb-4 border-b border-hair pb-3">
         <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
           Mine parametre
