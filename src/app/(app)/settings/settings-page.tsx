@@ -934,20 +934,22 @@ function OAuthClientsCard({ initial }: { initial: OAuthClientRow[] }) {
                 className="rounded-[10px] bg-bg-subtle px-3 py-2.5 text-[12px]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-ink">{c.name}</span>
-                  <code className="text-mid">{c.clientId}</code>
+                  <span className="shrink-0 font-medium text-ink">{c.name}</span>
+                  <code className="min-w-0 flex-1 truncate text-mid">
+                    {c.clientId}
+                  </code>
                   <button
                     type="button"
                     onClick={() => remove(c.id)}
                     disabled={pending}
-                    className="ml-auto cursor-pointer text-dim hover:text-danger"
+                    className="shrink-0 cursor-pointer text-dim hover:text-danger"
                     title="Slet"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
                 {uris.length > 0 && (
-                  <div className="mt-1 text-[11px] text-light">
+                  <div className="mt-1 break-all text-[11px] text-light">
                     Redirects: {uris.join(", ")}
                   </div>
                 )}
