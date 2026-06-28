@@ -2,13 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
-import {
-  addDrink,
-  endSession,
-  removeDrink,
-  type ActiveSessionPayload,
-  type DrinkKind,
-} from "./actions";
+import { addDrink, endSession, removeDrink } from "./actions";
+import type { ActiveSessionPayload, DrinkKind } from "./constants";
 
 const KIND_LABEL: Record<DrinkKind, string> = {
   genstand: "Genstand",

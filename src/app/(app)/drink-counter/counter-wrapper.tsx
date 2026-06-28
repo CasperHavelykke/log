@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { CounterScreen } from "./counter-screen";
-import type { ActiveSessionPayload } from "./actions";
+import type { ActiveSessionPayload } from "./constants";
 
 const ESCAPE_COOKIE = "drink-counter-escape";
 

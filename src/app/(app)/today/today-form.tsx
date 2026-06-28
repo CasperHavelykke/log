@@ -221,7 +221,6 @@ export function TodayPage(props: {
   weekStart: string;
   weekAppsCount: number;
   weekHoursX10: number;
-  drinkKcal: number;
   initialWeekGoal: WeekGoalState;
   initialDayGoals: DayGoalsState;
   projects: ProjectRef[];
@@ -400,7 +399,6 @@ export function TodayPage(props: {
             trackers={props.trackers}
             customParameters={props.customParameters}
             customValues={props.customValues}
-            drinkKcal={props.drinkKcal}
           />
         </Card>
       </div>
@@ -1176,6 +1174,10 @@ function ApplicationsList({
 
 // --- Helbred ----------------------------------------------------------------
 
+// 1 dansk genstand = 12g ren alkohol ≈ 84 kcal ren ethanol. Med typisk
+// sukker/kulhydrater i øl/vin/drinks lander det omkring 100 kcal pr. enhed.
+const KCAL_PER_ALCOHOL_UNIT = 100;
+
 function HealthBody({
   day,
   setDay,
@@ -1187,7 +1189,6 @@ function HealthBody({
   trackers,
   customParameters,
   customValues,
-  drinkKcal,
 }: {
   day: DayState;
   setDay: (d: DayState) => void;
@@ -1203,7 +1204,6 @@ function HealthBody({
   trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
   customValues: CustomValueRow[];
-  drinkKcal: number;
 }) {
   const hasGarminDuration =
     garminSleepEnabled &&
@@ -1235,8 +1235,10 @@ function HealthBody({
     day.carbsG !== null && day.proteinG !== null && day.fatG !== null
       ? day.carbsG * 4 + day.proteinG * 4 + day.fatG * 9
       : null;
-  // Tæl drikkevarer med hvis der enten er macro-tal ELLER drink-kalorier
-  // — så viser meta-tallet altid det reelle samlede dagsindtag.
+  // Alkohol-kalorier kommer fra day.alcoholUnits, ikke fra drink_logs-tabellen.
+  // alcoholUnits bumpes automatisk af genstandstælleren og kan også sættes
+  // manuelt — én kilde til sandhed for dagens alkoholmængde.
+  const drinkKcal = (day.alcoholUnits ?? 0) * KCAL_PER_ALCOHOL_UNIT;
   const kcal =
     macroKcal !== null
       ? macroKcal + drinkKcal

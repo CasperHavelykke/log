@@ -20,13 +20,12 @@ const uploadSchema = z.object({
   takenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-export type UploadPhotoResult =
-  | { ok: true; id: number; url: string }
-  | { ok: false; error: string };
-
 export async function uploadPhoto(
   formData: FormData,
-): Promise<UploadPhotoResult> {
+): Promise<
+  | { ok: true; id: number; url: string }
+  | { ok: false; error: string }
+> {
   const user = await requireUser();
 
   const file = formData.get("file");

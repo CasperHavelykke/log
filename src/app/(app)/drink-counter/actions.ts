@@ -5,35 +5,11 @@ import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import { todayIsoDate } from "@/lib/date";
-
-export type DrinkKind = "genstand" | "shot" | "stærk_shot";
-
-const KIND_UNITS: Record<DrinkKind, number> = {
-  genstand: 1,
-  shot: 1,
-  stærk_shot: 2,
-};
-
-// Estimerede kalorier per indtag. Genstand ≈ øl/vin/drink (varierer 80-150);
-// shot ≈ snaps/spiritus 4cl; stærk_shot ≈ dobbelt 4cl 40%+.
-export const KIND_KCAL: Record<DrinkKind, number> = {
-  genstand: 100,
-  shot: 95,
-  stærk_shot: 130,
-};
-
-export type ActiveSessionPayload = {
-  id: number;
-  sessionDate: string;
-  startedAt: string;
-  totalUnits: number;
-  logs: Array<{
-    id: number;
-    unitCount: number;
-    kind: DrinkKind;
-    occurredAt: string;
-  }>;
-};
+import {
+  KIND_UNITS,
+  type ActiveSessionPayload,
+  type DrinkKind,
+} from "./constants";
 
 export async function getActiveSession(): Promise<ActiveSessionPayload | null> {
   const user = await requireUser();
