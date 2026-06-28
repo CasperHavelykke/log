@@ -386,7 +386,7 @@ function PhotoCard({
         type="button"
         onClick={remove}
         disabled={pending}
-        className="absolute right-1.5 top-1.5 inline-flex cursor-pointer items-center rounded-[6px] bg-black/55 p-1.5 text-white opacity-0 backdrop-blur-sm transition-opacity hover:text-danger group-hover:opacity-100 group-focus-within:opacity-100"
+        className="absolute right-1.5 top-1.5 inline-flex cursor-pointer items-center rounded-[6px] bg-black/55 p-1.5 text-white opacity-0 backdrop-blur-sm transition-opacity hover:text-danger group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
         title="Slet"
       >
         <Trash2 className="size-3.5" />
