@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
 import { db, schema } from "@/db";
 import {
@@ -17,6 +17,7 @@ import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
 import { listDocuments } from "../documents/actions";
 import { listTrackersWithPhotoStats } from "../health/trackere/actions";
 import { getActiveJobSearchPeriod } from "../jobs/period-actions";
+import { KIND_KCAL, type DrinkKind } from "../drink-counter/actions";
 import {
   listCustomParameters,
   listCustomValuesForDate,
@@ -78,6 +79,7 @@ export default async function Today() {
     customParameters,
     customValues,
     activePeriod,
+    drinkKcal,
   ] = await Promise.all([
     getActiveSupplements(user.id),
     getSupplementIntakesOnDate(user.id, date),
@@ -88,6 +90,7 @@ export default async function Today() {
     listCustomParameters(false),
     listCustomValuesForDate(date),
     getActiveJobSearchPeriod(),
+    sumDrinkKcalForDate(user.id, date),
   ]);
   const hasActiveJobPeriod = activePeriod !== null;
 
@@ -137,6 +140,7 @@ export default async function Today() {
       weekStart={weekStart}
       weekAppsCount={weekAppsCount}
       weekHoursX10={weekHoursX10}
+      drinkKcal={drinkKcal}
       initialWeekGoal={{
         text: weekGoal?.text ?? "",
         applicationsTarget: weekGoal?.applicationsTarget ?? null,
@@ -281,4 +285,33 @@ async function resolveGoalNote(
     .orderBy(desc(schema.dayEntries.date))
     .limit(1);
   return rows[0]?.goalNote ?? "";
+}
+
+// Summér estimerede kalorier fra drink-counter-logs for en given dato.
+// drink_sessions.sessionDate styrer datoen (en session der starter sent kan
+// strække sig ind i den næste kalenderdag, men logs hører til startdagen).
+async function sumDrinkKcalForDate(
+  userId: number,
+  date: string,
+): Promise<number> {
+  const sessions = await db
+    .select({ id: schema.drinkSessions.id })
+    .from(schema.drinkSessions)
+    .where(
+      and(
+        eq(schema.drinkSessions.userId, userId),
+        eq(schema.drinkSessions.sessionDate, date),
+      ),
+    );
+  if (sessions.length === 0) return 0;
+  const sessionIds = sessions.map((s) => s.id);
+  const logs = await db
+    .select({ kind: schema.drinkLogs.kind })
+    .from(schema.drinkLogs)
+    .where(inArray(schema.drinkLogs.sessionId, sessionIds));
+  let total = 0;
+  for (const l of logs) {
+    total += KIND_KCAL[l.kind as DrinkKind] ?? 0;
+  }
+  return total;
 }

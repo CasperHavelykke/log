@@ -221,6 +221,7 @@ export function TodayPage(props: {
   weekStart: string;
   weekAppsCount: number;
   weekHoursX10: number;
+  drinkKcal: number;
   initialWeekGoal: WeekGoalState;
   initialDayGoals: DayGoalsState;
   projects: ProjectRef[];
@@ -399,6 +400,7 @@ export function TodayPage(props: {
             trackers={props.trackers}
             customParameters={props.customParameters}
             customValues={props.customValues}
+            drinkKcal={props.drinkKcal}
           />
         </Card>
       </div>
@@ -1185,6 +1187,7 @@ function HealthBody({
   trackers,
   customParameters,
   customValues,
+  drinkKcal,
 }: {
   day: DayState;
   setDay: (d: DayState) => void;
@@ -1200,6 +1203,7 @@ function HealthBody({
   trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
   customValues: CustomValueRow[];
+  drinkKcal: number;
 }) {
   const hasGarminDuration =
     garminSleepEnabled &&
@@ -1227,10 +1231,18 @@ function HealthBody({
       : (day.waistX10 / 10).toString().replace(".", ","),
   );
 
-  const kcal =
+  const macroKcal =
     day.carbsG !== null && day.proteinG !== null && day.fatG !== null
       ? day.carbsG * 4 + day.proteinG * 4 + day.fatG * 9
       : null;
+  // Tæl drikkevarer med hvis der enten er macro-tal ELLER drink-kalorier
+  // — så viser meta-tallet altid det reelle samlede dagsindtag.
+  const kcal =
+    macroKcal !== null
+      ? macroKcal + drinkKcal
+      : drinkKcal > 0
+        ? drinkKcal
+        : null;
 
   return (
     <div>
@@ -1333,7 +1345,15 @@ function HealthBody({
       <FieldSection
         icon={<Apple className="size-3.5" />}
         title="Ernæring"
-        meta={kcal !== null ? `${kcal} kcal` : undefined}
+        meta={
+          kcal !== null
+            ? drinkKcal > 0 && macroKcal !== null
+              ? `${kcal} kcal · inkl. ${drinkKcal} fra drikkevarer`
+              : drinkKcal > 0 && macroKcal === null
+                ? `${drinkKcal} kcal fra drikkevarer`
+                : `${kcal} kcal`
+            : undefined
+        }
       >
         <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
           <GridField label="Kulhydrat">

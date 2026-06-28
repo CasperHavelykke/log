@@ -14,6 +14,14 @@ const KIND_UNITS: Record<DrinkKind, number> = {
   stærk_shot: 2,
 };
 
+// Estimerede kalorier per indtag. Genstand ≈ øl/vin/drink (varierer 80-150);
+// shot ≈ snaps/spiritus 4cl; stærk_shot ≈ dobbelt 4cl 40%+.
+export const KIND_KCAL: Record<DrinkKind, number> = {
+  genstand: 100,
+  shot: 95,
+  stærk_shot: 130,
+};
+
 export type ActiveSessionPayload = {
   id: number;
   sessionDate: string;
