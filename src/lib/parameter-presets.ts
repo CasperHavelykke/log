@@ -36,21 +36,9 @@ export const HEALTH_PRESETS: ParameterPreset[] = [
     description: "Vurder fra 1 til 5",
   },
   {
-    key: "staph",
-    name: "Stafylokokker",
-    kind: "scale_5",
-    description: "Vurder fra 1 til 5",
-  },
-  {
     key: "breathing",
     name: "Vejrtrækningsbesvær",
     kind: "scale_5",
     description: "Vurder fra 1 til 5",
-  },
-  {
-    key: "foamy_urine",
-    name: "Skummende urin",
-    kind: "boolean",
-    description: "Skete det i dag?",
   },
 ];
