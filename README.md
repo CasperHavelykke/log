@@ -29,13 +29,29 @@ disk-filer. Ingen tredjepart med teknisk adgang til data.
 
 ## Lokal udvikling
 
-`next dev` køres **aldrig** for dette projekt — det hænger PC'en. Verificér
-i stedet med:
+Dev-serveren virker, men kør den med memory-cap (PowerShell):
+
+```powershell
+$env:NODE_OPTIONS="--max-old-space-size=4096"
+npm run dev
+```
+
+**Setup-note:** Repoet ligger på en ekstern USB-SSD, hvilket tidligere fik
+`next dev` til at hænge PC'en (I/O-storm + Defender-scanning). Det er løst
+med to NTFS-junctions — `.next` → `C:\dev-cache\log-next`, og dennes
+`node_modules` tilbage til projektets — plus Defender-exclusions for begge
+mapper. Hvis junctions mangler (fx på en ny maskine), genskab dem:
+
+```powershell
+mklink /J F:\ikke-synkroniseret\log\.next C:\dev-cache\log-next
+mklink /J C:\dev-cache\log-next\node_modules F:\ikke-synkroniseret\log\node_modules
+```
+
+Hurtig verifikation uden dev-server:
 
 ```bash
-npm install
 npx tsc --noEmit         # type-check
-npm run build            # produktions-build (når du vil være sikker)
+npm run build            # produktions-build
 ```
 
 Database-schema-ændringer:

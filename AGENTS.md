@@ -9,9 +9,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Web-appen er selvhostet på en privat Ubuntu-server (ThinkCentre M920q): Next.js
 kører som systemd-service `log`, Caddy står foran med TLS, libSQL kører lokalt
 på filen `data/app.db`, og fotos + dokumenter ligger som filer under `data/`.
-Det lokale repo bruges som dev-environment — `next dev` køres aldrig her,
-men ændringer pulles til serveren via `git pull && npm install && npm run
-build && sudo systemctl restart log`.
+Ændringer pulles til serveren via `git pull && npm install && npm run build
+&& sudo systemctl restart log`.
+
+Lokal dev virker (`npm run dev`), men kør den med memory-cap:
+`$env:NODE_OPTIONS="--max-old-space-size=4096"; npm run dev`. Bemærk at
+`.next` er en NTFS-junction til `C:\dev-cache\log-next` (og dennes
+`node_modules` peger tilbage på projektets) — nødvendigt fordi repoet ligger
+på en ekstern USB-SSD. Rør ikke junction-setup'et.
 
 # Kode-stil
 
