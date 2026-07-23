@@ -84,7 +84,8 @@
       "Bash(\"C:\\\\Program Files\\\\nodejs\\\\node.exe\" node_modules/tsx/dist/cli.mjs scripts/migrate-sleep-quality.ts)",
       "Bash(npm ls *)",
       "Bash(awk -F: '$1 >= 796 && $1 <= 1300 {print}')",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }
