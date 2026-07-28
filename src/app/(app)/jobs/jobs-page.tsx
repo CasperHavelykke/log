@@ -1430,9 +1430,7 @@ function WeekGoalBanner({
     startSave(async () => {
       await setWeekGoal({
         weekStart,
-        text: "",
         applicationsTarget: value,
-        focusHoursTargetX10: null,
       });
       setOpen(false);
       router.refresh();

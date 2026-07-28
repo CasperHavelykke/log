@@ -85,7 +85,10 @@
       "Bash(npm ls *)",
       "Bash(awk -F: '$1 >= 796 && $1 <= 1300 {print}')",
       "Bash(npx tsc *)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(rm src/components/week-goal-card.tsx)",
+      "Bash(echo \"TSC=$?\")"
     ]
   }
 }

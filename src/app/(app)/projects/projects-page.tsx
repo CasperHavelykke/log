@@ -705,8 +705,6 @@ function FocusHoursBanner({
     startSave(async () => {
       await setWeekGoal({
         weekStart,
-        text: "",
-        applicationsTarget: null,
         focusHoursTargetX10: x10,
       });
       setOpen(false);

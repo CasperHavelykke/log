@@ -96,11 +96,26 @@ export async function saveDayEntry(input: DayEntryInput): Promise<SaveResult> {
   return { ok: true, savedAt: now };
 }
 
+// Partial update-semantik: udeladt felt (undefined) = rør ikke det
+// eksisterende; null = ryd feltet bevidst. Så /jobs kan sætte ansøgnings-
+// målet uden at klippe /projekters fokus-timer-mål og omvendt.
 const weekGoalSchema = z.object({
   weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  text: z.string().max(2_000).default(""),
-  applicationsTarget: z.coerce.number().int().min(0).max(1000).nullable(),
-  focusHoursTargetX10: z.coerce.number().int().min(0).max(2400).nullable(),
+  text: z.string().max(2_000).optional(),
+  applicationsTarget: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(1000)
+    .nullable()
+    .optional(),
+  focusHoursTargetX10: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(2400)
+    .nullable()
+    .optional(),
 });
 
 export async function setWeekGoal(input: z.infer<typeof weekGoalSchema>) {
@@ -122,10 +137,22 @@ export async function setWeekGoal(input: z.infer<typeof weekGoalSchema>) {
     )
     .limit(1);
 
+  const merged = {
+    text: text !== undefined ? text : existing[0]?.text ?? "",
+    applicationsTarget:
+      applicationsTarget !== undefined
+        ? applicationsTarget
+        : existing[0]?.applicationsTarget ?? null,
+    focusHoursTargetX10:
+      focusHoursTargetX10 !== undefined
+        ? focusHoursTargetX10
+        : existing[0]?.focusHoursTargetX10 ?? null,
+  };
+
   const allEmpty =
-    text.trim() === "" &&
-    applicationsTarget === null &&
-    focusHoursTargetX10 === null;
+    merged.text.trim() === "" &&
+    merged.applicationsTarget === null &&
+    merged.focusHoursTargetX10 === null;
 
   if (allEmpty) {
     if (existing[0]) {
@@ -136,20 +163,13 @@ export async function setWeekGoal(input: z.infer<typeof weekGoalSchema>) {
   } else if (existing[0]) {
     await db
       .update(schema.weekGoals)
-      .set({
-        text,
-        applicationsTarget,
-        focusHoursTargetX10,
-        updatedAt: now,
-      })
+      .set({ ...merged, updatedAt: now })
       .where(eq(schema.weekGoals.id, existing[0].id));
   } else {
     await db.insert(schema.weekGoals).values({
       userId: user.id,
       weekStart,
-      text,
-      applicationsTarget,
-      focusHoursTargetX10,
+      ...merged,
     });
   }
 
