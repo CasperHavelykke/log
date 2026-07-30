@@ -242,6 +242,22 @@ const drinkLogRow = z.object({
   occurredAt: z.string(),
 });
 
+const recipeRow = z.object({
+  id: z.number().int(),
+  title: z.string(),
+  ingredients: z.string().optional().default(""),
+  steps: z.string().optional().default(""),
+  servings: z.number().int().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  carbsG: z.number().int().nullable().optional(),
+  proteinG: z.number().int().nullable().optional(),
+  fatG: z.number().int().nullable().optional(),
+  imagePathname: z.string().nullable().optional(),
+  imageMime: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
 export const backupSchema = z.object({
   format: z.literal("log-backup"),
   version: z.number(),
@@ -267,6 +283,7 @@ export const backupSchema = z.object({
     jobSearchPeriods: z.array(jobSearchPeriodRow).optional().default([]),
     drinkSessions: z.array(drinkSessionRow).optional().default([]),
     drinkLogs: z.array(drinkLogRow).optional().default([]),
+    recipes: z.array(recipeRow).optional().default([]),
   }),
 });
 
@@ -353,6 +370,7 @@ export async function performImport(
   await db.delete(schema.customParameters).where(eq(schema.customParameters.userId, uid));
   await db.delete(schema.photos).where(eq(schema.photos.userId, uid));
   await db.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
+  await db.delete(schema.recipes).where(eq(schema.recipes.userId, uid));
 
   // Lad SQLite generere nye autoincrement-id'er — backup-id'er kan
   // kollidere på tværs af brugere (PK er global, ikke per user).
@@ -689,11 +707,30 @@ export async function performImport(
       .filter((r): r is NonNullable<typeof r> => r !== null);
     if (rows.length > 0) await db.insert(schema.drinkLogs).values(rows);
   }
+  if (d.recipes.length > 0) {
+    await db.insert(schema.recipes).values(
+      d.recipes.map((r) => ({
+        userId: uid,
+        title: r.title,
+        ingredients: r.ingredients,
+        steps: r.steps,
+        servings: r.servings ?? null,
+        sourceUrl: r.sourceUrl ?? null,
+        carbsG: r.carbsG ?? null,
+        proteinG: r.proteinG ?? null,
+        fatG: r.fatG ?? null,
+        imagePathname: r.imagePathname ?? null,
+        imageMime: r.imageMime ?? null,
+        createdAt: r.createdAt ?? nowIso(),
+        updatedAt: r.updatedAt ?? nowIso(),
+      })),
+    );
+  }
 
   // Skriv binær fil-data fra ZIP'en til lokal disk.
   let filesWritten = 0;
   for (const f of files) {
-    if (!/^(photos|documents)\//.test(f.path)) continue;
+    if (!/^(photos|documents|recipes)\//.test(f.path)) continue;
     if (f.path.includes("..")) continue;
     const absolutePath = join(BLOB_ROOT, f.path);
     await mkdir(dirname(absolutePath), { recursive: true });
@@ -711,6 +748,7 @@ export async function performImport(
     "/health/trackere",
     "/documents",
     "/journal",
+    "/opskrifter",
     "/statistik",
     "/settings",
   ]) {
@@ -738,6 +776,7 @@ export async function performImport(
       trackers: d.trackers.length,
       photos: d.photos.length,
       documents: d.documents.length,
+      recipes: d.recipes.length,
     },
     filesWritten,
   };

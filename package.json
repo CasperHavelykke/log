@@ -8,7 +8,7 @@
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/apply-migrations.ts",
     "db:studio": "drizzle-kit studio",
     "icons:generate": "tsx scripts/generate-icons.ts",
     "mcp": "tsx src/mcp/server.ts"

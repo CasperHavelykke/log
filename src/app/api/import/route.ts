@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           if (!name.startsWith("files/")) continue;
           if (name.endsWith("/")) continue;
           const inner = name.slice("files/".length);
-          if (!/^(photos|documents)\//.test(inner)) continue;
+          if (!/^(photos|documents|recipes)\//.test(inner)) continue;
           if (inner.includes("..")) continue;
           files.push({ path: inner, data: bytes });
         }

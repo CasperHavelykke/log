@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Briefcase,
   CalendarDays,
+  ChefHat,
   FileText,
   FolderKanban,
   HeartPulse,
@@ -39,6 +40,7 @@ const PRIMARY_ITEMS: Item[] = [
 ];
 
 const ARCHIVE_ITEMS: Item[] = [
+  { href: "/opskrifter", label: "Opskrifter", icon: ChefHat, key: "opskrifter" },
   { href: "/documents", label: "Dokumenter", icon: FileText, key: "documents" },
   { href: "/journal", label: "Journal", icon: NotebookPen, key: "journal" },
 ];

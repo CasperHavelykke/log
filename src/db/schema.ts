@@ -591,6 +591,40 @@ export const documents = sqliteTable(
   ],
 );
 
+export const recipes = sqliteTable(
+  "recipes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    // Fri tekst — én ingrediens per linje. Bevidst ustruktureret for hurtig
+    // indtastning på mobil.
+    ingredients: text("ingredients").notNull().default(""),
+    steps: text("steps").notNull().default(""),
+    servings: integer("servings"),
+    sourceUrl: text("source_url"),
+    // Makroer PER PORTION — kun reference, ingen automatisk logning.
+    carbsG: integer("carbs_g"),
+    proteinG: integer("protein_g"),
+    fatG: integer("fat_g"),
+    // Valgfrit billede — fil ligger under data/recipes/, kun sti+mime i DB.
+    imagePathname: text("image_pathname"),
+    imageMime: text("image_mime"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("recipes_user").on(t.userId)],
+);
+
+export type Recipe = typeof recipes.$inferSelect;
+export type NewRecipe = typeof recipes.$inferInsert;
+
 export const PHOTO_CATEGORIES = ["skin_spot", "body_progress", "other"] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
 

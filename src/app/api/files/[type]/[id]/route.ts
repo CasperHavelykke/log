@@ -48,6 +48,21 @@ export async function GET(_req: Request, { params }: { params: Params }) {
     mimeType = row.mimeType;
     filename = row.filename;
     inline = mimeType === "application/pdf" || mimeType.startsWith("text/");
+  } else if (type === "recipe") {
+    const rows = await db
+      .select()
+      .from(schema.recipes)
+      .where(
+        and(eq(schema.recipes.id, id), eq(schema.recipes.userId, user.id)),
+      )
+      .limit(1);
+    const row = rows[0];
+    if (!row || !row.imagePathname) {
+      return new Response("Not found", { status: 404 });
+    }
+    blobUrl = row.imagePathname;
+    mimeType = row.imageMime ?? "image/jpeg";
+    filename = `recipe-${row.id}.jpg`;
   } else {
     return new Response("Bad type", { status: 400 });
   }

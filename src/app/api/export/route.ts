@@ -35,6 +35,7 @@ export async function GET() {
     trackers,
     photos,
     documents,
+    recipes,
   ] = await Promise.all([
     db.select().from(schema.dayEntries).where(eq(schema.dayEntries.userId, user.id)),
     db.select().from(schema.projects).where(eq(schema.projects.userId, user.id)),
@@ -72,6 +73,7 @@ export async function GET() {
     db.select().from(schema.trackers).where(eq(schema.trackers.userId, user.id)),
     db.select().from(schema.photos).where(eq(schema.photos.userId, user.id)),
     db.select().from(schema.documents).where(eq(schema.documents.userId, user.id)),
+    db.select().from(schema.recipes).where(eq(schema.recipes.userId, user.id)),
   ]);
 
   // drinkLogs har ingen userId — filtrér via sessionId
@@ -104,6 +106,7 @@ export async function GET() {
       trackers: strip(trackers),
       photos: strip(photos),
       documents: strip(documents),
+      recipes: strip(recipes),
     },
   };
 
@@ -131,6 +134,9 @@ export async function GET() {
   await Promise.all([
     ...photos.map((p) => addFile(p.blobPathname, `files/${p.blobPathname}`)),
     ...documents.map((d) => addFile(d.blobPathname, `files/${d.blobPathname}`)),
+    ...recipes
+      .filter((r) => r.imagePathname !== null)
+      .map((r) => addFile(r.imagePathname!, `files/${r.imagePathname}`)),
   ]);
 
   // README så brugeren forstår indholdet uden at åbne JSON'en.
