@@ -49,13 +49,15 @@ const recipeInputShape = {
     .string()
     .max(10_000)
     .default("")
-    .describe("Én ingrediens per linje, fx '400 g kyllingebryst'."),
+    .describe(
+      "Én ingrediens per linje. Start linjen med mængde + enhed ('400 g kyllingebryst', '1,5 dl fløde', '1/2 løg') — det ledende tal bruges til automatisk portions-skalering i UI, så skriv ALDRIG mængden inde i teksten ('kyllingebryst, 400 g' skalerer ikke). Decimaler med komma. En linje der ender med kolon ('Til dressingen:', 'Evt:') bliver en under-overskrift uden bullet.",
+    ),
   steps: z
     .string()
     .max(20_000)
     .default("")
     .describe(
-      "Ét trin per linje. Nummerering tilføjes automatisk i UI. KUN selve fremgangsmåden — tips, holdbarhed og makro-forklaringer hører til i notes.",
+      "Ét trin per linje UDEN manuel nummerering ('1.', '2.' osv.) — UI nummererer selv, så manuel nummerering giver dobbelt-numre. KUN selve fremgangsmåden — tips, holdbarhed og makro-forklaringer hører til i notes.",
     ),
   notes: z
     .string()
@@ -64,7 +66,16 @@ const recipeInputShape = {
     .describe(
       "Fri-tekst noter (tips, holdbarhed, variationer). Vises som afsnit, ikke nummererede trin.",
     ),
-  servings: z.number().int().min(1).max(100).nullable().default(null),
+  servings: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .nullable()
+    .default(null)
+    .describe(
+      "Antal portioner ingredienser-mængderne svarer til. Sæt den altid når den kendes — uden den kan UI ikke skalere portioner.",
+    ),
   sourceUrl: z.string().max(1000).nullable().default(null),
   carbsG: z
     .number()
@@ -142,7 +153,7 @@ export function registerRecipeTools(server: McpServer) {
     {
       title: "Gem ny opskrift",
       description:
-        "Gemmer en ny opskrift i brugerens samling. Ingredienser: én per linje. Fremgangsmåde: ét trin per linje. Makroer er per portion og valgfrie.",
+        "Gemmer en ny opskrift i brugerens samling. Følg felternes formatregler nøje (linjebaseret format med skalerbar mængde-parsing) — se beskrivelsen på hvert felt. Makroer er per portion og valgfrie.",
       inputSchema: recipeInputShape,
     },
     async (input) => {
@@ -181,8 +192,20 @@ export function registerRecipeTools(server: McpServer) {
       inputSchema: {
         id: z.number().int(),
         title: z.string().min(1).max(200).optional(),
-        ingredients: z.string().max(10_000).optional(),
-        steps: z.string().max(20_000).optional(),
+        ingredients: z
+          .string()
+          .max(10_000)
+          .optional()
+          .describe(
+            "Samme format som create_recipe: én per linje, ledende mængde+enhed (skalerbar), ':'-suffix = under-overskrift.",
+          ),
+        steps: z
+          .string()
+          .max(20_000)
+          .optional()
+          .describe(
+            "Samme format som create_recipe: ét trin per linje uden manuel nummerering.",
+          ),
         notes: z.string().max(10_000).optional(),
         servings: z.number().int().min(1).max(100).nullable().optional(),
         sourceUrl: z.string().max(1000).nullable().optional(),
