@@ -44,8 +44,11 @@ mapper. Hvis junctions mangler (fx på en ny maskine), genskab dem:
 
 ```powershell
 mklink /J F:\ikke-synkroniseret\log\.next C:\dev-cache\log-next
-mklink /J C:\dev-cache\log-next\node_modules F:\ikke-synkroniseret\log\node_modules
+mklink /J C:\dev-cache\node_modules F:\ikke-synkroniseret\log\node_modules
 ```
+
+(node_modules-junctionen skal ligge i `C:\dev-cache\` — inde i `log-next\`
+bliver den slettet når `next build` rydder mappen.)
 
 Hurtig verifikation uden dev-server:
 
