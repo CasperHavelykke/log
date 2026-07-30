@@ -376,15 +376,26 @@ export function RecipeDetailClient({
                 .split("\n")
                 .map((s) => s.trim())
                 .filter(Boolean)
-                .map((line, i) => (
-                  <li
-                    key={i}
-                    className="flex items-baseline gap-2 text-[14px] leading-snug text-ink"
-                  >
-                    <span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" />
-                    {scaleLine(line, scaleFactor)}
-                  </li>
-                ))}
+                .map((line, i) =>
+                  line.endsWith(":") ? (
+                    // Under-overskrift (fx "Evt:" eller "Til dressingen:")
+                    // — ingen bullet, dæmpet label-styling.
+                    <li
+                      key={i}
+                      className="pt-2 text-[11px] font-medium uppercase tracking-[0.5px] text-light first:pt-0"
+                    >
+                      {line.slice(0, -1)}
+                    </li>
+                  ) : (
+                    <li
+                      key={i}
+                      className="flex items-baseline gap-2 text-[14px] leading-snug text-ink"
+                    >
+                      <span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" />
+                      {scaleLine(line, scaleFactor)}
+                    </li>
+                  ),
+                )}
             </ul>
           ) : (
             <p className="text-[13px] italic text-light">

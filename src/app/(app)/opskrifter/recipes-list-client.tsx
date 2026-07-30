@@ -113,7 +113,7 @@ function RecipeCard({ recipe }: { recipe: RecipeRow }) {
   const firstIngredients = recipe.ingredients
     .split("\n")
     .map((s) => s.trim())
-    .filter(Boolean)
+    .filter((s) => s !== "" && !s.endsWith(":"))
     .slice(0, 3)
     .join(" · ");
 
