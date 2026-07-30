@@ -37,6 +37,67 @@ type RecipeData = {
   hasImage: boolean;
 };
 
+// --- Portions-skalering -----------------------------------------------------
+// Parser det ledende tal på en ingrediens-linje og skalerer det. Linjer uden
+// ledende tal ("Salt og peber") returneres uændret.
+
+const UNICODE_FRACTIONS: Record<string, number> = {
+  "½": 0.5,
+  "⅓": 1 / 3,
+  "⅔": 2 / 3,
+  "¼": 0.25,
+  "¾": 0.75,
+  "⅛": 0.125,
+};
+
+function parseLeadingQty(
+  line: string,
+): { qty: number; rest: string } | null {
+  // Blandet tal: "1 1/2 dl"
+  let m = line.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)(?=\s|$)/);
+  if (m) {
+    return {
+      qty: Number(m[1]) + Number(m[2]) / Number(m[3]),
+      rest: line.slice(m[0].length),
+    };
+  }
+  // Brøk: "1/2 dl"
+  m = line.match(/^(\d+)\s*\/\s*(\d+)(?=\s|$)/);
+  if (m) {
+    return { qty: Number(m[1]) / Number(m[2]), rest: line.slice(m[0].length) };
+  }
+  // Decimal/heltal: "400 g", "1,5 dl"
+  m = line.match(/^(\d+(?:[.,]\d+)?)/);
+  if (m) {
+    return {
+      qty: Number(m[1].replace(",", ".")),
+      rest: line.slice(m[0].length),
+    };
+  }
+  // Unicode-brøk: "½ løg"
+  const first = line[0];
+  if (first !== undefined && UNICODE_FRACTIONS[first] !== undefined) {
+    return { qty: UNICODE_FRACTIONS[first], rest: line.slice(1) };
+  }
+  return null;
+}
+
+function fmtQty(n: number): string {
+  // Køkken-pragmatisk afrunding: store mængder som heltal, små med decimaler.
+  let rounded: number;
+  if (n >= 20) rounded = Math.round(n);
+  else if (n >= 2) rounded = Math.round(n * 10) / 10;
+  else rounded = Math.round(n * 100) / 100;
+  return String(rounded).replace(".", ",");
+}
+
+function scaleLine(line: string, factor: number): string {
+  if (factor === 1) return line;
+  const parsed = parseLeadingQty(line);
+  if (!parsed) return line;
+  return `${fmtQty(parsed.qty * factor)}${parsed.rest}`;
+}
+
 export function RecipeDetailClient({
   recipe: initial,
   startInEdit,
@@ -51,6 +112,16 @@ export function RecipeDetailClient({
   const [imageVersion, setImageVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
+  // Visnings-skalering af portioner — persisteres ikke.
+  const [viewServings, setViewServings] = useState(initial.servings);
+
+  const scaleFactor =
+    recipe.servings !== null &&
+    recipe.servings > 0 &&
+    viewServings !== null &&
+    viewServings !== recipe.servings
+      ? viewServings / recipe.servings
+      : 1;
 
   const kcal =
     recipe.carbsG !== null && recipe.proteinG !== null && recipe.fatG !== null
@@ -86,6 +157,7 @@ export function RecipeDetailClient({
         return;
       }
       setRecipe(draft);
+      setViewServings(draft.servings);
       setEditing(false);
       router.refresh();
     });
@@ -203,9 +275,42 @@ export function RecipeDetailClient({
             </label>
           ) : (
             recipe.servings !== null && (
-              <span className="inline-flex items-center gap-1.5">
-                <Users className="size-3.5" />
-                {recipe.servings} personer
+              <span className="inline-flex items-center gap-1">
+                <Users className="mr-0.5 size-3.5" />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setViewServings(Math.max(1, (viewServings ?? 1) - 1))
+                  }
+                  disabled={(viewServings ?? 1) <= 1}
+                  aria-label="Færre personer"
+                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg-subtle text-[15px] text-mid hover:text-ink disabled:opacity-40 sm:size-6 sm:rounded-[6px] sm:text-[13px]"
+                >
+                  −
+                </button>
+                <span className="min-w-[86px] text-center tabular-nums text-ink">
+                  {viewServings} person{(viewServings ?? 1) === 1 ? "" : "er"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setViewServings(Math.min(100, (viewServings ?? 1) + 1))
+                  }
+                  disabled={(viewServings ?? 1) >= 100}
+                  aria-label="Flere personer"
+                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg-subtle text-[15px] text-mid hover:text-ink disabled:opacity-40 sm:size-6 sm:rounded-[6px] sm:text-[13px]"
+                >
+                  +
+                </button>
+                {scaleFactor !== 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setViewServings(recipe.servings)}
+                    className="ml-1 cursor-pointer text-[11px] italic text-accent hover:underline"
+                  >
+                    nulstil
+                  </button>
+                )}
               </span>
             )
           )}
@@ -243,8 +348,15 @@ export function RecipeDetailClient({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1.4fr] md:items-start">
         <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
-          <div className="mb-3 border-b border-hair pb-2 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
-            Ingredienser
+          <div className="mb-3 flex items-baseline justify-between border-b border-hair pb-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Ingredienser
+            </span>
+            {!editing && scaleFactor !== 1 && (
+              <span className="text-[11px] italic text-accent">
+                skaleret til {viewServings} pers.
+              </span>
+            )}
           </div>
           {editing ? (
             <textarea
@@ -268,7 +380,7 @@ export function RecipeDetailClient({
                     className="flex items-baseline gap-2 text-[14px] leading-snug text-ink"
                   >
                     <span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" />
-                    {line}
+                    {scaleLine(line, scaleFactor)}
                   </li>
                 ))}
             </ul>
