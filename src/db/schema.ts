@@ -603,6 +603,9 @@ export const recipes = sqliteTable(
     // indtastning på mobil.
     ingredients: text("ingredients").notNull().default(""),
     steps: text("steps").notNull().default(""),
+    // Fri-tekst noter (tips, makro-forklaringer, holdbarhed) — vises som
+    // almindelige afsnit, IKKE nummererede trin.
+    notes: text("notes"),
     servings: integer("servings"),
     sourceUrl: text("source_url"),
     // Makroer PER PORTION — kun reference, ingen automatisk logning.

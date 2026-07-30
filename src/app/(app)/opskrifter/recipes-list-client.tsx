@@ -178,6 +178,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
         title: t,
         ingredients: "",
         steps: "",
+        notes: "",
         servings: null,
         sourceUrl: null,
         carbsG: null,

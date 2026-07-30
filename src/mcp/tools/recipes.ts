@@ -25,6 +25,7 @@ function shapeRecipeFull(row: typeof schema.recipes.$inferSelect) {
     ...shapeRecipeSummary(row),
     ingredients: row.ingredients,
     steps: row.steps,
+    notes: row.notes,
     sourceUrl: row.sourceUrl,
     carbsG: row.carbsG,
     proteinG: row.proteinG,
@@ -53,7 +54,16 @@ const recipeInputShape = {
     .string()
     .max(20_000)
     .default("")
-    .describe("Ét trin per linje. Nummerering tilføjes automatisk i UI."),
+    .describe(
+      "Ét trin per linje. Nummerering tilføjes automatisk i UI. KUN selve fremgangsmåden — tips, holdbarhed og makro-forklaringer hører til i notes.",
+    ),
+  notes: z
+    .string()
+    .max(10_000)
+    .default("")
+    .describe(
+      "Fri-tekst noter (tips, holdbarhed, variationer). Vises som afsnit, ikke nummererede trin.",
+    ),
   servings: z.number().int().min(1).max(100).nullable().default(null),
   sourceUrl: z.string().max(1000).nullable().default(null),
   carbsG: z
@@ -145,6 +155,7 @@ export function registerRecipeTools(server: McpServer) {
           title: input.title.trim(),
           ingredients: input.ingredients.trim(),
           steps: input.steps.trim(),
+          notes: input.notes.trim() || null,
           servings: input.servings,
           sourceUrl: input.sourceUrl?.trim() || null,
           carbsG: input.carbsG,
@@ -172,6 +183,7 @@ export function registerRecipeTools(server: McpServer) {
         title: z.string().min(1).max(200).optional(),
         ingredients: z.string().max(10_000).optional(),
         steps: z.string().max(20_000).optional(),
+        notes: z.string().max(10_000).optional(),
         servings: z.number().int().min(1).max(100).nullable().optional(),
         sourceUrl: z.string().max(1000).nullable().optional(),
         carbsG: z.number().int().min(0).max(2000).nullable().optional(),
@@ -193,6 +205,10 @@ export function registerRecipeTools(server: McpServer) {
               ? patch.ingredients.trim()
               : recipe.ingredients,
           steps: patch.steps !== undefined ? patch.steps.trim() : recipe.steps,
+          notes:
+            patch.notes !== undefined
+              ? patch.notes.trim() || null
+              : recipe.notes,
           servings:
             patch.servings !== undefined ? patch.servings : recipe.servings,
           sourceUrl:

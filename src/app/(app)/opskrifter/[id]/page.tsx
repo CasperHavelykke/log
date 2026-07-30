@@ -37,6 +37,7 @@ export default async function RecipeDetailPage({
         title: recipe.title,
         ingredients: recipe.ingredients,
         steps: recipe.steps,
+        notes: recipe.notes ?? "",
         servings: recipe.servings,
         sourceUrl: recipe.sourceUrl,
         carbsG: recipe.carbsG,

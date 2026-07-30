@@ -29,6 +29,7 @@ type RecipeData = {
   title: string;
   ingredients: string;
   steps: string;
+  notes: string;
   servings: number | null;
   sourceUrl: string | null;
   carbsG: number | null;
@@ -146,6 +147,7 @@ export function RecipeDetailClient({
         title: draft.title,
         ingredients: draft.ingredients,
         steps: draft.steps,
+        notes: draft.notes,
         servings: draft.servings,
         sourceUrl: draft.sourceUrl,
         carbsG: draft.carbsG,
@@ -425,6 +427,32 @@ export function RecipeDetailClient({
           )}
         </section>
       </div>
+
+      {(editing || recipe.notes) && (
+        <section className="mt-4 rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
+          <div className="mb-3 flex items-baseline justify-between border-b border-hair pb-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Noter
+            </span>
+            <span className="text-[11px] italic text-dim">
+              tips, holdbarhed, variationer
+            </span>
+          </div>
+          {editing ? (
+            <textarea
+              value={draft.notes}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+              rows={4}
+              placeholder={"Holder 3-4 dage på køl.\nFor lavere fedt: brug 5 hele æg + 10 æggehvider."}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[14px]"
+            />
+          ) : (
+            <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-mid">
+              {recipe.notes}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="mt-4 rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="mb-3 flex items-baseline justify-between border-b border-hair pb-2">
