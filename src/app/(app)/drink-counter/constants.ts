@@ -20,6 +20,12 @@ export const KIND_KCAL: Record<DrinkKind, number> = {
   stærk_shot: 70,
 };
 
+// 1 dansk genstand = 12g ren alkohol ≈ 84 kcal ren ethanol. Med typisk
+// sukker/kulhydrater i øl/vin/drinks lander det omkring 100 kcal pr. enhed.
+// Bruges hvor dags-total beregnes fra day_entries.alcoholUnits (som bumpes
+// af genstandstælleren og kan sættes manuelt).
+export const KCAL_PER_ALCOHOL_UNIT = 100;
+
 export type ActiveSessionPayload = {
   id: number;
   sessionDate: string;

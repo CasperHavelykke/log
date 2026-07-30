@@ -20,6 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { saveDayEntry } from "../today/actions";
+import { dayKcal, kcalMetaText } from "@/lib/kcal";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
 import Link from "next/link";
 import { createTracker } from "./trackere/actions";
@@ -711,10 +712,8 @@ function DayEditorPanel({
     sleep?.durationMin !== null &&
     sleep?.durationMin !== undefined;
 
-  const kcal =
-    carbsG !== null && proteinG !== null && fatG !== null
-      ? carbsG * 4 + proteinG * 4 + fatG * 9
-      : null;
+  // Fælles kalorie-beregning med /today og /statistik — alkohol tæller med.
+  const kcalInfo = dayKcal({ carbsG, proteinG, fatG, alcoholUnits });
 
   return (
     <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
@@ -802,7 +801,7 @@ function DayEditorPanel({
       <Section
         icon={<Apple className="size-3.5" />}
         title="Ernæring"
-        meta={kcal !== null ? `${kcal} kcal` : undefined}
+        meta={kcalMetaText(kcalInfo)}
       >
         <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
           <GridField label="Kulhydrat">

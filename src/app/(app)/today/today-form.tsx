@@ -52,6 +52,7 @@ import { ElasticTimerBar } from "@/components/elastic-timer-bar";
 import { WeekStrip } from "./week-strip";
 import { DayIntention } from "./day-intention";
 import { StartCounterTrigger } from "../drink-counter/start-trigger";
+import { dayKcal, kcalMetaText } from "@/lib/kcal";
 import {
   Section as FieldSection,
   Field as FieldRow,
@@ -1174,10 +1175,6 @@ function ApplicationsList({
 
 // --- Helbred ----------------------------------------------------------------
 
-// 1 dansk genstand = 12g ren alkohol ≈ 84 kcal ren ethanol. Med typisk
-// sukker/kulhydrater i øl/vin/drinks lander det omkring 100 kcal pr. enhed.
-const KCAL_PER_ALCOHOL_UNIT = 100;
-
 function HealthBody({
   day,
   setDay,
@@ -1231,20 +1228,9 @@ function HealthBody({
       : (day.waistX10 / 10).toString().replace(".", ","),
   );
 
-  const macroKcal =
-    day.carbsG !== null && day.proteinG !== null && day.fatG !== null
-      ? day.carbsG * 4 + day.proteinG * 4 + day.fatG * 9
-      : null;
-  // Alkohol-kalorier kommer fra day.alcoholUnits, ikke fra drink_logs-tabellen.
-  // alcoholUnits bumpes automatisk af genstandstælleren og kan også sættes
-  // manuelt — én kilde til sandhed for dagens alkoholmængde.
-  const drinkKcal = (day.alcoholUnits ?? 0) * KCAL_PER_ALCOHOL_UNIT;
-  const kcal =
-    macroKcal !== null
-      ? macroKcal + drinkKcal
-      : drinkKcal > 0
-        ? drinkKcal
-        : null;
+  // Alkohol-kalorier kommer fra day.alcoholUnits (bumpes af genstands-
+  // tælleren, kan sættes manuelt). Fælles beregning med /helbred+/statistik.
+  const kcalInfo = dayKcal(day);
 
   return (
     <div>
@@ -1347,15 +1333,7 @@ function HealthBody({
       <FieldSection
         icon={<Apple className="size-3.5" />}
         title="Ernæring"
-        meta={
-          kcal !== null
-            ? drinkKcal > 0 && macroKcal !== null
-              ? `${kcal} kcal · inkl. ${drinkKcal} fra drikkevarer`
-              : drinkKcal > 0 && macroKcal === null
-                ? `${drinkKcal} kcal fra drikkevarer`
-                : `${kcal} kcal`
-            : undefined
-        }
+        meta={kcalMetaText(kcalInfo)}
       >
         <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
           <GridField label="Kulhydrat">

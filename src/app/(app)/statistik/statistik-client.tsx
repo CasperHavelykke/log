@@ -611,7 +611,13 @@ function StackedView({
         >
           <MetricHeader metric={m} data={data} />
           <div className="mt-2 h-[160px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              minHeight={0}
+              initialDimension={{ width: 600, height: 160 }}
+            >
               <LineChart
                 data={data}
                 syncId="statistik"
@@ -713,7 +719,13 @@ function OverlayView({
         )}
       </div>
       <div className="h-[460px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minWidth={0}
+          minHeight={0}
+          initialDimension={{ width: 600, height: 460 }}
+        >
           <LineChart
             data={data}
             margin={{ top: 8, right: 32, left: 8, bottom: 0 }}

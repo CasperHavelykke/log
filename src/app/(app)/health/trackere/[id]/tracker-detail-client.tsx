@@ -215,7 +215,13 @@ export function TrackerDetailClient({
             </span>
           </div>
           <div className="h-[180px] w-full sm:h-[220px]">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              minHeight={0}
+              initialDimension={{ width: 600, height: 200 }}
+            >
               <LineChart
                 data={chartData}
                 margin={{ top: 8, right: 8, left: -14, bottom: 0 }}
