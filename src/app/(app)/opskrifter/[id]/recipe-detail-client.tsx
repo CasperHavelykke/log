@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { compressImage, formatFileSize } from "@/lib/image-compress";
+import { danishLongDate } from "@/lib/date";
 import {
   deleteRecipe,
   deleteRecipeImage,
@@ -36,6 +37,8 @@ type RecipeData = {
   proteinG: number | null;
   fatG: number | null;
   hasImage: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 // --- Portions-skalering -----------------------------------------------------
@@ -158,7 +161,7 @@ export function RecipeDetailClient({
         setError(res.error);
         return;
       }
-      setRecipe(draft);
+      setRecipe({ ...draft, updatedAt: new Date().toISOString() });
       setViewServings(draft.servings);
       setEditing(false);
       router.refresh();
@@ -507,6 +510,13 @@ export function RecipeDetailClient({
           </p>
         )}
       </section>
+
+      <p className="mt-4 text-center text-[11px] italic text-dim">
+        Oprettet {danishLongDate(recipe.createdAt.slice(0, 10))}
+        {recipe.updatedAt.slice(0, 10) !== recipe.createdAt.slice(0, 10) && (
+          <> · senest redigeret {danishLongDate(recipe.updatedAt.slice(0, 10))}</>
+        )}
+      </p>
     </div>
   );
 }

@@ -44,6 +44,8 @@ export default async function RecipeDetailPage({
         proteinG: recipe.proteinG,
         fatG: recipe.fatG,
         hasImage: recipe.imagePathname !== null,
+        createdAt: recipe.createdAt,
+        updatedAt: recipe.updatedAt,
       }}
       startInEdit={rediger === "1"}
     />
