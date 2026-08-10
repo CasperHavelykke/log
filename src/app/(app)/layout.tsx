@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { Nav } from "@/components/nav";
 import { MobileNav } from "@/components/mobile-nav";
+import { isDemoMode } from "@/lib/demo";
 import { requireUser } from "@/lib/session";
 import { listJobSearchPeriods } from "./jobs/period-actions";
 import { getActiveSession } from "./drink-counter/actions";
@@ -43,9 +44,23 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Nav jobsPlacement={jobsPlacement} email={user.email ?? null} />
-      <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-32 pt-[calc(env(safe-area-inset-top,0px)+16px)] sm:pb-8 sm:pt-[calc(env(safe-area-inset-top,0px)+32px)] md:px-10 md:pb-10">
-        {children}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {isDemoMode() && (
+          <div className="sticky top-0 z-40 border-b border-[var(--accent-soft-strong)] bg-[var(--accent-bg)] px-4 py-1.5 pt-[calc(env(safe-area-inset-top,0px)+6px)] text-center text-[12px] text-accent backdrop-blur-sm">
+            Demo — kig frit rundt, alt data er fiktivt og nulstilles
+            automatisk.{" "}
+            <a
+              href="https://loggen.app/login"
+              className="font-medium underline underline-offset-2 hover:text-accent-bright"
+            >
+              Opret din egen gratis →
+            </a>
+          </div>
+        )}
+        <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 pb-32 pt-[calc(env(safe-area-inset-top,0px)+16px)] sm:pb-8 sm:pt-[calc(env(safe-area-inset-top,0px)+32px)] md:px-10 md:pb-10">
+          {children}
+        </main>
+      </div>
       <MobileNav jobsPlacement={jobsPlacement} />
       {drinkSession && (
         <FloatingCounterBanner totalUnits={drinkSession.totalUnits} />

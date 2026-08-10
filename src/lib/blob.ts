@@ -29,7 +29,9 @@ export type UploadedBlob = {
 };
 
 // Lokal disk-rod for alle uploads. Ligger i samme data/ som SQLite-filen.
-const BLOB_ROOT = resolve(process.cwd(), "data");
+// DATA_DIR-env kan pege den et andet sted hen (demo-instansen bruger
+// data-demo/ så demo-uploads aldrig blandes med rigtige filer).
+const BLOB_ROOT = resolve(process.cwd(), process.env.DATA_DIR ?? "data");
 
 function blobAbsolutePath(relativePath: string): string {
   return join(BLOB_ROOT, relativePath);

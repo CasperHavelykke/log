@@ -8,9 +8,16 @@ import { getCurrentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-const BLOB_ROOT = resolve(process.cwd(), "data");
+const BLOB_ROOT = resolve(process.cwd(), process.env.DATA_DIR ?? "data");
 
 export async function GET() {
+  const { isDemoMode } = await import("@/lib/demo");
+  if (isDemoMode()) {
+    return NextResponse.json(
+      { error: "Eksport er ikke tilgængelig i demoen" },
+      { status: 403 },
+    );
+  }
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Ikke logget ind" }, { status: 401 });

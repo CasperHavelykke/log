@@ -52,6 +52,8 @@ function parseBasicAuth(header: string | null): [string, string] | null {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const { isDemoMode } = await import("@/lib/demo");
+  if (isDemoMode()) return new Response("Not found", { status: 404 });
   let body: URLSearchParams;
   try {
     const contentType = req.headers.get("content-type") ?? "";

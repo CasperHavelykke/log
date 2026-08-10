@@ -28,6 +28,8 @@ export async function createOAuthClient(input: {
   name: string;
   redirectUris: string[];
 }): Promise<CreateResult> {
+  const { isDemoMode, DEMO_BLOCKED_MESSAGE } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false, error: DEMO_BLOCKED_MESSAGE };
   const user = await requireUser();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) {
@@ -75,6 +77,8 @@ export async function listOAuthClients() {
 }
 
 export async function deleteOAuthClient(id: number) {
+  const { isDemoMode } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false as const };
   const user = await requireUser();
   await db
     .delete(schema.oauthClients)

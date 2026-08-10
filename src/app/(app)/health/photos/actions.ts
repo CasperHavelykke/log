@@ -26,6 +26,8 @@ export async function uploadPhoto(
   | { ok: true; id: number; url: string }
   | { ok: false; error: string }
 > {
+  const { isDemoMode, DEMO_BLOCKED_MESSAGE } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false, error: DEMO_BLOCKED_MESSAGE };
   const user = await requireUser();
 
   const file = formData.get("file");

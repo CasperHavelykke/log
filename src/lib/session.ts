@@ -4,11 +4,23 @@ import { redirect } from "next/navigation";
 import { eq, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { auth, signOut } from "@/auth";
+import { DEMO_USER_EMAIL, isDemoMode } from "@/lib/demo";
 
 // Henter den fulde user-row fra DB ud fra Auth.js' session. Kald-stederne
 // regner med fuld user-shape (id, name, email, focusProjectId osv.), så vi
 // laver én lookup per request — billig sammenlignet med resten af siden.
 export async function getCurrentUser() {
+  // Demo-instansen har ingen login-flow: alle besøgende ER demo-brugeren.
+  // Demo-DB'en indeholder kun fiktiv seed-data, så der er intet at beskytte.
+  if (isDemoMode()) {
+    const rows = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, DEMO_USER_EMAIL))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
   const session = await auth();
   const idRaw = session?.user?.id;
   if (!idRaw) return null;

@@ -37,6 +37,8 @@ export type UploadDocumentResult =
 export async function uploadDocument(
   formData: FormData,
 ): Promise<UploadDocumentResult> {
+  const { isDemoMode, DEMO_BLOCKED_MESSAGE } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false, error: DEMO_BLOCKED_MESSAGE };
   const user = await requireUser();
 
   const file = formData.get("file");

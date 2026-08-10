@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { isDemoMode } from "@/lib/demo";
 import { getCurrentUser } from "@/lib/session";
 import {
   SUPPORTED_CHALLENGE_METHODS,
@@ -23,6 +24,7 @@ export default async function AuthorizePage({
 }: {
   searchParams: Params;
 }) {
+  if (isDemoMode()) notFound();
   const params = await searchParams;
   const clientIdParam = first(params.client_id);
   const redirectUri = first(params.redirect_uri);

@@ -33,6 +33,10 @@ async function authenticate(
 }
 
 async function handle(req: Request): Promise<Response> {
+  const { isDemoMode } = await import("@/lib/demo");
+  if (isDemoMode()) {
+    return new Response("MCP er ikke tilgængelig i demoen", { status: 404 });
+  }
   const auth = await authenticate(req);
   if (!auth) return unauthorized(req, "invalid_token");
 

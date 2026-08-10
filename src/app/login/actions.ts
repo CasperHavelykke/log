@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
+import { isDemoMode } from "@/lib/demo";
 
 export async function sendMagicLink(formData: FormData) {
+  if (isDemoMode()) redirect("/today");
   const email = (formData.get("email") as string | null)?.trim().toLowerCase();
   if (!email) return;
 

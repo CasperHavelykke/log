@@ -12,6 +12,13 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+    const { isDemoMode } = await import("@/lib/demo");
+    if (isDemoMode()) {
+      return NextResponse.json(
+        { ok: false, error: "Import er ikke tilgængelig i demoen" },
+        { status: 403 },
+      );
+    }
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(

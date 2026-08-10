@@ -66,6 +66,8 @@ export async function getAccountSummary(): Promise<AccountSummary> {
 export async function deleteAccount(input: {
   confirmEmail: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { isDemoMode, DEMO_BLOCKED_MESSAGE } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false, error: DEMO_BLOCKED_MESSAGE };
   const user = await requireUser();
 
   const expected = (user.email ?? "").trim().toLowerCase();

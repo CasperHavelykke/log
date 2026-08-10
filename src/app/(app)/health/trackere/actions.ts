@@ -201,6 +201,8 @@ const uploadSchema = z.object({
 });
 
 export async function uploadTrackerPhoto(formData: FormData) {
+  const { isDemoMode, DEMO_BLOCKED_MESSAGE } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false as const, error: DEMO_BLOCKED_MESSAGE };
   const user = await requireUser();
 
   const file = formData.get("file");

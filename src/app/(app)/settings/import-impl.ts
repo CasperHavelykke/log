@@ -7,7 +7,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 
-const BLOB_ROOT = resolve(process.cwd(), "data");
+const BLOB_ROOT = resolve(process.cwd(), process.env.DATA_DIR ?? "data");
 
 // dayEntryRow accepterer både v1 (med headache/iskiasPain osv.) og v2.
 // De gamle felter ignoreres ved insert siden de er flyttet til

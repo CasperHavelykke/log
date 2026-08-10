@@ -10,6 +10,8 @@ import {
 // JSON-import via server-action (legacy / små backups uden filer).
 // Store ZIP-backups skal poste til /api/import for at omgå body-size-limit.
 export async function importData(raw: unknown): Promise<ImportResult> {
+  const { isDemoMode, DEMO_BLOCKED_MESSAGE } = await import("@/lib/demo");
+  if (isDemoMode()) return { ok: false, error: DEMO_BLOCKED_MESSAGE };
   const user = await requireUser();
 
   const parsed = backupSchema.safeParse(raw);
