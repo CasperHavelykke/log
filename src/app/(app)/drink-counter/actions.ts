@@ -88,15 +88,20 @@ export async function addDrink(input: { kind: DrinkKind }) {
     return { ok: false as const, error: "Ukendt drink-type" };
   }
   const now = new Date().toISOString();
-  await db.insert(schema.drinkLogs).values({
-    sessionId: session.id,
-    unitCount: units,
-    kind: input.kind,
-    occurredAt: now,
-  });
+  const inserted = await db
+    .insert(schema.drinkLogs)
+    .values({
+      sessionId: session.id,
+      unitCount: units,
+      kind: input.kind,
+      occurredAt: now,
+    })
+    .returning();
   await bumpAlcoholUnits(user.id, session.sessionDate, units);
   revalidatePath("/", "layout");
-  return { ok: true as const };
+  // Klienten skal bruge det RIGTIGE id — fabrikerede optimistiske id'er
+  // gjorde fortryd stille brudt (ramte en ikke-eksisterende række).
+  return { ok: true as const, log: inserted[0] };
 }
 
 export async function removeDrink(input: { logId: number }) {

@@ -30,9 +30,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       })(),
       // 6-cifret kode i stedet for UUID, så iOS PWA-brugere kan taste den
       // ind i appen frem for at klikke et link (links åbner i Safari, ikke
-      // i PWA'en — cookien lander det forkerte sted).
+      // i PWA'en — cookien lander det forkerte sted). CSPRNG — Math.random
+      // er forudsigelig og hører ikke hjemme i auth-tokens.
       generateVerificationToken: async () => {
-        return Math.floor(100000 + Math.random() * 900000).toString();
+        const { randomInt } = await import("node:crypto");
+        return randomInt(100000, 1000000).toString();
       },
       // Send email der både viser koden TOPMOST og link som fallback til
       // desktop-brugere.

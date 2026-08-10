@@ -10,6 +10,14 @@ export const runtime = "nodejs";
 const execFileAsync = promisify(execFile);
 
 export async function POST(req: NextRequest) {
+  // Ren lokal-udviklings-convenience: åbner en sti i Stifinder på den
+  // maskine serveren kører på. Giver kun mening på Windows (dev-PC'en) —
+  // på Linux-serverne er featuren død, og existsSync-tjekket nedenfor
+  // ville ellers fungere som et sti-orakel for vilkårlige server-stier.
+  const { isDemoMode } = await import("@/lib/demo");
+  if (isDemoMode() || process.platform !== "win32") {
+    return NextResponse.json({ error: "Ikke tilgængelig" }, { status: 404 });
+  }
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Ikke logget ind" }, { status: 401 });

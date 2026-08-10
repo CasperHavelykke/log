@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
-import { addDrink, endSession, removeDrink } from "./actions";
+import { addDrink, endSession, getActiveSession, removeDrink } from "./actions";
 import type { ActiveSessionPayload, DrinkKind } from "./constants";
 
 const KIND_LABEL: Record<DrinkKind, string> = {
@@ -32,18 +32,18 @@ export function CounterScreen({
     startTx(async () => {
       const res = await addDrink({ kind });
       if (!res.ok) return;
-      // Optimistic-style: tilføj log lokalt med temp id
-      const units = kind === "stærk_shot" ? 2 : 1;
+      // Brug serverens række direkte — fabrikerede id'er gjorde fortryd
+      // stille brudt (removeDrink ramte en ikke-eksisterende række).
       setSession((s) => ({
         ...s,
-        totalUnits: s.totalUnits + units,
+        totalUnits: s.totalUnits + res.log.unitCount,
         logs: [
           ...s.logs,
           {
-            id: Math.max(0, ...s.logs.map((l) => l.id)) + 1,
-            unitCount: units,
-            kind,
-            occurredAt: new Date().toISOString(),
+            id: res.log.id,
+            unitCount: res.log.unitCount,
+            kind: res.log.kind as DrinkKind,
+            occurredAt: res.log.occurredAt,
           },
         ],
       }));
@@ -53,7 +53,13 @@ export function CounterScreen({
   function undo(logId: number) {
     startTx(async () => {
       const res = await removeDrink({ logId });
-      if (!res.ok) return;
+      if (!res.ok) {
+        // Klient og server er ude af sync — hent sandheden frem for at
+        // sluge fejlen stille.
+        const fresh = await getActiveSession();
+        if (fresh) setSession(fresh);
+        return;
+      }
       setSession((s) => {
         const log = s.logs.find((l) => l.id === logId);
         return {

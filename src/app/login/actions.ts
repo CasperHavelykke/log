@@ -9,6 +9,13 @@ export async function sendMagicLink(formData: FormData) {
   const email = (formData.get("email") as string | null)?.trim().toLowerCase();
   if (!email) return;
 
+  // Max 5 mails per email per time — beskytter Resend-kvoten og modtagerens
+  // indbakke mod spam via formularen.
+  const { rateLimit } = await import("@/lib/rate-limit");
+  if (!rateLimit(`magiclink:${email}`, 5, 60 * 60 * 1000).ok) {
+    redirect("/login?error=RateLimited");
+  }
+
   // redirect: false → vi håndterer redirect selv så vi kan tage email med
   // ind på næste step (kode-input). Auth.js sender stadig emailen via
   // sendVerificationRequest.

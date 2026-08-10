@@ -343,35 +343,39 @@ export async function performImport(
     }
   }
 
+  // Hele nulstil+genindsæt kører i ÉN transaktion — et nedbrud midtvejs
+  // ville ellers efterlade databasen halvt slettet i netop den feature,
+  // hvis formål er datasikkerhed. Fil-skrivning sker først EFTER commit.
+  await db.transaction(async (tx) => {
   // Slet eksisterende data (børn før forældre).
-  const existingDrinkSessions = await db
+  const existingDrinkSessions = await tx
     .select({ id: schema.drinkSessions.id })
     .from(schema.drinkSessions)
     .where(eq(schema.drinkSessions.userId, uid));
   const existingDrinkSessionIds = existingDrinkSessions.map((s) => s.id);
   if (existingDrinkSessionIds.length > 0) {
-    await db
+    await tx
       .delete(schema.drinkLogs)
       .where(inArray(schema.drinkLogs.sessionId, existingDrinkSessionIds));
   }
-  await db.delete(schema.drinkSessions).where(eq(schema.drinkSessions.userId, uid));
-  await db.delete(schema.applicationEvents).where(eq(schema.applicationEvents.userId, uid));
-  await db.delete(schema.timeEntries).where(eq(schema.timeEntries.userId, uid));
-  await db.delete(schema.documents).where(eq(schema.documents.userId, uid));
-  await db.delete(schema.jobApplications).where(eq(schema.jobApplications.userId, uid));
-  await db.delete(schema.jobSearchPeriods).where(eq(schema.jobSearchPeriods.userId, uid));
-  await db.delete(schema.projects).where(eq(schema.projects.userId, uid));
-  await db.delete(schema.dayEntries).where(eq(schema.dayEntries.userId, uid));
-  await db.delete(schema.weekGoals).where(eq(schema.weekGoals.userId, uid));
-  await db.delete(schema.supplementIntakes).where(eq(schema.supplementIntakes.userId, uid));
-  await db.delete(schema.supplements).where(eq(schema.supplements.userId, uid));
-  await db.delete(schema.fasts).where(eq(schema.fasts.userId, uid));
-  await db.delete(schema.sleepEntries).where(eq(schema.sleepEntries.userId, uid));
-  await db.delete(schema.customParameterValues).where(eq(schema.customParameterValues.userId, uid));
-  await db.delete(schema.customParameters).where(eq(schema.customParameters.userId, uid));
-  await db.delete(schema.photos).where(eq(schema.photos.userId, uid));
-  await db.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
-  await db.delete(schema.recipes).where(eq(schema.recipes.userId, uid));
+  await tx.delete(schema.drinkSessions).where(eq(schema.drinkSessions.userId, uid));
+  await tx.delete(schema.applicationEvents).where(eq(schema.applicationEvents.userId, uid));
+  await tx.delete(schema.timeEntries).where(eq(schema.timeEntries.userId, uid));
+  await tx.delete(schema.documents).where(eq(schema.documents.userId, uid));
+  await tx.delete(schema.jobApplications).where(eq(schema.jobApplications.userId, uid));
+  await tx.delete(schema.jobSearchPeriods).where(eq(schema.jobSearchPeriods.userId, uid));
+  await tx.delete(schema.projects).where(eq(schema.projects.userId, uid));
+  await tx.delete(schema.dayEntries).where(eq(schema.dayEntries.userId, uid));
+  await tx.delete(schema.weekGoals).where(eq(schema.weekGoals.userId, uid));
+  await tx.delete(schema.supplementIntakes).where(eq(schema.supplementIntakes.userId, uid));
+  await tx.delete(schema.supplements).where(eq(schema.supplements.userId, uid));
+  await tx.delete(schema.fasts).where(eq(schema.fasts.userId, uid));
+  await tx.delete(schema.sleepEntries).where(eq(schema.sleepEntries.userId, uid));
+  await tx.delete(schema.customParameterValues).where(eq(schema.customParameterValues.userId, uid));
+  await tx.delete(schema.customParameters).where(eq(schema.customParameters.userId, uid));
+  await tx.delete(schema.photos).where(eq(schema.photos.userId, uid));
+  await tx.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
+  await tx.delete(schema.recipes).where(eq(schema.recipes.userId, uid));
 
   // Lad SQLite generere nye autoincrement-id'er — backup-id'er kan
   // kollidere på tværs af brugere (PK er global, ikke per user).
@@ -385,7 +389,7 @@ export async function performImport(
   ): Promise<Map<number, number>> {
     const map = new Map<number, number>();
     for (const row of rows) {
-      const inserted = await db
+      const inserted = await tx
         .insert(table)
         .values(toValues(row))
         .returning({ id: table.id });
@@ -476,7 +480,7 @@ export async function performImport(
 
   // Parents uden børn — batch-insert uden eksplicit id.
   if (d.jobSearchPeriods.length > 0) {
-    await db.insert(schema.jobSearchPeriods).values(
+    await tx.insert(schema.jobSearchPeriods).values(
       d.jobSearchPeriods.map((p) => ({
         userId: uid,
         name: p.name ?? null,
@@ -487,7 +491,7 @@ export async function performImport(
     );
   }
   if (d.dayEntries.length > 0) {
-    await db.insert(schema.dayEntries).values(
+    await tx.insert(schema.dayEntries).values(
       d.dayEntries.map((e) => ({
         userId: uid,
         date: e.date,
@@ -523,7 +527,7 @@ export async function performImport(
     );
   }
   if (d.weekGoals.length > 0) {
-    await db.insert(schema.weekGoals).values(
+    await tx.insert(schema.weekGoals).values(
       d.weekGoals.map((g) => ({
         userId: uid,
         weekStart: g.weekStart,
@@ -536,7 +540,7 @@ export async function performImport(
     );
   }
   if (d.fasts.length > 0) {
-    await db.insert(schema.fasts).values(
+    await tx.insert(schema.fasts).values(
       d.fasts.map((f) => ({
         userId: uid,
         startedAt: f.startedAt,
@@ -547,7 +551,7 @@ export async function performImport(
     );
   }
   if (d.sleepEntries.length > 0) {
-    await db.insert(schema.sleepEntries).values(
+    await tx.insert(schema.sleepEntries).values(
       d.sleepEntries.map((s) => ({
         userId: uid,
         date: s.date,
@@ -595,7 +599,7 @@ export async function performImport(
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (rows.length > 0) await db.insert(schema.timeEntries).values(rows);
+    if (rows.length > 0) await tx.insert(schema.timeEntries).values(rows);
   }
   if (d.applicationEvents.length > 0) {
     const rows = d.applicationEvents
@@ -612,7 +616,7 @@ export async function performImport(
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (rows.length > 0) await db.insert(schema.applicationEvents).values(rows);
+    if (rows.length > 0) await tx.insert(schema.applicationEvents).values(rows);
   }
   if (d.supplementIntakes.length > 0) {
     const rows = d.supplementIntakes
@@ -632,7 +636,7 @@ export async function performImport(
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
     if (rows.length > 0)
-      await db.insert(schema.supplementIntakes).values(rows);
+      await tx.insert(schema.supplementIntakes).values(rows);
   }
   if (d.customParameterValues.length > 0) {
     const rows = d.customParameterValues
@@ -653,10 +657,10 @@ export async function performImport(
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
     if (rows.length > 0)
-      await db.insert(schema.customParameterValues).values(rows);
+      await tx.insert(schema.customParameterValues).values(rows);
   }
   if (d.photos.length > 0) {
-    await db.insert(schema.photos).values(
+    await tx.insert(schema.photos).values(
       d.photos.map((p) => ({
         userId: uid,
         trackerId:
@@ -674,7 +678,7 @@ export async function performImport(
     );
   }
   if (d.documents.length > 0) {
-    await db.insert(schema.documents).values(
+    await tx.insert(schema.documents).values(
       d.documents.map((doc) => ({
         userId: uid,
         kind: doc.kind,
@@ -706,10 +710,10 @@ export async function performImport(
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (rows.length > 0) await db.insert(schema.drinkLogs).values(rows);
+    if (rows.length > 0) await tx.insert(schema.drinkLogs).values(rows);
   }
   if (d.recipes.length > 0) {
-    await db.insert(schema.recipes).values(
+    await tx.insert(schema.recipes).values(
       d.recipes.map((r) => ({
         userId: uid,
         title: r.title,
@@ -728,6 +732,8 @@ export async function performImport(
       })),
     );
   }
+
+  });
 
   // Skriv binær fil-data fra ZIP'en til lokal disk.
   let filesWritten = 0;
