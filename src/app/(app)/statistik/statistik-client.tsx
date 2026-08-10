@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -289,6 +290,8 @@ export function StatistikClient({
   const [selected, setSelected] = useState<Set<MetricKey>>(
     () => new Set<MetricKey>(["weight", "sleepHours", "mood", "energy"]),
   );
+  // Kalender-visning af én metrik ad gangen (åbnes via ikon i venstre panel).
+  const [calendarMetric, setCalendarMetric] = useState<MetricKey | null>(null);
 
   const range = RANGES.find((r) => r.id === rangeId)!;
 
@@ -361,9 +364,20 @@ export function StatistikClient({
           data={filteredData}
           allMetrics={ALL_METRICS}
           garminSleepEnabled={garminSleepEnabled}
+          calendarMetric={calendarMetric}
+          onOpenCalendar={(k) =>
+            setCalendarMetric((prev) => (prev === k ? null : k))
+          }
         />
 
         <div className="space-y-3">
+          {calendarMetric !== null && METRIC_BY_KEY.has(calendarMetric) && (
+            <MetricCalendar
+              metric={METRIC_BY_KEY.get(calendarMetric)!}
+              data={data}
+              onClose={() => setCalendarMetric(null)}
+            />
+          )}
           {selectedMetrics.length === 0 ? (
             <EmptyState text="Vælg en eller flere metrics i venstre panel." />
           ) : mode === "stacked" ? (
@@ -454,12 +468,16 @@ function MetricPicker({
   data,
   allMetrics,
   garminSleepEnabled,
+  calendarMetric,
+  onOpenCalendar,
 }: {
   selected: Set<MetricKey>;
   onToggle: (k: MetricKey) => void;
   data: DataPoint[];
   allMetrics: Metric[];
   garminSleepEnabled: boolean;
+  calendarMetric: MetricKey | null;
+  onOpenCalendar: (k: MetricKey) => void;
 }) {
   const counts = useMemo(() => {
     const m = new Map<MetricKey, number>();
@@ -499,31 +517,49 @@ function MetricPicker({
                 const count = counts.get(m.key) ?? 0;
                 const has = count > 0;
                 const isSelected = selected.has(m.key);
+                const isCalendarActive = calendarMetric === m.key;
                 return (
-                  <button
+                  <div
                     key={m.key}
-                    type="button"
-                    onClick={() => onToggle(m.key)}
-                    className={`flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-[13px] transition ${
-                      isSelected
-                        ? "bg-accent/10"
-                        : "hover:bg-border-light"
-                    } ${has ? "text-ink" : "text-dim"}`}
+                    className={`flex w-full items-center rounded transition ${
+                      isSelected ? "bg-accent/10" : "hover:bg-border-light"
+                    }`}
                   >
-                    <span
-                      className="inline-block size-2 shrink-0 rounded-full"
-                      style={{
-                        backgroundColor: isSelected
-                          ? m.color
-                          : "transparent",
-                        border: `1px solid ${
-                          isSelected ? m.color : "var(--border)"
-                        }`,
-                      }}
-                    />
-                    <span className="flex-1 truncate">{m.label}</span>
-                    <span className="text-[10px] text-light">{count}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onToggle(m.key)}
+                      className={`flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-1.5 py-1 text-left text-[13px] ${
+                        has ? "text-ink" : "text-dim"
+                      }`}
+                    >
+                      <span
+                        className="inline-block size-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: isSelected
+                            ? m.color
+                            : "transparent",
+                          border: `1px solid ${
+                            isSelected ? m.color : "var(--border)"
+                          }`,
+                        }}
+                      />
+                      <span className="flex-1 truncate">{m.label}</span>
+                      <span className="text-[10px] text-light">{count}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCalendar(m.key)}
+                      title={`Vis ${m.label} i kalender`}
+                      aria-pressed={isCalendarActive}
+                      className={`inline-flex shrink-0 cursor-pointer items-center rounded p-1.5 transition-colors ${
+                        isCalendarActive
+                          ? "text-accent"
+                          : "text-dim hover:text-mid"
+                      }`}
+                    >
+                      <CalendarDays className="size-3.5" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -538,6 +574,291 @@ function EmptyState({ text }: { text: string }) {
   return (
     <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
       {text}
+    </div>
+  );
+}
+
+// --- Metrik-kalender ---------------------------------------------------------
+// Read-only kalender der viser på hvilke dage en metrik er registreret.
+// Ja/nej-metrikker (domain fra 0): kun prik ved "ja" (>0). Alt andet: prik
+// når der findes en værdi. Data er hele historikken — ingen server-kald.
+
+const CAL_MONTHS = [
+  "januar", "februar", "marts", "april", "maj", "juni",
+  "juli", "august", "september", "oktober", "november", "december",
+];
+const CAL_MONTHS_SHORT = [
+  "jan", "feb", "mar", "apr", "maj", "jun",
+  "jul", "aug", "sep", "okt", "nov", "dec",
+];
+const CAL_WEEKDAYS = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"];
+
+function calPad(n: number) {
+  return String(n).padStart(2, "0");
+}
+function calIso(y: number, m: number, d: number) {
+  return `${y}-${calPad(m + 1)}-${calPad(d)}`;
+}
+function calDaysInMonth(y: number, m: number) {
+  return new Date(y, m + 1, 0).getDate();
+}
+function calFirstWeekday(y: number, m: number) {
+  return (new Date(y, m, 1).getDay() + 6) % 7;
+}
+
+function metricHit(metric: Metric, value: unknown): boolean {
+  if (typeof value !== "number") return false;
+  if (metric.domain && metric.domain[0] === 0) return value > 0;
+  return true;
+}
+
+function MetricCalendar({
+  metric,
+  data,
+  onClose,
+}: {
+  metric: Metric;
+  data: DataPoint[];
+  onClose: () => void;
+}) {
+  const now = new Date();
+  const [view, setView] = useState<"month" | "year">("month");
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+
+  const hitDates = useMemo(() => {
+    const s = new Set<string>();
+    for (const row of data) {
+      if (metricHit(metric, row[metric.key])) s.add(row.date);
+    }
+    return s;
+  }, [data, metric]);
+
+  function shiftMonth(delta: number) {
+    const d = new Date(year, month + delta, 1);
+    setYear(d.getFullYear());
+    setMonth(d.getMonth());
+  }
+
+  const monthPrefix = `${year}-${calPad(month + 1)}`;
+  const monthCount = useMemo(
+    () => [...hitDates].filter((d) => d.startsWith(monthPrefix)).length,
+    [hitDates, monthPrefix],
+  );
+  const yearCount = useMemo(
+    () => [...hitDates].filter((d) => d.startsWith(`${year}-`)).length,
+    [hitDates, year],
+  );
+
+  return (
+    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-hair pb-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="inline-block size-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: metric.color }}
+          />
+          <span className="truncate font-serif text-[16px] text-ink">
+            {metric.label}
+          </span>
+          <span className="shrink-0 text-[11px] text-light">
+            {view === "month"
+              ? `${monthCount} dag${monthCount === 1 ? "" : "e"}`
+              : `${yearCount} dag${yearCount === 1 ? "" : "e"} i ${year}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="inline-flex rounded-[8px] bg-bg p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("month")}
+              className={`cursor-pointer rounded-[6px] px-2.5 py-1 text-[12px] transition-colors ${
+                view === "month" ? "bg-accent text-white" : "text-mid hover:text-ink"
+              }`}
+            >
+              Måned
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("year")}
+              className={`cursor-pointer rounded-[6px] px-2.5 py-1 text-[12px] transition-colors ${
+                view === "year" ? "bg-accent text-white" : "text-mid hover:text-ink"
+              }`}
+            >
+              År
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Luk kalender"
+            className="inline-flex cursor-pointer items-center rounded-[6px] p-1.5 text-dim hover:bg-bg hover:text-ink"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => (view === "month" ? shiftMonth(-1) : setYear(year - 1))}
+          aria-label="Forrige"
+          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg text-mid hover:text-ink sm:size-7"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <span className="text-[13px] font-medium text-ink">
+          {view === "month" ? `${CAL_MONTHS[month]} ${year}` : year}
+        </span>
+        <button
+          type="button"
+          onClick={() => (view === "month" ? shiftMonth(1) : setYear(year + 1))}
+          aria-label="Næste"
+          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg text-mid hover:text-ink sm:size-7"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+
+      {view === "month" ? (
+        <MetricMonthGrid
+          year={year}
+          month={month}
+          hitDates={hitDates}
+          color={metric.color}
+        />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {CAL_MONTHS_SHORT.map((label, m) => {
+            const prefix = `${year}-${calPad(m + 1)}`;
+            const count = [...hitDates].filter((d) => d.startsWith(prefix)).length;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMonth(m);
+                  setView("month");
+                }}
+                title={`Vis ${CAL_MONTHS[m]} ${year}`}
+                className="cursor-pointer rounded-[8px] bg-bg p-2 text-left transition-colors hover:bg-bg-subtle"
+              >
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <span className="text-[11px] font-medium text-mid">{label}</span>
+                  <span className="text-[10px] text-light">
+                    {count > 0 ? count : ""}
+                  </span>
+                </div>
+                <MetricMiniMonth
+                  year={year}
+                  month={m}
+                  hitDates={hitDates}
+                  color={metric.color}
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MetricMonthGrid({
+  year,
+  month,
+  hitDates,
+  color,
+}: {
+  year: number;
+  month: number;
+  hitDates: Set<string>;
+  color: string;
+}) {
+  const cells: (string | null)[] = [];
+  for (let i = 0; i < calFirstWeekday(year, month); i++) cells.push(null);
+  for (let d = 1; d <= calDaysInMonth(year, month); d++) {
+    cells.push(calIso(year, month, d));
+  }
+  const today = toIsoDate(new Date());
+
+  return (
+    <div>
+      <div className="mb-1 grid grid-cols-7 gap-1">
+        {CAL_WEEKDAYS.map((w) => (
+          <div
+            key={w}
+            className="text-center text-[10px] uppercase tracking-[0.5px] text-dim"
+          >
+            {w}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((iso, i) => {
+          if (!iso) return <div key={i} />;
+          const hit = hitDates.has(iso);
+          const isToday = iso === today;
+          const isFuture = iso > today;
+          return (
+            <div
+              key={iso}
+              className={`flex aspect-square flex-col items-center justify-center rounded-[8px] ${
+                isToday ? "bg-bg ring-1 ring-hair-strong" : "bg-bg"
+              }`}
+            >
+              <span
+                className={`text-[12px] ${
+                  isFuture ? "text-dim" : hit ? "font-medium text-ink" : "text-mid"
+                }`}
+              >
+                {Number(iso.slice(8))}
+              </span>
+              <span
+                className="mt-0.5 size-1.5 rounded-full"
+                style={{ backgroundColor: hit ? color : "transparent" }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MetricMiniMonth({
+  year,
+  month,
+  hitDates,
+  color,
+}: {
+  year: number;
+  month: number;
+  hitDates: Set<string>;
+  color: string;
+}) {
+  const cells: (string | null)[] = [];
+  for (let i = 0; i < calFirstWeekday(year, month); i++) cells.push(null);
+  for (let d = 1; d <= calDaysInMonth(year, month); d++) {
+    cells.push(calIso(year, month, d));
+  }
+  return (
+    <div className="grid grid-cols-7 gap-[3px]">
+      {cells.map((iso, i) =>
+        iso === null ? (
+          <div key={i} className="aspect-square" />
+        ) : (
+          <div
+            key={iso}
+            className="aspect-square rounded-[2px]"
+            style={{
+              backgroundColor: hitDates.has(iso) ? color : "var(--bg-subtle)",
+              opacity: hitDates.has(iso) ? 0.9 : 0.6,
+            }}
+          />
+        ),
+      )}
     </div>
   );
 }
