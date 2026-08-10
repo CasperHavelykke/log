@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  X,
+} from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -375,6 +381,7 @@ export function StatistikClient({
             <MetricCalendar
               metric={METRIC_BY_KEY.get(calendarMetric)!}
               data={data}
+              garminSleepEnabled={garminSleepEnabled}
               onClose={() => setCalendarMetric(null)}
             />
           )}
@@ -612,13 +619,45 @@ function metricHit(metric: Metric, value: unknown): boolean {
   return true;
 }
 
+// Hex-farve + alpha (0-1) → 8-cifret hex. Metric-farverne er alle #rrggbb.
+function withAlpha(hex: string, alpha: number): string {
+  const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${hex}${a}`;
+}
+
+// Intensitet 0-1 for en dags værdi (bruges som celle-baggrundens alpha, så
+// bevidst dæmpet af hensyn til læsbarheden af dag-nummeret). Ja/nej-
+// metrikker: fast mellemtone. Øvrige: normaliseret over metrikens
+// registrerede min-max, med bund så laveste værdi stadig er synlig.
+function heatAlpha(
+  metric: Metric,
+  value: number,
+  min: number,
+  max: number,
+): number {
+  if (metric.domain && metric.domain[0] === 0) return 0.5;
+  if (max <= min) return 0.45;
+  return 0.15 + 0.5 * ((value - min) / (max - min));
+}
+
+// Samme farvelogik som /helbred-kalenderens søvnscore-badge.
+function calScoreClasses(score: number): string {
+  if (score >= 80) return "bg-[var(--success-soft)] text-success";
+  if (score >= 60) return "bg-[var(--warning-soft)] text-warning";
+  return "bg-[var(--danger-soft)] text-danger";
+}
+
 function MetricCalendar({
   metric,
   data,
+  garminSleepEnabled,
   onClose,
 }: {
   metric: Metric;
   data: DataPoint[];
+  garminSleepEnabled: boolean;
   onClose: () => void;
 }) {
   const now = new Date();
@@ -626,12 +665,22 @@ function MetricCalendar({
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  const hitDates = useMemo(() => {
-    const s = new Set<string>();
+  // date → værdi for alle dage hvor metrikken "tæller", plus min/max til
+  // intensitets-normalisering.
+  const { hits, minVal, maxVal } = useMemo(() => {
+    const m = new Map<string, number>();
+    let lo = Infinity;
+    let hi = -Infinity;
     for (const row of data) {
-      if (metricHit(metric, row[metric.key])) s.add(row.date);
+      const v = row[metric.key];
+      if (metricHit(metric, v)) {
+        const n = v as number;
+        m.set(row.date, n);
+        if (n < lo) lo = n;
+        if (n > hi) hi = n;
+      }
     }
-    return s;
+    return { hits: m, minVal: lo, maxVal: hi };
   }, [data, metric]);
 
   function shiftMonth(delta: number) {
@@ -640,14 +689,25 @@ function MetricCalendar({
     setMonth(d.getMonth());
   }
 
+  // Træning + Garmin-score til /helbred-style markører i cellerne.
+  const { exerciseDates, sleepScores } = useMemo(() => {
+    const ex = new Set<string>();
+    const sc = new Map<string, number>();
+    for (const row of data) {
+      if (row.exercise === 1) ex.add(row.date);
+      if (typeof row.sleepScore === "number") sc.set(row.date, row.sleepScore);
+    }
+    return { exerciseDates: ex, sleepScores: sc };
+  }, [data]);
+
   const monthPrefix = `${year}-${calPad(month + 1)}`;
   const monthCount = useMemo(
-    () => [...hitDates].filter((d) => d.startsWith(monthPrefix)).length,
-    [hitDates, monthPrefix],
+    () => [...hits.keys()].filter((d) => d.startsWith(monthPrefix)).length,
+    [hits, monthPrefix],
   );
   const yearCount = useMemo(
-    () => [...hitDates].filter((d) => d.startsWith(`${year}-`)).length,
-    [hitDates, year],
+    () => [...hits.keys()].filter((d) => d.startsWith(`${year}-`)).length,
+    [hits, year],
   );
 
   return (
@@ -725,14 +785,19 @@ function MetricCalendar({
         <MetricMonthGrid
           year={year}
           month={month}
-          hitDates={hitDates}
-          color={metric.color}
+          metric={metric}
+          hits={hits}
+          minVal={minVal}
+          maxVal={maxVal}
+          exerciseDates={exerciseDates}
+          sleepScores={sleepScores}
+          garminSleepEnabled={garminSleepEnabled}
         />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {CAL_MONTHS_SHORT.map((label, m) => {
             const prefix = `${year}-${calPad(m + 1)}`;
-            const count = [...hitDates].filter((d) => d.startsWith(prefix)).length;
+            const count = [...hits.keys()].filter((d) => d.startsWith(prefix)).length;
             return (
               <button
                 key={m}
@@ -753,8 +818,10 @@ function MetricCalendar({
                 <MetricMiniMonth
                   year={year}
                   month={m}
-                  hitDates={hitDates}
-                  color={metric.color}
+                  metric={metric}
+                  hits={hits}
+                  minVal={minVal}
+                  maxVal={maxVal}
                 />
               </button>
             );
@@ -768,13 +835,23 @@ function MetricCalendar({
 function MetricMonthGrid({
   year,
   month,
-  hitDates,
-  color,
+  metric,
+  hits,
+  minVal,
+  maxVal,
+  exerciseDates,
+  sleepScores,
+  garminSleepEnabled,
 }: {
   year: number;
   month: number;
-  hitDates: Set<string>;
-  color: string;
+  metric: Metric;
+  hits: Map<string, number>;
+  minVal: number;
+  maxVal: number;
+  exerciseDates: Set<string>;
+  sleepScores: Map<string, number>;
+  garminSleepEnabled: boolean;
 }) {
   const cells: (string | null)[] = [];
   for (let i = 0; i < calFirstWeekday(year, month); i++) cells.push(null);
@@ -785,7 +862,7 @@ function MetricMonthGrid({
 
   return (
     <div>
-      <div className="mb-1 grid grid-cols-7 gap-1">
+      <div className="mb-1.5 grid grid-cols-7 gap-1">
         {CAL_WEEKDAYS.map((w) => (
           <div
             key={w}
@@ -797,31 +874,85 @@ function MetricMonthGrid({
       </div>
       <div className="grid grid-cols-7 gap-1">
         {cells.map((iso, i) => {
-          if (!iso) return <div key={i} />;
-          const hit = hitDates.has(iso);
+          if (!iso) return <div key={i} className="aspect-square" />;
+          const value = hits.get(iso);
+          const hit = value !== undefined;
           const isToday = iso === today;
-          const isFuture = iso > today;
+          const score = garminSleepEnabled ? sleepScores.get(iso) : undefined;
+          const showValue =
+            hit && !(metric.domain && metric.domain[0] === 0);
           return (
             <div
               key={iso}
-              className={`flex aspect-square flex-col items-center justify-center rounded-[8px] ${
-                isToday ? "bg-bg ring-1 ring-hair-strong" : "bg-bg"
+              title={
+                hit
+                  ? `${danishLongDate(iso)}: ${value!.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
+                  : undefined
+              }
+              className={`relative flex aspect-square min-h-[44px] flex-col rounded-[8px] border p-1 text-left md:p-1.5 ${
+                isToday
+                  ? "border-hair-strong bg-bg"
+                  : "border-transparent bg-bg"
               }`}
+              style={
+                hit
+                  ? {
+                      backgroundColor: withAlpha(
+                        metric.color,
+                        heatAlpha(metric, value!, minVal, maxVal),
+                      ),
+                    }
+                  : undefined
+              }
             >
-              <span
-                className={`text-[12px] ${
-                  isFuture ? "text-dim" : hit ? "font-medium text-ink" : "text-mid"
-                }`}
-              >
+              <span className="text-[13px] font-medium text-ink">
                 {Number(iso.slice(8))}
               </span>
-              <span
-                className="mt-0.5 size-1.5 rounded-full"
-                style={{ backgroundColor: hit ? color : "transparent" }}
-              />
+              {score !== undefined && (
+                <span
+                  className={`absolute right-1 top-1 rounded-[3px] px-1 py-[1px] text-[9px] font-semibold ${calScoreClasses(score)}`}
+                  title={`Garmin søvnscore: ${score}`}
+                >
+                  {score}
+                </span>
+              )}
+              {exerciseDates.has(iso) && (
+                <Dumbbell
+                  className="absolute bottom-1 left-1 size-[11px] text-accent opacity-85"
+                  strokeWidth={2.5}
+                />
+              )}
+              {showValue && (
+                <span className="absolute bottom-1 right-1 text-[9px] font-medium text-ink/80">
+                  {value!.toFixed(metric.decimals).replace(".", ",")}
+                </span>
+              )}
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-3.5 flex flex-wrap gap-x-3 gap-y-1 border-t border-hair pt-3.5 text-[11px] text-light">
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className="inline-block size-2.5 rounded-[3px]"
+            style={{ backgroundColor: withAlpha(metric.color, 0.55) }}
+          />
+          {metric.label}
+          {!(metric.domain && metric.domain[0] === 0) && " — mørkere = højere"}
+        </span>
+        {garminSleepEnabled && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="rounded-[3px] bg-[var(--success-soft)] px-1.5 py-[1px] text-[10px] font-semibold text-success">
+              82
+            </span>
+            Garmin søvnscore
+          </span>
+        )}
+        <span className="inline-flex items-center gap-1.5">
+          <Dumbbell className="size-[11px] text-accent opacity-85" strokeWidth={2.5} />
+          Træning
+        </span>
       </div>
     </div>
   );
@@ -830,13 +961,17 @@ function MetricMonthGrid({
 function MetricMiniMonth({
   year,
   month,
-  hitDates,
-  color,
+  metric,
+  hits,
+  minVal,
+  maxVal,
 }: {
   year: number;
   month: number;
-  hitDates: Set<string>;
-  color: string;
+  metric: Metric;
+  hits: Map<string, number>;
+  minVal: number;
+  maxVal: number;
 }) {
   const cells: (string | null)[] = [];
   for (let i = 0; i < calFirstWeekday(year, month); i++) cells.push(null);
@@ -845,20 +980,32 @@ function MetricMiniMonth({
   }
   return (
     <div className="grid grid-cols-7 gap-[3px]">
-      {cells.map((iso, i) =>
-        iso === null ? (
-          <div key={i} className="aspect-square" />
-        ) : (
+      {cells.map((iso, i) => {
+        if (iso === null) return <div key={i} className="aspect-square" />;
+        const value = hits.get(iso);
+        return (
           <div
             key={iso}
+            title={
+              value !== undefined
+                ? `${danishLongDate(iso)}: ${value.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
+                : undefined
+            }
             className="aspect-square rounded-[2px]"
             style={{
-              backgroundColor: hitDates.has(iso) ? color : "var(--bg-subtle)",
-              opacity: hitDates.has(iso) ? 0.9 : 0.6,
+              backgroundColor:
+                value !== undefined
+                  ? withAlpha(
+                      metric.color,
+                      // Mini-cellerne er små — løft intensiteten lidt så
+                      // svage værdier stadig kan ses.
+                      Math.min(1, heatAlpha(metric, value, minVal, maxVal) + 0.2),
+                    )
+                  : "var(--bg-subtle)",
             }}
           />
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
