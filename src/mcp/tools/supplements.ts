@@ -359,4 +359,147 @@ export function registerSupplementTools(server: McpServer) {
       });
     },
   );
+
+  server.registerTool(
+    "merge_supplement_metric",
+    {
+      title: "Flet tilskuds-metrik",
+      description:
+        "Fletter én tilskuds-metrik ind i en anden ved at flytte alle intakes fra (fromName, fromUnit) til (toName, toUnit). Bruges til at rydde op i tastefejl — fx 'Glycin (mg)' der skulle have været 'Glycin (g)', eller 'Lycin' → 'Lysin'. Metrikker på /statistik grupperes efter navn+enhed, så kilden forsvinder automatisk når dens intakes er flyttet. VIGTIGT: kald ALTID først med dryRun=true (default) og vis brugeren hvad der rammes, før du udfører med dryRun=false.",
+      inputSchema: {
+        fromName: z.string().min(1).max(200).describe("Kildens navn, fx 'Glycin'"),
+        fromUnit: z
+          .string()
+          .max(50)
+          .nullable()
+          .describe("Kildens enhed, fx 'mg'. null hvis intakes ikke har enhed."),
+        toName: z.string().min(1).max(200).describe("Målets navn"),
+        toUnit: z
+          .string()
+          .max(50)
+          .nullable()
+          .describe("Målets enhed, fx 'g'. null for ingen enhed."),
+        valueFactor: z
+          .number()
+          .positive()
+          .default(1)
+          .describe(
+            "Ganges på dosis-værdierne under flytning. 1 = ren ometiketning (tallene var rigtige, kun enheden forkert). 0.001 = ægte mg→g-konvertering. SPØRG brugeren hvilken situation det er, hvis det er uklart.",
+          ),
+        dryRun: z
+          .boolean()
+          .default(true)
+          .describe(
+            "true (default): rapportér kun hvad der ville ske. false: udfør flytningen.",
+          ),
+      },
+    },
+    async ({ fromName, fromUnit, toName, toUnit, valueFactor, dryRun }) => {
+      const user = await getActiveUser();
+      const from = fromName.trim();
+      const to = toName.trim();
+      const fromU = fromUnit?.trim() || null;
+      const toU = toUnit?.trim() || null;
+      if (from.toLowerCase() === to.toLowerCase() && fromU === toU) {
+        return errorContent("Kilde og mål er identiske.");
+      }
+
+      // Find de ramte intakes (navn matcher case-insensitivt som i statistik).
+      const all = await db
+        .select()
+        .from(schema.supplementIntakes)
+        .where(eq(schema.supplementIntakes.userId, user.id));
+      const affected = all.filter(
+        (i) =>
+          i.name.trim().toLowerCase() === from.toLowerCase() &&
+          ((i.doseUnit ?? "").trim() || null) === fromU,
+      );
+
+      if (affected.length === 0) {
+        return errorContent(
+          `Ingen intakes matcher '${from}' (${fromU ?? "uden enhed"}).`,
+        );
+      }
+
+      const preview = affected.map((i) => ({
+        id: i.id,
+        date: i.date,
+        dose: i.doseAmountX100 === null ? null : i.doseAmountX100 / 100,
+        newDose:
+          i.doseAmountX100 === null
+            ? null
+            : Math.round(i.doseAmountX100 * valueFactor) / 100,
+      }));
+
+      if (dryRun) {
+        return jsonContent({
+          dryRun: true,
+          wouldMove: affected.length,
+          from: { name: from, unit: fromU },
+          to: { name: to, unit: toU },
+          valueFactor,
+          intakes: preview,
+          hint: "Kald igen med dryRun=false for at udføre — efter brugerens bekræftelse.",
+        });
+      }
+
+      await db.transaction(async (tx) => {
+        for (const i of affected) {
+          await tx
+            .update(schema.supplementIntakes)
+            .set({
+              name: to,
+              doseUnit: toU,
+              doseAmountX100:
+                i.doseAmountX100 === null
+                  ? null
+                  : Math.round(i.doseAmountX100 * valueFactor),
+            })
+            .where(eq(schema.supplementIntakes.id, i.id));
+        }
+
+        // Skabelon-oprydning: hvis target-skabelon findes, slet source-
+        // skabelonen; ellers omdøb source til target.
+        const templates = await tx
+          .select()
+          .from(schema.supplements)
+          .where(eq(schema.supplements.userId, user.id));
+        const sourceTpl = templates.find(
+          (t) =>
+            t.name.trim().toLowerCase() === from.toLowerCase() &&
+            ((t.defaultDoseUnit ?? "").trim() || null) === fromU,
+        );
+        const targetTpl = templates.find(
+          (t) =>
+            t.name.trim().toLowerCase() === to.toLowerCase() &&
+            ((t.defaultDoseUnit ?? "").trim() || null) === toU,
+        );
+        if (sourceTpl && targetTpl && sourceTpl.id !== targetTpl.id) {
+          await tx
+            .delete(schema.supplements)
+            .where(eq(schema.supplements.id, sourceTpl.id));
+        } else if (sourceTpl && !targetTpl) {
+          await tx
+            .update(schema.supplements)
+            .set({
+              name: to,
+              defaultDoseUnit: toU,
+              defaultDoseAmountX100:
+                sourceTpl.defaultDoseAmountX100 === null
+                  ? null
+                  : Math.round(sourceTpl.defaultDoseAmountX100 * valueFactor),
+            })
+            .where(eq(schema.supplements.id, sourceTpl.id));
+        }
+      });
+
+      return jsonContent({
+        ok: true,
+        moved: affected.length,
+        from: { name: from, unit: fromU },
+        to: { name: to, unit: toU },
+        valueFactor,
+      });
+    },
+  );
 }
