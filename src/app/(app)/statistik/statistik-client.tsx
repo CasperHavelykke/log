@@ -49,6 +49,7 @@ type MetricKey =
   | "waist"
   | "mood"
   | "energy"
+  | "exercise"
   | "sleepQuality"
   | "sleepHours"
   | "sleepScore"
@@ -123,6 +124,9 @@ const METRICS: Metric[] = [
   { key: "waist", label: "Livvidde", short: "Livvidde", category: "body", unit: "cm", color: "#f97316", decimals: 1 },
   { key: "mood", label: "Humør", short: "Humør", category: "health", unit: "/5", domain: [1, 5], color: "#4ade80", decimals: 0 },
   { key: "energy", label: "Energi", short: "Energi", category: "health", unit: "/5", domain: [1, 5], color: "#fbbf24", decimals: 0 },
+  // Ja/nej-metrik (domain fra 0) — primært til metrik-kalenderen; grafen
+  // bliver en flad 0/1-linje men tælleren og kalenderen er pointen.
+  { key: "exercise", label: "Træning", short: "Træning", category: "health", unit: "", domain: [0, 1], color: "#6ea9f2", decimals: 0 },
   { key: "sleepQuality", label: "Søvnkvalitet", short: "Søvnkval.", category: "sleep", unit: "/4", domain: [1, 4], color: "#a78bfa", decimals: 0 },
   { key: "sleepHours", label: "Søvnvarighed", short: "Søvn", category: "sleep", unit: "t", color: "#5fa3f0", decimals: 1 },
   { key: "sleepScore", label: "Søvnscore (Garmin)", short: "Søvnscore", category: "sleep", unit: "/100", domain: [0, 100], color: "#4ade80", decimals: 0 },
@@ -711,7 +715,7 @@ function MetricCalendar({
   );
 
   return (
-    <section className="rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
+    <section className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-hair pb-3">
         <div className="flex min-w-0 items-center gap-2">
           <span
@@ -728,7 +732,7 @@ function MetricCalendar({
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="inline-flex rounded-[8px] bg-bg p-0.5">
+          <div className="inline-flex rounded-[8px] bg-bg-elevated p-0.5 md:bg-bg">
             <button
               type="button"
               onClick={() => setView("month")}
@@ -764,7 +768,7 @@ function MetricCalendar({
           type="button"
           onClick={() => (view === "month" ? shiftMonth(-1) : setYear(year - 1))}
           aria-label="Forrige"
-          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg text-mid hover:text-ink sm:size-7"
+          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg-elevated text-mid hover:text-ink sm:size-7 md:bg-bg"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -775,7 +779,7 @@ function MetricCalendar({
           type="button"
           onClick={() => (view === "month" ? shiftMonth(1) : setYear(year + 1))}
           aria-label="Næste"
-          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg text-mid hover:text-ink sm:size-7"
+          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[8px] bg-bg-elevated text-mid hover:text-ink sm:size-7 md:bg-bg"
         >
           <ChevronRight className="size-4" />
         </button>
@@ -807,7 +811,7 @@ function MetricCalendar({
                   setView("month");
                 }}
                 title={`Vis ${CAL_MONTHS[m]} ${year}`}
-                className="cursor-pointer rounded-[8px] bg-bg p-2 text-left transition-colors hover:bg-bg-subtle"
+                className="cursor-pointer rounded-[8px] bg-bg-elevated p-2 text-left transition-colors hover:bg-bg-subtle md:bg-bg"
               >
                 <div className="mb-1.5 flex items-baseline justify-between">
                   <span className="text-[11px] font-medium text-mid">{label}</span>
@@ -879,20 +883,22 @@ function MetricMonthGrid({
           const hit = value !== undefined;
           const isToday = iso === today;
           const score = garminSleepEnabled ? sleepScores.get(iso) : undefined;
-          const showValue =
-            hit && !(metric.domain && metric.domain[0] === 0);
+          const isBool = metric.domain !== undefined && metric.domain[0] === 0;
+          const showValue = hit && !isBool;
           return (
             <div
               key={iso}
               title={
                 hit
-                  ? `${danishLongDate(iso)}: ${value!.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
+                  ? isBool
+                    ? danishLongDate(iso)
+                    : `${danishLongDate(iso)}: ${value!.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
                   : undefined
               }
               className={`relative flex aspect-square min-h-[44px] flex-col rounded-[8px] border p-1 text-left md:p-1.5 ${
                 isToday
-                  ? "border-hair-strong bg-bg"
-                  : "border-transparent bg-bg"
+                  ? "border-hair-strong bg-bg-elevated md:bg-bg"
+                  : "border-transparent bg-bg-elevated md:bg-bg"
               }`}
               style={
                 hit
@@ -908,9 +914,11 @@ function MetricMonthGrid({
               <span className="text-[13px] font-medium text-ink">
                 {Number(iso.slice(8))}
               </span>
+              {/* Badge + værdi skjules under sm: — på små skærme er cellerne
+                  for trange, og heat-farven + tælleren bærer informationen. */}
               {score !== undefined && (
                 <span
-                  className={`absolute right-1 top-1 rounded-[3px] px-1 py-[1px] text-[9px] font-semibold ${calScoreClasses(score)}`}
+                  className={`absolute right-1 top-1 hidden rounded-[3px] px-1 py-[1px] text-[9px] font-semibold sm:block ${calScoreClasses(score)}`}
                   title={`Garmin søvnscore: ${score}`}
                 >
                   {score}
@@ -923,7 +931,7 @@ function MetricMonthGrid({
                 />
               )}
               {showValue && (
-                <span className="absolute bottom-1 right-1 text-[9px] font-medium text-ink/80">
+                <span className="absolute bottom-1 right-1 hidden text-[9px] font-medium text-ink/80 sm:block">
                   {value!.toFixed(metric.decimals).replace(".", ",")}
                 </span>
               )}
@@ -942,7 +950,7 @@ function MetricMonthGrid({
           {!(metric.domain && metric.domain[0] === 0) && " — mørkere = højere"}
         </span>
         {garminSleepEnabled && (
-          <span className="inline-flex items-center gap-1.5">
+          <span className="hidden items-center gap-1.5 sm:inline-flex">
             <span className="rounded-[3px] bg-[var(--success-soft)] px-1.5 py-[1px] text-[10px] font-semibold text-success">
               82
             </span>
