@@ -70,6 +70,15 @@ export default async function LoginPage({
             <LoginGate>
               <LoginForm returnTo={returnTo} />
             </LoginGate>
+            <p className="mt-6 text-center text-[13px] text-light">
+              Nysgerrig, men ikke klar til at oprette dig?{" "}
+              <a
+                href="https://demo.loggen.app"
+                className="font-medium text-accent underline underline-offset-2 hover:text-accent-bright"
+              >
+                Prøv demoen →
+              </a>
+            </p>
           </>
         )}
       </div>
