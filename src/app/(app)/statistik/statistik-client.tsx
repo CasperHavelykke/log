@@ -343,28 +343,13 @@ export function StatistikClient({
 
   return (
     <div className="mx-auto max-w-[1280px] space-y-5 px-4 py-8">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-hair pb-5">
-        <div className="min-w-0">
-          <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
-            Statistik
-          </div>
-          <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
-            Oversigt
-          </h1>
+      <header className="border-b border-hair pb-5">
+        <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.6px] text-light">
+          Statistik
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <RangePicker value={rangeId} onChange={setRangeId} />
-          <ModeToggle value={mode} onChange={setMode} />
-          <label className="flex items-center gap-2 text-[12px] text-mid">
-            <input
-              type="checkbox"
-              checked={showMA}
-              onChange={(e) => setShowMA(e.target.checked)}
-              className="size-3.5"
-            />
-            7-dages snit
-          </label>
-        </div>
+        <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
+          Oversigt
+        </h1>
       </header>
 
       <div className="grid gap-4 md:grid-cols-[260px_1fr]">
@@ -389,6 +374,21 @@ export function StatistikClient({
               onClose={() => setCalendarMetric(null)}
             />
           )}
+          {/* Graf-kontroller bor hos graferne — på mobil ligger metric-
+              listen ellers imellem, og man skulle scrolle forbi den. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <RangePicker value={rangeId} onChange={setRangeId} />
+            <ModeToggle value={mode} onChange={setMode} />
+            <label className="flex items-center gap-2 text-[12px] text-mid">
+              <input
+                type="checkbox"
+                checked={showMA}
+                onChange={(e) => setShowMA(e.target.checked)}
+                className="size-3.5"
+              />
+              7-dages snit
+            </label>
+          </div>
           {selectedMetrics.length === 0 ? (
             <EmptyState text="Vælg en eller flere metrics i venstre panel." />
           ) : mode === "stacked" ? (
