@@ -390,18 +390,35 @@ export async function updateJobApplicationStatus(input: {
     .set({ status: input.status, updatedAt: new Date().toISOString() })
     .where(eq(schema.jobApplications.id, input.id));
 
+  let event: {
+    id: number;
+    status: schema.JobStatus;
+    occurredAt: string;
+    note: string | null;
+  } | null = null;
   if (current[0].status !== input.status) {
-    await db.insert(schema.applicationEvents).values({
-      userId: user.id,
-      applicationId: input.id,
-      status: input.status,
-      occurredAt: todayIsoDate(),
-    });
+    const inserted = await db
+      .insert(schema.applicationEvents)
+      .values({
+        userId: user.id,
+        applicationId: input.id,
+        status: input.status,
+        occurredAt: todayIsoDate(),
+      })
+      .returning();
+    if (inserted[0]) {
+      event = {
+        id: inserted[0].id,
+        status: inserted[0].status as schema.JobStatus,
+        occurredAt: inserted[0].occurredAt,
+        note: inserted[0].note ?? null,
+      };
+    }
   }
 
   revalidatePath("/today");
   revalidatePath("/jobs");
-  return { ok: true as const };
+  return { ok: true as const, event };
 }
 
 const updateApplicationSchema = z.object({

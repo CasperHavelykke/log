@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   ExternalLink,
+  Loader2,
   Pencil,
   Trash2,
   X,
@@ -14,6 +16,7 @@ import {
 import {
   deleteJobApplication,
   updateJobApplication,
+  updateJobApplicationStatus,
 } from "../../today/actions";
 import { ApplicationDocuments } from "@/components/application-documents";
 import { danishLongDate } from "@/lib/date";
@@ -105,10 +108,26 @@ export function JobDetailClient({
   const [app, setApp] = useState<App>(initial);
   const [draft, setDraft] = useState<App>(initial);
   const [editing, setEditing] = useState(false);
-  const [events] = useState<Event[]>(initialEvents);
+  const [events, setEvents] = useState<Event[]>(initialEvents);
   const [documents, setDocuments] = useState<AppDoc[]>(initialDocs);
   const [unattached, setUnattached] = useState<AppDoc[]>(initialUnattached);
   const [saving, startSave] = useTransition();
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [statusSaving, startStatusSave] = useTransition();
+
+  function changeStatus(next: Status) {
+    setStatusMenuOpen(false);
+    if (next === app.status) return;
+    startStatusSave(async () => {
+      const res = await updateJobApplicationStatus({ id: app.id, status: next });
+      if (!res.ok) return;
+      setApp((prev) => ({ ...prev, status: next }));
+      setDraft((prev) => ({ ...prev, status: next }));
+      const ev = res.event;
+      if (ev) setEvents((prev) => [...prev, ev]);
+      router.refresh();
+    });
+  }
 
   function patch<K extends keyof App>(field: K, value: App[K]) {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -210,12 +229,51 @@ export function JobDetailClient({
       {/* Page header */}
       <header className="mb-5 border-b border-hair pb-5">
         <div className="mb-2 flex items-center gap-2">
-          <span
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.4px] ${STATUS_PILL_CLASSES[app.status]}`}
-          >
-            <span className={`size-1.5 rounded-full ${STATUS_DOT_BG[app.status]}`} />
-            {STATUS_LABELS[app.status]}
-          </span>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setStatusMenuOpen((o) => !o)}
+              disabled={statusSaving}
+              title="Skift status"
+              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.4px] transition hover:opacity-85 disabled:opacity-60 ${STATUS_PILL_CLASSES[app.status]}`}
+            >
+              <span className={`size-1.5 rounded-full ${STATUS_DOT_BG[app.status]}`} />
+              {STATUS_LABELS[app.status]}
+              {statusSaving ? (
+                <Loader2 className="size-3 animate-spin opacity-70" />
+              ) : (
+                <ChevronDown className="size-3 opacity-70" />
+              )}
+            </button>
+            {statusMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Luk statusmenu"
+                  onClick={() => setStatusMenuOpen(false)}
+                  className="fixed inset-0 z-[60] cursor-default"
+                />
+                <div className="absolute left-0 top-full z-[70] mt-1.5 w-44 rounded-[10px] border border-hair bg-bg-elevated p-1 shadow-[var(--shadow-card)]">
+                  {STATUS_ORDER.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => changeStatus(s)}
+                      className={`flex w-full cursor-pointer items-center gap-2 rounded-[6px] px-2.5 py-2 text-left text-[12px] hover:bg-bg-subtle ${
+                        s === app.status ? "font-medium text-ink" : "text-mid"
+                      }`}
+                    >
+                      <span className={`size-1.5 shrink-0 rounded-full ${STATUS_DOT_BG[s]}`} />
+                      {STATUS_LABELS[s]}
+                      {s === app.status && (
+                        <Check className="ml-auto size-3.5 text-accent" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {app.sentAt && (
             <span className="text-[11px] uppercase tracking-[0.3px] text-light">
               Sendt {danishLongDate(app.sentAt)}
