@@ -659,6 +659,31 @@ export const workouts = sqliteTable(
 export type Workout = typeof workouts.$inferSelect;
 export type NewWorkout = typeof workouts.$inferInsert;
 
+// Trænings-skabeloner: et gemt program ("Pull + press A") der kan
+// forudfylde en ny session. Samme body-format som workouts.
+export const workoutTemplates = sqliteTable(
+  "workout_templates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    durationMin: integer("duration_min"),
+    body: text("body").notNull().default(""),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("workout_templates_user").on(t.userId)],
+);
+
+export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
+export type NewWorkoutTemplate = typeof workoutTemplates.$inferInsert;
+
 export const PHOTO_CATEGORIES = ["skin_spot", "body_progress", "other"] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
 

@@ -38,11 +38,18 @@ export default async function TraeningPage() {
     );
   }
 
-  const workouts = await db
-    .select()
-    .from(schema.workouts)
-    .where(eq(schema.workouts.userId, user.id))
-    .orderBy(desc(schema.workouts.date), desc(schema.workouts.id));
+  const [workouts, templates] = await Promise.all([
+    db
+      .select()
+      .from(schema.workouts)
+      .where(eq(schema.workouts.userId, user.id))
+      .orderBy(desc(schema.workouts.date), desc(schema.workouts.id)),
+    db
+      .select()
+      .from(schema.workoutTemplates)
+      .where(eq(schema.workoutTemplates.userId, user.id))
+      .orderBy(desc(schema.workoutTemplates.updatedAt)),
+  ]);
 
   return (
     <TraeningListClient
@@ -52,6 +59,13 @@ export default async function TraeningPage() {
         date: w.date,
         durationMin: w.durationMin,
         exerciseCount: countExercises(w.body),
+      }))}
+      initialTemplates={templates.map((t) => ({
+        id: t.id,
+        title: t.title,
+        durationMin: t.durationMin,
+        body: t.body,
+        exerciseCount: countExercises(t.body),
       }))}
     />
   );

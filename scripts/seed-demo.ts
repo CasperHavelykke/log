@@ -283,6 +283,22 @@ async function main() {
     },
   ]);
 
+  // --- Trænings-skabeloner --------------------------------------------------
+  await db.insert(schema.workoutTemplates).values([
+    {
+      userId: uid,
+      title: "Pull + press",
+      durationMin: 40,
+      body: "Chin-ups — 4×4\nKB strict press, én arm — 4×6-8 @ 16 kg\nKB row, én arm — 3×10-12 @ 16 kg\nTil slut:\nDead hang — 2×40 sek",
+    },
+    {
+      userId: uid,
+      title: "Push + ben",
+      durationMin: 45,
+      body: "Armhævelser på greb — 3×10\nGoblet squat — 4×10 @ 16 kg\nPike push-ups — 3×8-12\nBulgarian split squat — 3×8 per ben",
+    },
+  ]);
+
   // --- 92 dages dagsdata ----------------------------------------------------
   // Fortælling: vægt falder langsomt 84,5 → 81, træning man/ons/fre + lør,
   // humør/energi svinger med søvnen, alkohol mest i weekender.

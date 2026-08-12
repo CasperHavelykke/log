@@ -16,7 +16,7 @@ import { registerWorkoutTools } from "./tools/workouts";
 
 export const MCP_SERVER_INFO = {
   name: "dagbog",
-  version: "0.8.0",
+  version: "0.9.0",
 } as const;
 
 export function registerAllTools(server: McpServer): void {

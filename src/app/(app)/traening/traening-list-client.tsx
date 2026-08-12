@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, Dumbbell, Plus, X } from "lucide-react";
-import { createWorkout } from "./actions";
+import { BookmarkMinus, Clock, Dumbbell, Plus, X } from "lucide-react";
+import { createWorkout, deleteWorkoutTemplate } from "./actions";
 import { danishLongDate, danishWeekday, todayIsoDate } from "@/lib/date";
 
 type WorkoutRow = {
@@ -15,13 +15,27 @@ type WorkoutRow = {
   exerciseCount: number;
 };
 
+type TemplateRow = {
+  id: number;
+  title: string;
+  durationMin: number | null;
+  body: string;
+  exerciseCount: number;
+};
+
 export function TraeningListClient({
   initialWorkouts,
+  initialTemplates,
 }: {
   initialWorkouts: WorkoutRow[];
+  initialTemplates: TemplateRow[];
 }) {
   const [workouts] = useState(initialWorkouts);
-  const [showCreate, setShowCreate] = useState(false);
+  const [templates, setTemplates] = useState(initialTemplates);
+  // null = dialog lukket; undefined = tom session; ellers valgt skabelon.
+  const [createFrom, setCreateFrom] = useState<TemplateRow | undefined | null>(
+    null,
+  );
 
   return (
     <div className="mx-auto max-w-[680px] px-4 py-8">
@@ -38,13 +52,55 @@ export function TraeningListClient({
         </div>
         <button
           type="button"
-          onClick={() => setShowCreate(true)}
+          onClick={() => setCreateFrom(undefined)}
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
         >
           <Plus className="size-3.5" strokeWidth={2.5} />
           Log træning
         </button>
       </header>
+
+      {templates.length > 0 && (
+        <section className="mb-5">
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.6px] text-dim">
+            Start fra skabelon
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {templates.map((t) => (
+              <div
+                key={t.id}
+                className="inline-flex items-center overflow-hidden rounded-[8px] bg-bg-elevated shadow-[var(--shadow-card)]"
+              >
+                <button
+                  type="button"
+                  onClick={() => setCreateFrom(t)}
+                  title={`Ny session fra "${t.title}"`}
+                  className="inline-flex cursor-pointer items-center gap-2 py-2 pl-3 pr-2 text-left hover:bg-bg-subtle"
+                >
+                  <span className="text-[13px] font-medium text-ink">
+                    {t.title}
+                  </span>
+                  <span className="text-[11px] text-light">
+                    {t.exerciseCount} øvelse{t.exerciseCount === 1 ? "" : "r"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm(`Slet skabelonen "${t.title}"?`)) return;
+                    await deleteWorkoutTemplate(t.id);
+                    setTemplates((prev) => prev.filter((x) => x.id !== t.id));
+                  }}
+                  title="Slet skabelon"
+                  className="cursor-pointer self-stretch px-2 text-dim hover:bg-bg-subtle hover:text-danger"
+                >
+                  <BookmarkMinus className="size-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {workouts.length === 0 ? (
         <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
@@ -58,7 +114,12 @@ export function TraeningListClient({
         </div>
       )}
 
-      {showCreate && <CreateDialog onClose={() => setShowCreate(false)} />}
+      {createFrom !== null && (
+        <CreateDialog
+          template={createFrom}
+          onClose={() => setCreateFrom(null)}
+        />
+      )}
     </div>
   );
 }
@@ -98,9 +159,15 @@ function WorkoutCard({ workout }: { workout: WorkoutRow }) {
   );
 }
 
-function CreateDialog({ onClose }: { onClose: () => void }) {
+function CreateDialog({
+  template,
+  onClose,
+}: {
+  template: TemplateRow | undefined;
+  onClose: () => void;
+}) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(template?.title ?? "");
   const [date, setDate] = useState(todayIsoDate());
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -116,14 +183,14 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
       const res = await createWorkout({
         title: t,
         date,
-        durationMin: null,
-        body: "",
+        durationMin: template?.durationMin ?? null,
+        body: template?.body ?? "",
       });
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      // Videre til detaljesiden hvor øvelserne udfyldes.
+      // Videre til detaljesiden hvor øvelserne udfyldes/justeres.
       router.push(`/traening/${res.workout.id}?rediger=1`);
     });
   }
@@ -140,10 +207,10 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
-              Log træning
+              {template ? "Ny session fra skabelon" : "Log træning"}
             </div>
             <h2 className="mt-0.5 font-serif text-[20px] leading-none text-ink">
-              Hvad har du lavet?
+              {template ? template.title : "Hvad har du lavet?"}
             </h2>
           </div>
           <button
@@ -179,7 +246,9 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
           />
         </div>
         <p className="mt-2 text-[11px] italic text-light">
-          Øvelser og noter tilføjes på næste side.
+          {template
+            ? "Programmet forudfyldes — justér de faktiske reps på næste side."
+            : "Øvelser og noter tilføjes på næste side."}
         </p>
         {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
 

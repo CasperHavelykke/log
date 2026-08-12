@@ -130,3 +130,63 @@ export async function listWorkouts() {
     .where(eq(schema.workouts.userId, user.id))
     .orderBy(desc(schema.workouts.date), desc(schema.workouts.id));
 }
+
+// --- Skabeloner -------------------------------------------------------------
+
+export async function saveWorkoutAsTemplate(workoutId: number) {
+  const user = await requireUser();
+  const workout = await getOwnWorkout(user.id, workoutId);
+  if (!workout) return { ok: false as const, error: "Træningen findes ikke" };
+
+  const now = new Date().toISOString();
+  // Upsert på titel (case-insensitivt): gemmer man samme program igen,
+  // opdateres skabelonen i stedet for at lave en dublet.
+  const existing = await db
+    .select()
+    .from(schema.workoutTemplates)
+    .where(eq(schema.workoutTemplates.userId, user.id));
+  const match = existing.find(
+    (t) => t.title.trim().toLowerCase() === workout.title.trim().toLowerCase(),
+  );
+
+  if (match) {
+    await db
+      .update(schema.workoutTemplates)
+      .set({
+        durationMin: workout.durationMin,
+        body: workout.body,
+        updatedAt: now,
+      })
+      .where(eq(schema.workoutTemplates.id, match.id));
+    revalidatePath("/traening");
+    return { ok: true as const, updated: true, templateId: match.id };
+  }
+
+  const inserted = await db
+    .insert(schema.workoutTemplates)
+    .values({
+      userId: user.id,
+      title: workout.title.trim(),
+      durationMin: workout.durationMin,
+      body: workout.body,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
+  revalidatePath("/traening");
+  return { ok: true as const, updated: false, templateId: inserted[0].id };
+}
+
+export async function deleteWorkoutTemplate(id: number) {
+  const user = await requireUser();
+  await db
+    .delete(schema.workoutTemplates)
+    .where(
+      and(
+        eq(schema.workoutTemplates.id, id),
+        eq(schema.workoutTemplates.userId, user.id),
+      ),
+    );
+  revalidatePath("/traening");
+  return { ok: true as const };
+}

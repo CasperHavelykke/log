@@ -261,4 +261,119 @@ export function registerWorkoutTools(server: McpServer) {
       return jsonContent({ ok: true, deletedId: id });
     },
   );
+
+  server.registerTool(
+    "list_workout_templates",
+    {
+      title: "List trænings-skabeloner",
+      description:
+        "Returnerer brugerens gemte trænings-programmer/skabeloner inkl. body. Brug en skabelon som udgangspunkt når brugeren siger 'log min sædvanlige pull-session' el.lign. — kopiér body til log_workout og justér de faktiske reps/vægte efter det brugeren fortæller.",
+      inputSchema: {},
+    },
+    async () => {
+      const user = await requireTrainingEnabled();
+      if (!user) return errorContent(DISABLED_MESSAGE);
+      const rows = await db
+        .select()
+        .from(schema.workoutTemplates)
+        .where(eq(schema.workoutTemplates.userId, user.id))
+        .orderBy(desc(schema.workoutTemplates.updatedAt));
+      return jsonContent({
+        count: rows.length,
+        templates: rows.map((t) => ({
+          id: t.id,
+          title: t.title,
+          durationMin: t.durationMin,
+          exerciseCount: countExercises(t.body),
+          body: t.body,
+          updatedAt: t.updatedAt,
+        })),
+      });
+    },
+  );
+
+  server.registerTool(
+    "save_workout_template",
+    {
+      title: "Gem trænings-skabelon",
+      description:
+        "Gemmer eller opdaterer et program som skabelon. Findes en skabelon med samme titel (case-insensitivt), opdateres den i stedet for at oprette en dublet.",
+      inputSchema: {
+        title: z
+          .string()
+          .min(1)
+          .max(200)
+          .describe("Programmets navn, fx 'Pull + press A'."),
+        durationMin: z.number().int().min(1).max(600).nullable().default(null),
+        body: z.string().max(20_000).default("").describe(bodyDescription),
+      },
+    },
+    async (input) => {
+      const user = await requireTrainingEnabled();
+      if (!user) return errorContent(DISABLED_MESSAGE);
+      const now = new Date().toISOString();
+      const existing = await db
+        .select()
+        .from(schema.workoutTemplates)
+        .where(eq(schema.workoutTemplates.userId, user.id));
+      const match = existing.find(
+        (t) =>
+          t.title.trim().toLowerCase() === input.title.trim().toLowerCase(),
+      );
+      if (match) {
+        await db
+          .update(schema.workoutTemplates)
+          .set({
+            durationMin: input.durationMin,
+            body: input.body.trim(),
+            updatedAt: now,
+          })
+          .where(eq(schema.workoutTemplates.id, match.id));
+        return jsonContent({ ok: true, updated: true, templateId: match.id });
+      }
+      const inserted = await db
+        .insert(schema.workoutTemplates)
+        .values({
+          userId: user.id,
+          title: input.title.trim(),
+          durationMin: input.durationMin,
+          body: input.body.trim(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return jsonContent({
+        ok: true,
+        updated: false,
+        templateId: inserted[0].id,
+      });
+    },
+  );
+
+  server.registerTool(
+    "delete_workout_template",
+    {
+      title: "Slet trænings-skabelon",
+      description:
+        "Sletter en skabelon permanent (allerede loggede sessioner røres ikke). Bekræft med brugeren først.",
+      inputSchema: {
+        id: z.number().int(),
+      },
+    },
+    async ({ id }) => {
+      const user = await requireTrainingEnabled();
+      if (!user) return errorContent(DISABLED_MESSAGE);
+      const deleted = await db
+        .delete(schema.workoutTemplates)
+        .where(
+          and(
+            eq(schema.workoutTemplates.id, id),
+            eq(schema.workoutTemplates.userId, user.id),
+          ),
+        )
+        .returning();
+      if (deleted.length === 0) return errorContent("Skabelonen findes ikke");
+      return jsonContent({ ok: true, deletedId: id });
+    },
+  );
 }

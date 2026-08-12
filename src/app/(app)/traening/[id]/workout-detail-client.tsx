@@ -5,13 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  BookmarkPlus,
   Check,
   Clock,
   Pencil,
   Trash2,
   X,
 } from "lucide-react";
-import { deleteWorkout, updateWorkout } from "../actions";
+import {
+  deleteWorkout,
+  saveWorkoutAsTemplate,
+  updateWorkout,
+} from "../actions";
 import { danishLongDate, danishWeekday } from "@/lib/date";
 import { parseWorkoutBody } from "@/lib/workout";
 
@@ -38,6 +43,23 @@ export function WorkoutDetailClient({
   const [editing, setEditing] = useState(startInEdit);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
+  const [templateState, setTemplateState] = useState<
+    "idle" | "saving" | "saved" | "updated"
+  >("idle");
+
+  function saveAsTemplate() {
+    setTemplateState("saving");
+    startSave(async () => {
+      const res = await saveWorkoutAsTemplate(workout.id);
+      if (!res.ok) {
+        setTemplateState("idle");
+        setError(res.error);
+        return;
+      }
+      setTemplateState(res.updated ? "updated" : "saved");
+      setTimeout(() => setTemplateState("idle"), 2500);
+    });
+  }
 
   function startEditing() {
     setDraft(workout);
@@ -118,6 +140,30 @@ export function WorkoutDetailClient({
               >
                 <Trash2 className="size-3.5" />
                 Slet
+              </button>
+              <button
+                type="button"
+                onClick={saveAsTemplate}
+                disabled={templateState === "saving"}
+                title="Gem programmet som skabelon, så en ny session kan starte forudfyldt"
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12px] disabled:opacity-50 ${
+                  templateState === "saved" || templateState === "updated"
+                    ? "text-success"
+                    : "text-dim hover:bg-bg-elevated hover:text-ink"
+                }`}
+              >
+                {templateState === "saved" || templateState === "updated" ? (
+                  <Check className="size-3.5" strokeWidth={2.5} />
+                ) : (
+                  <BookmarkPlus className="size-3.5" />
+                )}
+                {templateState === "saved"
+                  ? "Gemt som skabelon"
+                  : templateState === "updated"
+                    ? "Skabelon opdateret"
+                    : templateState === "saving"
+                      ? "Gemmer…"
+                      : "Gem som skabelon"}
               </button>
               <button
                 type="button"

@@ -44,6 +44,7 @@ export async function GET() {
     documents,
     recipes,
     workouts,
+    workoutTemplates,
   ] = await Promise.all([
     db.select().from(schema.dayEntries).where(eq(schema.dayEntries.userId, user.id)),
     db.select().from(schema.projects).where(eq(schema.projects.userId, user.id)),
@@ -83,6 +84,10 @@ export async function GET() {
     db.select().from(schema.documents).where(eq(schema.documents.userId, user.id)),
     db.select().from(schema.recipes).where(eq(schema.recipes.userId, user.id)),
     db.select().from(schema.workouts).where(eq(schema.workouts.userId, user.id)),
+    db
+      .select()
+      .from(schema.workoutTemplates)
+      .where(eq(schema.workoutTemplates.userId, user.id)),
   ]);
 
   // drinkLogs har ingen userId — filtrér via sessionId
@@ -117,6 +122,7 @@ export async function GET() {
       documents: strip(documents),
       recipes: strip(recipes),
       workouts: strip(workouts),
+      workoutTemplates: strip(workoutTemplates),
     },
   };
 
