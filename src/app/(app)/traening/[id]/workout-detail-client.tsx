@@ -196,7 +196,10 @@ export function WorkoutDetailClient({
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              {/* min-w-0 + w-full: iOS' dato-input har en indbygget
+                  minimumsbredde og skubber ellers ind over nabofeltet
+                  på smalle skærme (iPhone mini). */}
+              <div className="min-w-0">
                 <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
                   Dato
                 </label>
@@ -204,10 +207,10 @@ export function WorkoutDetailClient({
                   type="date"
                   value={draft.date}
                   onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-                  className="!rounded-[8px] !border-hair !bg-bg-subtle"
+                  className="!w-full min-w-0 !rounded-[8px] !border-hair !bg-bg-subtle"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
                   Varighed (min)
                 </label>
@@ -223,7 +226,7 @@ export function WorkoutDetailClient({
                     });
                   }}
                   placeholder="fx 40"
-                  className="!rounded-[8px] !border-hair !bg-bg-subtle"
+                  className="!w-full min-w-0 !rounded-[8px] !border-hair !bg-bg-subtle"
                 />
               </div>
             </div>
