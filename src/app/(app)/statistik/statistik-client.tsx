@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -68,6 +68,7 @@ type MetricKey =
 type Category =
   | "body"
   | "health"
+  | "training"
   | "sleep"
   | "garmin"
   | "nutrition"
@@ -84,11 +85,15 @@ type Metric = {
   color: string;
   domain?: [number, number];
   decimals: number;
+  // Foldbare serier (Øvelser): sub-rækker skjules til gruppen foldes ud.
+  group?: string;
+  sub?: boolean;
 };
 
 const CATEGORIES: { id: Category; label: string }[] = [
   { id: "body", label: "Kropsmål" },
   { id: "health", label: "Helbred" },
+  { id: "training", label: "Øvelser" },
   { id: "sleep", label: "Søvn" },
   { id: "garmin", label: "Garmin biometri" },
   { id: "nutrition", label: "Ernæring" },
@@ -143,6 +148,8 @@ const METRICS: Metric[] = [
   { key: "kcal", label: "Kalorier", short: "Kcal", category: "nutrition", unit: " kcal", color: "#f97316", decimals: 0 },
 ];
 
+
+const SELECTED_STORAGE_KEY = "statistik-selected-metrics";
 
 const RANGES = [
   { id: "30d", label: "30 dage", days: 30 },
@@ -245,6 +252,7 @@ export function StatistikClient({
   data,
   supplementMetrics,
   customMetrics,
+  exerciseMetrics,
   garminSleepEnabled,
 }: {
   data: DataPoint[];
@@ -254,6 +262,13 @@ export function StatistikClient({
     label: string;
     unit: string;
     kind: string;
+  }[];
+  exerciseMetrics: {
+    metricKey: string;
+    label: string;
+    unit: string;
+    group: string;
+    sub: boolean;
   }[];
   garminSleepEnabled: boolean;
 }) {
@@ -292,7 +307,25 @@ export function StatistikClient({
     };
   });
 
-  const ALL_METRICS = [...METRICS, ...dynamicMetrics, ...customDynamicMetrics];
+  // Øvelses-progression: vægtede øvelser i kg (1 decimal), resten reps/sek.
+  const exerciseDynamicMetrics: Metric[] = exerciseMetrics.map((e, i) => ({
+    key: e.metricKey as MetricKey,
+    label: e.label,
+    short: e.label.length > 16 ? e.label.slice(0, 14) + "…" : e.label,
+    category: "training",
+    unit: e.unit,
+    color: SUPPLEMENT_COLORS[(i + 3) % SUPPLEMENT_COLORS.length],
+    decimals: e.unit.trim() === "kg" ? 1 : 0,
+    group: e.group,
+    sub: e.sub,
+  }));
+
+  const ALL_METRICS = [
+    ...METRICS,
+    ...dynamicMetrics,
+    ...customDynamicMetrics,
+    ...exerciseDynamicMetrics,
+  ];
   const METRIC_BY_KEY = new Map(ALL_METRICS.map((m) => [m.key, m]));
   const [rangeId, setRangeId] = useState<(typeof RANGES)[number]["id"]>("90d");
   const [mode, setMode] = useState<"stacked" | "overlay">("stacked");
@@ -300,6 +333,17 @@ export function StatistikClient({
   const [selected, setSelected] = useState<Set<MetricKey>>(
     () => new Set<MetricKey>(["weight", "sleepHours", "mood", "energy"]),
   );
+  // Valget huskes i browseren, så man ikke skal fravælge standardvalgene
+  // hver gang. Indlæses i en effect (ikke i initializeren) så server- og
+  // klient-HTML matcher ved hydrering.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SELECTED_STORAGE_KEY);
+      if (raw) setSelected(new Set(JSON.parse(raw) as MetricKey[]));
+    } catch {
+      // Korrupt/utilgængelig storage → behold defaults.
+    }
+  }, []);
   // Kalender-visning af én metrik ad gangen (åbnes via ikon i venstre panel).
   const [calendarMetric, setCalendarMetric] = useState<MetricKey | null>(null);
 
@@ -335,6 +379,11 @@ export function StatistikClient({
       const next = new Set(prev);
       if (next.has(k)) next.delete(k);
       else next.add(k);
+      try {
+        localStorage.setItem(SELECTED_STORAGE_KEY, JSON.stringify([...next]));
+      } catch {
+        // Storage fuld/utilgængelig — valget virker stadig for sessionen.
+      }
       return next;
     });
   }
@@ -502,6 +551,20 @@ function MetricPicker({
     return m;
   }, [data, allMetrics]);
 
+  // Foldbare øvelses-grupper: sub-serier (vægt/reps) skjules indtil den
+  // primære række (est. 1RM) foldes ud — eller hvis de allerede er valgt.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
+  function toggleGroup(group: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  }
+
   return (
     <aside className="space-y-3 self-start md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
       {CATEGORIES.map((cat) => {
@@ -529,12 +592,25 @@ function MetricPicker({
                 const has = count > 0;
                 const isSelected = selected.has(m.key);
                 const isCalendarActive = calendarMetric === m.key;
+                const hasSubs =
+                  !m.sub &&
+                  m.group !== undefined &&
+                  metrics.some((x) => x.sub && x.group === m.group);
+                if (
+                  m.sub &&
+                  m.group !== undefined &&
+                  !expandedGroups.has(m.group) &&
+                  !isSelected &&
+                  !isCalendarActive
+                ) {
+                  return null;
+                }
                 return (
                   <div
                     key={m.key}
                     className={`flex w-full items-center rounded transition ${
                       isSelected ? "bg-accent/10" : "hover:bg-border-light"
-                    }`}
+                    } ${m.sub ? "ml-4" : ""}`}
                   >
                     <button
                       type="button"
@@ -554,7 +630,11 @@ function MetricPicker({
                           }`,
                         }}
                       />
-                      <span className="flex-1 truncate">{m.label}</span>
+                      <span className="flex-1 truncate">
+                        {m.sub && m.group !== undefined
+                          ? m.label.slice(m.group.length + 3) || m.label
+                          : m.label}
+                      </span>
                       <span className="text-[10px] text-light">{count}</span>
                     </button>
                     <button
@@ -570,6 +650,30 @@ function MetricPicker({
                     >
                       <CalendarDays className="size-3.5" />
                     </button>
+                    {hasSubs ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(m.group!)}
+                        title={
+                          expandedGroups.has(m.group!)
+                            ? "Skjul vægt- og reps-serier"
+                            : "Vis vægt- og reps-serier"
+                        }
+                        aria-expanded={expandedGroups.has(m.group!)}
+                        className="inline-flex shrink-0 cursor-pointer items-center rounded p-1.5 text-dim transition-colors hover:text-mid"
+                      >
+                        <ChevronRight
+                          className={`size-3.5 transition-transform ${
+                            expandedGroups.has(m.group!) ? "rotate-90" : ""
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      // Fast plads så rækker med/uden pil flugter.
+                      cat.id === "training" && (
+                        <span className="w-[26px] shrink-0" />
+                      )
+                    )}
                   </div>
                 );
               })}

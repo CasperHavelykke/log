@@ -74,3 +74,60 @@ export function parseWorkoutBody(body: string): WorkoutLine[] {
 export function countExercises(body: string): number {
   return parseWorkoutBody(body).filter((l) => l.type === "exercise").length;
 }
+
+// --- Progression (v3) -------------------------------------------------------
+
+// Strip superset-labels ("A1. ", "B2) ", "3. ") foran øvelsesnavne, så
+// samme øvelse grupperes på tværs af sessioner uanset programmets rækkefølge.
+export function normalizeExerciseName(name: string): string {
+  return name.replace(/^\s*(?:[a-zæøå]\d{1,2}|\d{1,2})[.):]\s+/i, "").trim();
+}
+
+// Grupperings-nøgle på tværs af sessioner. Ud over lowercase udvides den
+// gængse forkortelse "KB" til "kettlebell", så "KB row" og "Kettlebell row"
+// bliver samme serie selvom de er skrevet forskelligt.
+export function exerciseGroupKey(name: string): string {
+  return normalizeExerciseName(name)
+    .toLowerCase()
+    .replace(/\bkb\b/g, "kettlebell")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export type ExerciseLineStats = {
+  reps: number | null; // højeste tal i reps-delen ('6-8' → 8)
+  isSeconds: boolean; // reps-delen er tid ('30-45 sek')
+  weightKg: number | null; // tal fra '@ 16 kg'
+  e1rm: number | null; // estimeret 1RM (Epley): kg × (1 + reps/30)
+};
+
+// Udtræk alle plotbare tal fra en øvelses-linje. En linje som
+// '4×6-8 @ 12 kg' giver BÅDE reps (8), vægt (12) og e1RM (15,2) — hvilken
+// serie der vises, vælger brugeren på /statistik.
+export function exerciseLineStats(
+  line: Extract<WorkoutLine, { type: "exercise" }>,
+): ExerciseLineStats {
+  let reps: number | null = null;
+  let isSeconds = false;
+  if (line.reps) {
+    const nums = [...line.reps.matchAll(/\d+(?:[.,]\d+)?/g)].map((m) =>
+      Number(m[0].replace(",", ".")),
+    );
+    if (nums.length > 0) {
+      reps = Math.max(...nums);
+      isSeconds = /sek/i.test(line.reps);
+    }
+  }
+  let weightKg: number | null = null;
+  if (line.weight) {
+    const m = /(\d+(?:[.,]\d+)?)/.exec(line.weight);
+    if (m) weightKg = Number(m[1].replace(",", "."));
+  }
+  const e1rm =
+    weightKg !== null
+      ? reps !== null && !isSeconds
+        ? Math.round(weightKg * (1 + reps / 30) * 10) / 10
+        : weightKg
+      : null;
+  return { reps, isSeconds, weightKg, e1rm };
+}

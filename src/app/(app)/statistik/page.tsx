@@ -4,12 +4,19 @@ import { db, schema } from "@/db";
 import { StatistikClient, type DataPoint } from "./statistik-client";
 import { listCustomParameters } from "@/lib/custom-parameters";
 import { dayKcal } from "@/lib/kcal";
+import {
+  exerciseGroupKey,
+  exerciseLineStats,
+  normalizeExerciseName,
+  parseWorkoutBody,
+} from "@/lib/workout";
 
 export const metadata = { title: "Statistik | Log" };
 
 export default async function StatistikPage() {
   const user = await requireUser();
   const garminSleepEnabled = user.garminSleepEnabled ?? false;
+  const trainingEnabled = user.trainingEnabled ?? false;
 
   const [
     dayEntries,
@@ -18,6 +25,7 @@ export default async function StatistikPage() {
     supplementIntakes,
     customParameters,
     customValuesRows,
+    workouts,
   ] = await Promise.all([
       db
         .select()
@@ -50,6 +58,13 @@ export default async function StatistikPage() {
         .from(schema.customParameterValues)
         .where(eq(schema.customParameterValues.userId, user.id))
         .orderBy(asc(schema.customParameterValues.date)),
+      trainingEnabled
+        ? db
+            .select()
+            .from(schema.workouts)
+            .where(eq(schema.workouts.userId, user.id))
+            .orderBy(asc(schema.workouts.date))
+        : Promise.resolve([]),
     ]);
 
   const byDate = new Map<string, DataPoint>();
@@ -209,6 +224,118 @@ export default async function StatistikPage() {
   }
   customMetrics.sort((a, b) => a.label.localeCompare(b.label, "da"));
 
+  // Progression per øvelse: gruppér øvelses-linjer på tværs af sessioner
+  // (navn normaliseret uden "A1."-prefixer; "KB" = "Kettlebell"). En linje
+  // som '4×6-8 @ 12 kg' giver både reps, vægt og est. 1RM — hver bliver
+  // sin egen valgbare serie, så brugeren selv vælger visningen.
+  type ExerciseGroup = {
+    display: string;
+    e1rmByDate: Map<string, number>;
+    weightByDate: Map<string, number>;
+    repsByDate: Map<string, number>;
+    secondsLines: number;
+    repsLines: number;
+  };
+  const exerciseGroups = new Map<string, ExerciseGroup>();
+  for (const w of workouts) {
+    for (const line of parseWorkoutBody(w.body)) {
+      if (line.type !== "exercise") continue;
+      const display = normalizeExerciseName(line.name);
+      if (!display) continue;
+      const stats = exerciseLineStats(line);
+      if (stats.reps === null && stats.weightKg === null) continue;
+      const key = exerciseGroupKey(line.name);
+      let group = exerciseGroups.get(key);
+      if (!group) {
+        group = {
+          display,
+          e1rmByDate: new Map(),
+          weightByDate: new Map(),
+          repsByDate: new Map(),
+          secondsLines: 0,
+          repsLines: 0,
+        };
+        exerciseGroups.set(key, group);
+      }
+      // Flere sæt/sessioner samme dag → dagens bedste tæller.
+      const bump = (map: Map<string, number>, value: number | null) => {
+        if (value === null) return;
+        map.set(w.date, Math.max(map.get(w.date) ?? 0, value));
+      };
+      bump(group.e1rmByDate, stats.e1rm);
+      bump(group.weightByDate, stats.weightKg);
+      bump(group.repsByDate, stats.reps);
+      if (stats.reps !== null) {
+        group.repsLines += 1;
+        if (stats.isSeconds) group.secondsLines += 1;
+      }
+    }
+  }
+
+  // Én række per øvelse i pickeren (est. 1RM som primær for vægtede
+  // øvelser); kg- og reps-serierne ligger som foldbare under-rækker.
+  const exerciseMetrics: {
+    metricKey: string;
+    label: string;
+    unit: string;
+    group: string;
+    sub: boolean;
+  }[] = [];
+  let exIdx = 0;
+  const sortedGroups = [...exerciseGroups.values()].sort((a, b) =>
+    a.display.localeCompare(b.display, "da"),
+  );
+  for (const g of sortedGroups) {
+    // Én måling giver ingen kurve — kræv mindst to dage per serie.
+    const weighted = g.e1rmByDate.size >= 2;
+    const hasReps = g.repsByDate.size >= 2;
+    const repsUnit = g.secondsLines > g.repsLines / 2 ? " sek" : " reps";
+    const series: {
+      suffix: string;
+      unit: string;
+      perDate: Map<string, number>;
+      sub: boolean;
+    }[] = [];
+    if (weighted) {
+      series.push({
+        suffix: " · est. 1RM",
+        unit: " kg",
+        perDate: g.e1rmByDate,
+        sub: false,
+      });
+      series.push({
+        suffix: " · vægt",
+        unit: " kg",
+        perDate: g.weightByDate,
+        sub: true,
+      });
+      if (hasReps) {
+        series.push({
+          suffix: " · reps",
+          unit: repsUnit,
+          perDate: g.repsByDate,
+          sub: true,
+        });
+      }
+    } else if (hasReps) {
+      series.push({ suffix: "", unit: repsUnit, perDate: g.repsByDate, sub: false });
+    }
+    for (const s of series) {
+      const metricKey = `wo_${exIdx++}`;
+      exerciseMetrics.push({
+        metricKey,
+        label: `${g.display}${s.suffix}`,
+        unit: s.unit,
+        group: g.display,
+        sub: s.sub,
+      });
+      for (const [date, value] of s.perDate) {
+        const row = ensure(date);
+        row[metricKey] = value;
+      }
+    }
+  }
+
   const data = [...byDate.values()].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
@@ -218,6 +345,7 @@ export default async function StatistikPage() {
       data={data}
       supplementMetrics={supplementMetrics}
       customMetrics={customMetrics}
+      exerciseMetrics={exerciseMetrics}
       garminSleepEnabled={garminSleepEnabled}
     />
   );
