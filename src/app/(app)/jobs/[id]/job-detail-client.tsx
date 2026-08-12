@@ -176,10 +176,10 @@ export function JobDetailClient({
       <div className="mb-5 flex items-center justify-between">
         <Link
           href="/jobs"
-          className="inline-flex items-center gap-1.5 text-[13px] text-mid hover:text-ink"
+          className="inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap text-[13px] text-mid hover:text-ink sm:min-h-0"
         >
           <ArrowLeft className="size-4" />
-          Tilbage til ansøgninger
+          Tilbage<span className="hidden sm:inline">&nbsp;til ansøgninger</span>
         </Link>
         <div className="flex items-center gap-1.5">
           {editing ? (
@@ -208,15 +208,16 @@ export function JobDetailClient({
               <button
                 type="button"
                 onClick={onDelete}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12px] text-dim hover:bg-bg-elevated hover:text-danger"
+                title="Slet ansøgning"
+                className="inline-flex min-h-[40px] min-w-[40px] cursor-pointer items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-[12px] text-dim hover:bg-bg-elevated hover:text-danger sm:min-h-0 sm:min-w-0 sm:px-3"
               >
-                <Trash2 className="size-3.5" />
-                Slet
+                <Trash2 className="size-4 sm:size-3.5" />
+                <span className="hidden sm:inline">Slet</span>
               </button>
               <button
                 type="button"
                 onClick={startEditing}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-bg-elevated px-3.5 py-1.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink"
+                className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[8px] bg-bg-elevated px-3.5 py-1.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink sm:min-h-0"
               >
                 <Pencil className="size-3.5" />
                 Rediger
