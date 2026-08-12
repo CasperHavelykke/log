@@ -897,7 +897,7 @@ function MetricMonthGrid({
               }
               className={`relative flex aspect-square min-h-[44px] flex-col rounded-[8px] border p-1 text-left md:p-1.5 ${
                 isToday
-                  ? "border-hair-strong bg-bg-elevated md:bg-bg"
+                  ? "border-accent bg-bg-elevated md:bg-bg"
                   : "border-transparent bg-bg-elevated md:bg-bg"
               }`}
               style={
@@ -911,7 +911,11 @@ function MetricMonthGrid({
                   : undefined
               }
             >
-              <span className="text-[13px] font-medium text-ink">
+              <span
+                className={`text-[13px] ${
+                  isToday ? "font-semibold text-accent" : "font-medium text-ink"
+                }`}
+              >
                 {Number(iso.slice(8))}
               </span>
               {/* Badge + værdi skjules under sm: — på små skærme er cellerne
@@ -986,6 +990,7 @@ function MetricMiniMonth({
   for (let d = 1; d <= calDaysInMonth(year, month); d++) {
     cells.push(calIso(year, month, d));
   }
+  const today = toIsoDate(new Date());
   return (
     <div className="grid grid-cols-7 gap-[3px]">
       {cells.map((iso, i) => {
@@ -1010,6 +1015,9 @@ function MetricMiniMonth({
                       Math.min(1, heatAlpha(metric, value, minVal, maxVal) + 0.2),
                     )
                   : "var(--bg-subtle)",
+              ...(iso === today
+                ? { boxShadow: "inset 0 0 0 1.5px var(--accent)" }
+                : undefined),
             }}
           />
         );
