@@ -86,6 +86,7 @@ async function main() {
       name: "Demo",
       fasteEnabled: true,
       garminSleepEnabled: true,
+      trainingEnabled: true,
     })
     .returning();
   const uid = user.id;
@@ -335,6 +336,32 @@ async function main() {
       wentWell: chance(0.25) ? "Holdt træningsplanen." : null,
       nextStep: chance(0.25) ? "Følge op på ansøgningen til Nordisk Web." : null,
     });
+
+    // Træningssessioner (avanceret tracking er slået til for demo-brugeren).
+    // Mandag/fredag = pull, onsdag = push, lørdag = løbetur.
+    if (trained && chance(0.85)) {
+      const isRun = wd === 5;
+      const isPull = wd === 0 || wd === 4;
+      await db.insert(schema.workouts).values({
+        userId: uid,
+        date,
+        title: isRun ? "Løbetur" : isPull ? "Pull + press" : "Push + ben",
+        durationMin: isRun ? randInt(28, 45) : randInt(35, 55),
+        body: isRun
+          ? `${(4 + rng() * 3).toFixed(1).replace(".", ",")} km i roligt tempo\nAfslut med 4 stigningsløb`
+          : isPull
+            ? "Chin-ups — 4×" +
+              randInt(3, 6) +
+              "\nKB strict press, én arm — 4×6-8 @ 16 kg\nKB row, én arm — 3×10-12 @ 16 kg\nTil slut:\nDead hang — 2×" +
+              randInt(30, 45) +
+              " sek"
+            : "Armhævelser på greb — 3×" +
+              randInt(8, 14) +
+              "\nGoblet squat — 4×10 @ 16 kg\nPike push-ups — 3×8-12\nBulgarian split squat — 3×8 per ben",
+        createdAt: `${date}T18:30:00.000Z`,
+        updatedAt: `${date}T18:30:00.000Z`,
+      });
+    }
 
     // Garmin-søvn
     await db.insert(schema.sleepEntries).values({

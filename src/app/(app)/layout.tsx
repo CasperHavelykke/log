@@ -43,7 +43,11 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <Nav jobsPlacement={jobsPlacement} email={user.email ?? null} />
+      <Nav
+        jobsPlacement={jobsPlacement}
+        trainingEnabled={user.trainingEnabled ?? false}
+        email={user.email ?? null}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         {isDemoMode() && (
           <div className="sticky top-0 z-40 border-b border-[var(--accent-soft-strong)] bg-[var(--accent-bg)] px-4 py-1.5 pt-[calc(env(safe-area-inset-top,0px)+6px)] text-center text-[12px] text-accent backdrop-blur-sm">
@@ -61,7 +65,10 @@ export default async function AppLayout({
           {children}
         </main>
       </div>
-      <MobileNav jobsPlacement={jobsPlacement} />
+      <MobileNav
+        jobsPlacement={jobsPlacement}
+        trainingEnabled={user.trainingEnabled ?? false}
+      />
       {drinkSession && (
         <FloatingCounterBanner totalUnits={drinkSession.totalUnits} />
       )}

@@ -259,6 +259,16 @@ const recipeRow = z.object({
   updatedAt: z.string().optional(),
 });
 
+const workoutRow = z.object({
+  id: z.number().int(),
+  date: z.string(),
+  title: z.string(),
+  durationMin: z.number().int().nullable().optional(),
+  body: z.string().optional().default(""),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
 export const backupSchema = z.object({
   format: z.literal("log-backup"),
   version: z.number(),
@@ -285,6 +295,7 @@ export const backupSchema = z.object({
     drinkSessions: z.array(drinkSessionRow).optional().default([]),
     drinkLogs: z.array(drinkLogRow).optional().default([]),
     recipes: z.array(recipeRow).optional().default([]),
+    workouts: z.array(workoutRow).optional().default([]),
   }),
 });
 
@@ -376,6 +387,7 @@ export async function performImport(
   await tx.delete(schema.photos).where(eq(schema.photos.userId, uid));
   await tx.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
   await tx.delete(schema.recipes).where(eq(schema.recipes.userId, uid));
+  await tx.delete(schema.workouts).where(eq(schema.workouts.userId, uid));
 
   // Lad SQLite generere nye autoincrement-id'er — backup-id'er kan
   // kollidere på tværs af brugere (PK er global, ikke per user).
@@ -732,6 +744,19 @@ export async function performImport(
       })),
     );
   }
+  if (d.workouts.length > 0) {
+    await tx.insert(schema.workouts).values(
+      d.workouts.map((w) => ({
+        userId: uid,
+        date: w.date,
+        title: w.title,
+        durationMin: w.durationMin ?? null,
+        body: w.body,
+        createdAt: w.createdAt ?? nowIso(),
+        updatedAt: w.updatedAt ?? nowIso(),
+      })),
+    );
+  }
 
   });
 
@@ -785,6 +810,7 @@ export async function performImport(
       photos: d.photos.length,
       documents: d.documents.length,
       recipes: d.recipes.length,
+      workouts: d.workouts.length,
     },
     filesWritten,
   };

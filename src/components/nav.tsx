@@ -6,6 +6,7 @@ import {
   Briefcase,
   CalendarDays,
   ChefHat,
+  Dumbbell,
   FileText,
   FolderKanban,
   HeartPulse,
@@ -28,9 +29,17 @@ const JOBS_ITEM: Item = {
   key: "jobs",
 };
 
+const TRAINING_ITEM: Item = {
+  href: "/traening",
+  label: "Træning",
+  icon: Dumbbell,
+  key: "traening",
+};
+
 const PRIMARY_ITEMS: Item[] = [
   { href: "/today", label: "I dag", icon: CalendarDays, key: "today" },
   { href: "/health", label: "Helbred", icon: HeartPulse, key: "health" },
+  TRAINING_ITEM,
   { href: "/statistik", label: "Statistik", icon: LineChart, key: "statistik" },
   JOBS_ITEM,
   { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
@@ -44,15 +53,19 @@ const ARCHIVE_ITEMS: Item[] = [
 
 export function Nav({
   jobsPlacement = "primary",
+  trainingEnabled = false,
   email,
 }: {
   jobsPlacement?: "primary" | "archive" | "hidden";
+  trainingEnabled?: boolean;
   email?: string | null;
 }) {
   const pathname = usePathname();
-  const primary = PRIMARY_ITEMS.filter(
-    (i) => i.key !== "jobs" || jobsPlacement === "primary",
-  );
+  const primary = PRIMARY_ITEMS.filter((i) => {
+    if (i.key === "jobs") return jobsPlacement === "primary";
+    if (i.key === "traening") return trainingEnabled;
+    return true;
+  });
   const archive =
     jobsPlacement === "archive" ? [JOBS_ITEM, ...ARCHIVE_ITEMS] : ARCHIVE_ITEMS;
   const initial = (email ?? "?").trim().charAt(0).toUpperCase() || "?";

@@ -23,6 +23,9 @@ export const users = sqliteTable("users", {
   garminSleepEnabled: integer("garmin_sleep_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  trainingEnabled: integer("training_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
@@ -627,6 +630,34 @@ export const recipes = sqliteTable(
 
 export type Recipe = typeof recipes.$inferSelect;
 export type NewRecipe = typeof recipes.$inferInsert;
+
+// Træningssessioner (avanceret træningstracking — opt-in feature).
+export const workouts = sqliteTable(
+  "workouts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // ISO YYYY-MM-DD
+    title: text("title").notNull(),
+    durationMin: integer("duration_min"),
+    // Fri tekst — én øvelse per linje ('Navn — sæt×reps @ vægt').
+    // Linjer der ender med ':' er under-overskrifter, alt andet noter.
+    // Bevidst ustruktureret så alle træningsformer kan rummes.
+    body: text("body").notNull().default(""),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("workouts_user_date").on(t.userId, t.date)],
+);
+
+export type Workout = typeof workouts.$inferSelect;
+export type NewWorkout = typeof workouts.$inferInsert;
 
 export const PHOTO_CATEGORIES = ["skin_spot", "body_progress", "other"] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];

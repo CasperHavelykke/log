@@ -12,10 +12,11 @@ import { registerPhotoTools } from "./tools/photos";
 import { registerTrackerTools } from "./tools/trackers";
 import { registerCustomParameterTools } from "./tools/custom-parameters";
 import { registerRecipeTools } from "./tools/recipes";
+import { registerWorkoutTools } from "./tools/workouts";
 
 export const MCP_SERVER_INFO = {
   name: "dagbog",
-  version: "0.7.0",
+  version: "0.8.0",
 } as const;
 
 export function registerAllTools(server: McpServer): void {
@@ -32,4 +33,5 @@ export function registerAllTools(server: McpServer): void {
   registerTrackerTools(server);
   registerCustomParameterTools(server);
   registerRecipeTools(server);
+  registerWorkoutTools(server);
 }

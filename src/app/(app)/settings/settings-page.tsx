@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Briefcase, Check, Clock, LogOut, Monitor, Moon, Plus, Sun, Trash2 } from "lucide-react";
+import { AlertTriangle, Briefcase, Check, Clock, Dumbbell, LogOut, Monitor, Moon, Plus, Sun, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import {
   createOAuthClient,
@@ -16,7 +16,11 @@ import {
 import type { Theme } from "@/lib/theme";
 import { setTheme } from "./theme-actions";
 import { formatDanishDate } from "@/lib/date";
-import { setFasteEnabled, setGarminSleepEnabled } from "@/lib/user-prefs";
+import {
+  setFasteEnabled,
+  setGarminSleepEnabled,
+  setTrainingEnabled,
+} from "@/lib/user-prefs";
 import {
   deleteAccount,
   getAccountSummary,
@@ -54,6 +58,7 @@ export function SettingsPage({
   initialPastPeriods,
   initialFasteEnabled,
   initialGarminSleepEnabled,
+  initialTrainingEnabled,
   initialTheme,
 }: {
   username: string;
@@ -64,6 +69,7 @@ export function SettingsPage({
   initialPastPeriods: PastPeriodRow[];
   initialFasteEnabled: boolean;
   initialGarminSleepEnabled: boolean;
+  initialTrainingEnabled: boolean;
   initialTheme: Theme;
 }) {
   return (
@@ -93,6 +99,7 @@ export function SettingsPage({
         <FeaturesCard
           initialFasteEnabled={initialFasteEnabled}
           initialGarminSleepEnabled={initialGarminSleepEnabled}
+          initialTrainingEnabled={initialTrainingEnabled}
         />
         <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
         <CustomParametersCard initial={initialCustomParameters} />
@@ -211,13 +218,18 @@ function ThemeCard({ initial }: { initial: Theme }) {
 function FeaturesCard({
   initialFasteEnabled,
   initialGarminSleepEnabled,
+  initialTrainingEnabled,
 }: {
   initialFasteEnabled: boolean;
   initialGarminSleepEnabled: boolean;
+  initialTrainingEnabled: boolean;
 }) {
   const [fasteEnabled, setFastEnabledState] = useState(initialFasteEnabled);
   const [garminEnabled, setGarminEnabledState] = useState(
     initialGarminSleepEnabled,
+  );
+  const [trainingEnabled, setTrainingEnabledState] = useState(
+    initialTrainingEnabled,
   );
   const [, start] = useTransition();
 
@@ -237,6 +249,14 @@ function FeaturesCard({
     });
   }
 
+  function toggleTraining() {
+    const next = !trainingEnabled;
+    setTrainingEnabledState(next);
+    start(async () => {
+      await setTrainingEnabled(next);
+    });
+  }
+
   return (
     <Card label="Funktioner" title="Aktivér det du bruger">
       <p className="mb-4 text-[13px] text-mid">
@@ -250,6 +270,13 @@ function FeaturesCard({
           description="Faste-timer på /today + historik på /helbred"
           enabled={fasteEnabled}
           onToggle={toggleFaste}
+        />
+        <FeatureToggle
+          icon={<Dumbbell className="size-4" />}
+          title="Avanceret træningstracking"
+          description="Log hele sessioner (øvelser, sæt, reps, noter) på en ny Træning-side. Slået fra trackes træning stadig som et simpelt kryds på dagen."
+          enabled={trainingEnabled}
+          onToggle={toggleTraining}
         />
         <FeatureToggle
           icon={<Moon className="size-4" />}

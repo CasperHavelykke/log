@@ -7,6 +7,7 @@ import {
   Briefcase,
   CalendarDays,
   ChefHat,
+  Dumbbell,
   FileText,
   FolderKanban,
   HeartPulse,
@@ -30,9 +31,17 @@ const JOBS_ITEM: Item = {
   key: "jobs",
 };
 
+const TRAINING_ITEM: Item = {
+  href: "/traening",
+  label: "Træning",
+  icon: Dumbbell,
+  key: "traening",
+};
+
 const PRIMARY_ITEMS: Item[] = [
   { href: "/today", label: "I dag", icon: CalendarDays, key: "today" },
   { href: "/health", label: "Helbred", icon: HeartPulse, key: "health" },
+  TRAINING_ITEM,
   { href: "/statistik", label: "Statistik", icon: LineChart, key: "statistik" },
   JOBS_ITEM,
   { href: "/projects", label: "Projekter", icon: FolderKanban, key: "projects" },
@@ -47,13 +56,16 @@ const ARCHIVE_ITEMS: Item[] = [
 
 export function MobileNav({
   jobsPlacement = "primary",
+  trainingEnabled = false,
 }: {
   jobsPlacement?: "primary" | "archive" | "hidden";
+  trainingEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Items synlig i persistent bottom bar (kun aktiv-periode visning her)
+  // Items synlig i persistent bottom bar (kun aktiv-periode visning her).
+  // Træning holdes i draweren så bar'en ikke bliver for trang.
   const visibleItems = PRIMARY_ITEMS.filter((i) => {
     if (i.key === "today" || i.key === "health" || i.key === "statistik")
       return true;
@@ -62,9 +74,11 @@ export function MobileNav({
   });
 
   // Drawer-sektioner
-  const drawerPrimary = PRIMARY_ITEMS.filter(
-    (i) => i.key !== "jobs" || jobsPlacement === "primary",
-  );
+  const drawerPrimary = PRIMARY_ITEMS.filter((i) => {
+    if (i.key === "jobs") return jobsPlacement === "primary";
+    if (i.key === "traening") return trainingEnabled;
+    return true;
+  });
   const drawerArchive =
     jobsPlacement === "archive" ? [JOBS_ITEM, ...ARCHIVE_ITEMS] : ARCHIVE_ITEMS;
 
