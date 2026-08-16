@@ -142,7 +142,6 @@ export default async function Today() {
         applicationsTarget: weekGoal.applicationsTarget,
         focusHoursTargetX10: weekGoal.focusHoursTargetX10,
       }}
-      weekGoalInherited={weekGoal.inherited}
       initialDayGoals={{
         applicationsTarget: entry?.applicationsTarget ?? null,
         focusHoursTargetX10: entry?.focusHoursTargetX10 ?? null,

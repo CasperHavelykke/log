@@ -223,7 +223,6 @@ export function TodayPage(props: {
   weekAppsCount: number;
   weekHoursX10: number;
   initialWeekGoal: WeekGoalState;
-  weekGoalInherited: boolean;
   initialDayGoals: DayGoalsState;
   projects: ProjectRef[];
   initialFocusProjectId: number | null;
@@ -329,7 +328,6 @@ export function TodayPage(props: {
           props.hasActiveJobPeriod ? weekGoal.applicationsTarget : null
         }
         focusHoursTargetX10={weekGoal.focusHoursTargetX10}
-        inherited={props.weekGoalInherited}
       />
       <DayIntention
         date={props.date}
