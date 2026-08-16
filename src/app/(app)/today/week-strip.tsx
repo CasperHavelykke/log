@@ -7,11 +7,13 @@ export function WeekStrip({
   weekHoursX10,
   applicationsTarget,
   focusHoursTargetX10,
+  inherited = false,
 }: {
   appsThisWeek: number;
   weekHoursX10: number;
   applicationsTarget: number | null;
   focusHoursTargetX10: number | null;
+  inherited?: boolean;
 }) {
   const hasAppGoal = applicationsTarget !== null && applicationsTarget > 0;
   const hasFocusGoal =
@@ -22,23 +24,31 @@ export function WeekStrip({
   }
 
   return (
-    <div className="mb-4 flex flex-wrap gap-3">
-      {hasAppGoal && (
-        <ProgressLink
-          href="/jobs"
-          value={appsThisWeek}
-          target={applicationsTarget}
-          label="Ansøgninger"
-        />
-      )}
-      {hasFocusGoal && (
-        <ProgressLink
-          href="/projects"
-          value={weekHoursX10 / 10}
-          target={focusHoursTargetX10 / 10}
-          label="Fokus-timer"
-          decimals={1}
-        />
+    <div className="mb-4">
+      <div className="flex flex-wrap gap-3">
+        {hasAppGoal && (
+          <ProgressLink
+            href="/jobs"
+            value={appsThisWeek}
+            target={applicationsTarget}
+            label="Ansøgninger"
+          />
+        )}
+        {hasFocusGoal && (
+          <ProgressLink
+            href="/projects"
+            value={weekHoursX10 / 10}
+            target={focusHoursTargetX10 / 10}
+            label="Fokus-timer"
+            decimals={1}
+          />
+        )}
+      </div>
+      {inherited && (
+        <p className="mt-1.5 text-[11px] italic text-dim">
+          Mål arvet fra sidste uge — ret dem på /jobs eller /projects for at
+          sætte ugens egne.
+        </p>
       )}
     </div>
   );

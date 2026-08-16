@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
-import { getAllProjects, getAllTimeEntries, getWeekGoal } from "@/lib/queries";
+import {
+  getAllProjects,
+  getAllTimeEntries,
+  getEffectiveWeekGoal,
+} from "@/lib/queries";
 import { todayIsoDate, mondayOf } from "@/lib/date";
 import { ProjectsPage } from "./projects-page";
 
@@ -25,14 +29,14 @@ export default async function Projects() {
       )
       .limit(1)
       .then((rows) => rows[0] ?? null),
-    getWeekGoal(user.id, weekStart),
+    getEffectiveWeekGoal(user.id, weekStart),
   ]);
 
   return (
     <ProjectsPage
       focusProjectId={user.focusProjectId}
       weekStart={weekStart}
-      weekFocusTargetX10={weekGoal?.focusHoursTargetX10 ?? null}
+      weekFocusTargetX10={weekGoal.focusHoursTargetX10}
       reflectionInitial={{
         date,
         workNotes: todayEntry?.workNotes ?? "",

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, between, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, between, desc, eq, isNull, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 
 export async function getDayEntry(userId: number, date: string) {
@@ -26,6 +26,49 @@ export async function getWeekGoal(userId: number, weekStart: string) {
     )
     .limit(1);
   return rows[0] ?? null;
+}
+
+// Ugemål med arv: har ugen intet eget mål, arves TAL-målene fra den senest
+// foregående uge der havde nogen. Fritekst-noten arves bevidst IKKE — den
+// er uge-specifik og bliver støj som gengangere. Arvede værdier gemmes
+// først som ugens egne, når brugeren selv rører målene (setWeekGoal er
+// stadig nøglet til ugens mandag).
+export async function getEffectiveWeekGoal(userId: number, weekStart: string) {
+  const own = await getWeekGoal(userId, weekStart);
+  if (own) {
+    return {
+      text: own.text ?? null,
+      applicationsTarget: own.applicationsTarget ?? null,
+      focusHoursTargetX10: own.focusHoursTargetX10 ?? null,
+      inherited: false,
+    };
+  }
+  const prev = await db
+    .select()
+    .from(schema.weekGoals)
+    .where(
+      and(
+        eq(schema.weekGoals.userId, userId),
+        lt(schema.weekGoals.weekStart, weekStart),
+      ),
+    )
+    .orderBy(desc(schema.weekGoals.weekStart))
+    .limit(1);
+  const p = prev[0];
+  if (!p || (p.applicationsTarget === null && p.focusHoursTargetX10 === null)) {
+    return {
+      text: null,
+      applicationsTarget: null,
+      focusHoursTargetX10: null,
+      inherited: false,
+    };
+  }
+  return {
+    text: null,
+    applicationsTarget: p.applicationsTarget ?? null,
+    focusHoursTargetX10: p.focusHoursTargetX10 ?? null,
+    inherited: true,
+  };
 }
 
 export async function getActiveProjects(userId: number) {

@@ -11,7 +11,7 @@ import {
   getDayEntry,
   getSupplementIntakesOnDate,
   getTimeEntriesInRange,
-  getWeekGoal,
+  getEffectiveWeekGoal,
 } from "@/lib/queries";
 import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
 import { listDocuments } from "../documents/actions";
@@ -49,7 +49,7 @@ export default async function Today() {
     yesterdayEntry,
   ] = await Promise.all([
     getDayEntry(user.id, date),
-    getWeekGoal(user.id, weekStart),
+    getEffectiveWeekGoal(user.id, weekStart),
     getActiveProjects(user.id),
     getApplicationsSentOn(user.id, date),
     getAllJobApplications(user.id),
@@ -138,10 +138,11 @@ export default async function Today() {
       weekAppsCount={weekAppsCount}
       weekHoursX10={weekHoursX10}
       initialWeekGoal={{
-        text: weekGoal?.text ?? "",
-        applicationsTarget: weekGoal?.applicationsTarget ?? null,
-        focusHoursTargetX10: weekGoal?.focusHoursTargetX10 ?? null,
+        text: weekGoal.text ?? "",
+        applicationsTarget: weekGoal.applicationsTarget,
+        focusHoursTargetX10: weekGoal.focusHoursTargetX10,
       }}
+      weekGoalInherited={weekGoal.inherited}
       initialDayGoals={{
         applicationsTarget: entry?.applicationsTarget ?? null,
         focusHoursTargetX10: entry?.focusHoursTargetX10 ?? null,

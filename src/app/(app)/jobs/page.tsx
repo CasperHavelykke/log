@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/session";
 import {
   getAllApplicationEvents,
   getAllJobApplications,
-  getWeekGoal,
+  getEffectiveWeekGoal,
 } from "@/lib/queries";
 import { listDocuments } from "../documents/actions";
 import { JobsPage } from "./jobs-page";
@@ -73,7 +73,7 @@ export default async function Jobs({
     getAllApplicationEvents(user.id),
     listDocuments(),
     listJobSearchPeriods(),
-    getWeekGoal(user.id, weekStart),
+    getEffectiveWeekGoal(user.id, weekStart),
   ]);
 
   const params = await searchParams;
@@ -149,7 +149,7 @@ export default async function Jobs({
         periods={periodOptions}
         selectedPeriod={selectedPeriodOption}
         showingAll={showAll}
-        weekTarget={weekGoal?.applicationsTarget ?? null}
+        weekTarget={weekGoal.applicationsTarget}
         weekStart={weekStart}
         initial={filteredApps.map((a) => ({
           id: a.id,
