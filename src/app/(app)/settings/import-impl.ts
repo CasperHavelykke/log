@@ -114,7 +114,12 @@ const supplementRow = z.object({
 
 const supplementIntakeRow = z.object({
   id: z.number().int(),
-  supplementId: z.number().int(),
+  // Navnet er intakes' PRIMÆRE kobling (aggregering sker på navn, ikke
+  // FK) — uden det vises indtag som "Ukendt" og mangler i statistik.
+  name: z.string().optional().default(""),
+  // Nullable: sletning af et tilskud sætter historiske intakes' FK til
+  // null (ON DELETE SET NULL) — de rækker skal stadig kunne importeres.
+  supplementId: z.number().int().nullable(),
   date: z.string(),
   doseAmountX100: z.number().int().nullable().optional(),
   doseUnit: z.string().nullable().optional(),
@@ -355,7 +360,7 @@ export async function performImport(
 
   const supplementIds = new Set(d.supplements.map((s) => s.id));
   for (const i of d.supplementIntakes) {
-    if (!supplementIds.has(i.supplementId)) {
+    if (i.supplementId !== null && !supplementIds.has(i.supplementId)) {
       return {
         ok: false,
         error:
@@ -644,12 +649,23 @@ export async function performImport(
     if (rows.length > 0) await tx.insert(schema.applicationEvents).values(rows);
   }
   if (d.supplementIntakes.length > 0) {
+    // Ældre backups (før name-kolonnen) mangler navnet på rækken —
+    // fald tilbage til skabelonens navn via FK'en.
+    const suppNameById = new Map(d.supplements.map((s) => [s.id, s.name]));
     const rows = d.supplementIntakes
       .map((i) => {
-        const newSuppId = supplementMap.get(i.supplementId);
+        // null-FK bevares som null; ellers oversættes til det nye id.
+        const newSuppId =
+          i.supplementId === null ? null : supplementMap.get(i.supplementId);
         if (newSuppId === undefined) return null;
+        const name =
+          i.name.trim() ||
+          (i.supplementId !== null
+            ? (suppNameById.get(i.supplementId) ?? "")
+            : "");
         return {
           userId: uid,
+          name,
           supplementId: newSuppId,
           date: i.date,
           doseAmountX100: i.doseAmountX100 ?? null,
