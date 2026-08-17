@@ -751,7 +751,11 @@ function heatAlpha(
   if (metric.key === "exercise") return 0.25 + 0.15 * value;
   // Faste: trin efter milepæl frem for glidende gradient.
   if (metric.key === "fastHours") return fastAlpha(value);
-  if (metric.domain && metric.domain[0] === 0) return 0.5;
+  // Fast mellemtone KUN for ægte ja/nej-metrikker (domain [0,1]) — ikke
+  // alt med skala fra 0 (søvnscore 0-100 fik ellers altid samme farve).
+  if (metric.domain && metric.domain[0] === 0 && metric.domain[1] === 1) {
+    return 0.5;
+  }
   if (max <= min) return 0.45;
   return 0.15 + 0.5 * ((value - min) / (max - min));
 }
@@ -1010,18 +1014,28 @@ function MetricMonthGrid({
           const hit = value !== undefined;
           const isToday = iso === today;
           const score = garminSleepEnabled ? sleepScores.get(iso) : undefined;
-          const isBool = metric.domain !== undefined && metric.domain[0] === 0;
-          const showValue = hit && !isBool;
+          // Ægte ja/nej-metrik = domain [0,1]. Metrikker med tekst-labels
+          // (fx træningsintensitet) viser label i tooltip i stedet for tal,
+          // og søvnscore-tallet sidder allerede i badgen øverst til højre.
+          const isBool =
+            metric.domain !== undefined &&
+            metric.domain[0] === 0 &&
+            metric.domain[1] === 1;
+          const showValue =
+            hit &&
+            !isBool &&
+            metric.valueLabels === undefined &&
+            metric.key !== "sleepScore";
           return (
             <div
               key={iso}
               title={
                 hit
-                  ? isBool
-                    ? metric.valueLabels?.[value!]
-                      ? `${danishLongDate(iso)}: ${metric.valueLabels[value!]}`
-                      : danishLongDate(iso)
-                    : `${danishLongDate(iso)}: ${value!.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
+                  ? metric.valueLabels?.[value!]
+                    ? `${danishLongDate(iso)}: ${metric.valueLabels[value!]}`
+                    : isBool
+                      ? danishLongDate(iso)
+                      : `${danishLongDate(iso)}: ${value!.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
                   : undefined
               }
               className={`relative flex aspect-square min-h-[44px] flex-col rounded-[8px] border p-1 text-left md:p-1.5 ${
@@ -1133,8 +1147,11 @@ function MetricMonthGrid({
               style={{ backgroundColor: withAlpha(metric.color, 0.55) }}
             />
             {metric.label}
-            {!(metric.domain && metric.domain[0] === 0) &&
-              " — mørkere = højere"}
+            {!(
+              metric.domain &&
+              metric.domain[0] === 0 &&
+              metric.domain[1] === 1
+            ) && " — mørkere = højere"}
           </span>
         )}
         {garminSleepEnabled && (
