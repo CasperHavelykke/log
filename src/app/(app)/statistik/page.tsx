@@ -89,8 +89,16 @@ export default async function StatistikPage() {
     if (d.carbsG != null) row.carbs = d.carbsG;
     if (d.proteinG != null) row.protein = d.proteinG;
     if (d.fatG != null) row.fat = d.fatG;
-    // Til metrik-kalenderens træning-ikon (ikke en valgbar graf-metrik).
-    if (d.didExercise) row.exercise = 1;
+    // Træning med intensitet: 1 = ja/let, 2 = mellem, 3 = hård. Gamle dage
+    // uden intensitet tæller som let, så skalaen forbliver simpel.
+    if (d.didExercise) {
+      row.exercise =
+        d.exerciseIntensity === "hard"
+          ? 3
+          : d.exerciseIntensity === "medium"
+            ? 2
+            : 1;
+    }
     // Kcal kun beregnet når alle tre makroer er logget (delvis logning ville
     // give misvisende lave tal). Alkohol tæller med i totalen via dayKcal.
     const k = dayKcal(d);

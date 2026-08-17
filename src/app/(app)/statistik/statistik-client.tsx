@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
@@ -88,6 +89,8 @@ type Metric = {
   // Foldbare serier (Øvelser): sub-rækker skjules til gruppen foldes ud.
   group?: string;
   sub?: boolean;
+  // Tekst-labels for diskrete værdier (vises i kalender-tooltip + legend).
+  valueLabels?: Record<number, string>;
 };
 
 const CATEGORIES: { id: Category; label: string }[] = [
@@ -129,9 +132,8 @@ const METRICS: Metric[] = [
   { key: "waist", label: "Livvidde", short: "Livvidde", category: "body", unit: "cm", color: "#f97316", decimals: 1 },
   { key: "mood", label: "Humør", short: "Humør", category: "health", unit: "/5", domain: [1, 5], color: "#4ade80", decimals: 0 },
   { key: "energy", label: "Energi", short: "Energi", category: "health", unit: "/5", domain: [1, 5], color: "#fbbf24", decimals: 0 },
-  // Ja/nej-metrik (domain fra 0) — primært til metrik-kalenderen; grafen
-  // bliver en flad 0/1-linje men tælleren og kalenderen er pointen.
-  { key: "exercise", label: "Træning", short: "Træning", category: "health", unit: "", domain: [0, 1], color: "#6ea9f2", decimals: 0 },
+  // Træning med intensitet: 1 = ja/let, 2 = mellem, 3 = hård.
+  { key: "exercise", label: "Træning", short: "Træning", category: "health", unit: "", domain: [0, 3], color: "#6ea9f2", decimals: 0, valueLabels: { 1: "Let", 2: "Mellem", 3: "Hård" } },
   { key: "sleepQuality", label: "Søvnkvalitet", short: "Søvnkval.", category: "sleep", unit: "/4", domain: [1, 4], color: "#a78bfa", decimals: 0 },
   { key: "sleepHours", label: "Søvnvarighed", short: "Søvn", category: "sleep", unit: "t", color: "#5fa3f0", decimals: 1 },
   { key: "sleepScore", label: "Søvnscore (Garmin)", short: "Søvnscore", category: "sleep", unit: "/100", domain: [0, 100], color: "#4ade80", decimals: 0 },
@@ -745,9 +747,30 @@ function heatAlpha(
   min: number,
   max: number,
 ): number {
+  // Træning: tre faste trin efter intensitet (1 let, 2 mellem, 3 hård).
+  if (metric.key === "exercise") return 0.25 + 0.15 * value;
+  // Faste: trin efter milepæl frem for glidende gradient.
+  if (metric.key === "fastHours") return fastAlpha(value);
   if (metric.domain && metric.domain[0] === 0) return 0.5;
   if (max <= min) return 0.45;
   return 0.15 + 0.5 * ((value - min) / (max - min));
+}
+
+// Faste-milepæle: 16/18/24 fuldførte timer. Under 16 = gennemført faste
+// uden milepæl (vises dæmpet).
+function fastMilestone(v: number): 16 | 18 | 24 | null {
+  if (v >= 24) return 24;
+  if (v >= 18) return 18;
+  if (v >= 16) return 16;
+  return null;
+}
+
+function fastAlpha(v: number): number {
+  const m = fastMilestone(v);
+  if (m === 24) return 0.62;
+  if (m === 18) return 0.4;
+  if (m === 16) return 0.22;
+  return 0.08;
 }
 
 // Samme farvelogik som /helbred-kalenderens søvnscore-badge.
@@ -995,7 +1018,9 @@ function MetricMonthGrid({
               title={
                 hit
                   ? isBool
-                    ? danishLongDate(iso)
+                    ? metric.valueLabels?.[value!]
+                      ? `${danishLongDate(iso)}: ${metric.valueLabels[value!]}`
+                      : danishLongDate(iso)
                     : `${danishLongDate(iso)}: ${value!.toFixed(metric.decimals).replace(".", ",")}${metric.unit}`
                   : undefined
               }
@@ -1038,10 +1063,29 @@ function MetricMonthGrid({
                   strokeWidth={2.5}
                 />
               )}
-              {showValue && (
-                <span className="absolute bottom-1 right-1 hidden text-[9px] font-medium text-ink/80 sm:block">
-                  {value!.toFixed(metric.decimals).replace(".", ",")}
+              {metric.key === "fastHours" && hit ? (
+                <span
+                  className={`absolute bottom-1 right-1 hidden items-center gap-0.5 text-[9px] sm:flex ${
+                    fastMilestone(value!) !== null
+                      ? "font-semibold text-ink"
+                      : "text-ink/60"
+                  }`}
+                >
+                  {fastMilestone(value!) !== null ? (
+                    <>
+                      {fastMilestone(value!)}t
+                      <Check className="size-[9px]" strokeWidth={3.5} />
+                    </>
+                  ) : (
+                    value!.toFixed(1).replace(".", ",")
+                  )}
                 </span>
+              ) : (
+                showValue && (
+                  <span className="absolute bottom-1 right-1 hidden text-[9px] font-medium text-ink/80 sm:block">
+                    {value!.toFixed(metric.decimals).replace(".", ",")}
+                  </span>
+                )
               )}
             </div>
           );
@@ -1049,14 +1093,50 @@ function MetricMonthGrid({
       </div>
 
       <div className="mt-3.5 flex flex-wrap gap-x-3 gap-y-1 border-t border-hair pt-3.5 text-[11px] text-light">
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            className="inline-block size-2.5 rounded-[3px]"
-            style={{ backgroundColor: withAlpha(metric.color, 0.55) }}
-          />
-          {metric.label}
-          {!(metric.domain && metric.domain[0] === 0) && " — mørkere = højere"}
-        </span>
+        {metric.key === "exercise" ? (
+          <>
+            {([1, 2, 3] as const).map((v) => (
+              <span key={v} className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block size-2.5 rounded-[3px]"
+                  style={{
+                    backgroundColor: withAlpha(
+                      metric.color,
+                      heatAlpha(metric, v, 0, 3),
+                    ),
+                  }}
+                />
+                {metric.valueLabels?.[v]}
+              </span>
+            ))}
+          </>
+        ) : metric.key === "fastHours" ? (
+          <>
+            {([16, 18, 24] as const).map((m) => (
+              <span key={m} className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block size-2.5 rounded-[3px]"
+                  style={{
+                    backgroundColor: withAlpha(metric.color, fastAlpha(m)),
+                  }}
+                />
+                {m}t
+                <Check className="size-3" strokeWidth={3} />
+              </span>
+            ))}
+            <span className="text-dim">under 16t: tal uden flueben</span>
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block size-2.5 rounded-[3px]"
+              style={{ backgroundColor: withAlpha(metric.color, 0.55) }}
+            />
+            {metric.label}
+            {!(metric.domain && metric.domain[0] === 0) &&
+              " — mørkere = højere"}
+          </span>
+        )}
         {garminSleepEnabled && (
           <span className="hidden items-center gap-1.5 sm:inline-flex">
             <span className="rounded-[3px] bg-[var(--success-soft)] px-1.5 py-[1px] text-[10px] font-semibold text-success">
