@@ -27,6 +27,7 @@ export default async function RecipesPage() {
         hasImage: r.imagePathname !== null,
         updatedAt: r.updatedAt,
       }))}
+      initialCollectionToken={user.recipesShareToken ?? null}
     />
   );
 }

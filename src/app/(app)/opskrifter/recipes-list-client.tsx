@@ -3,8 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChefHat, Plus, Search, Users, X } from "lucide-react";
-import { createRecipe } from "./actions";
+import { ChefHat, Plus, Search, Share2, Users, X } from "lucide-react";
+import { createRecipe, setCollectionSharing } from "./actions";
+import { ShareDialog } from "@/components/share-dialog";
 
 type RecipeRow = {
   id: number;
@@ -29,12 +30,18 @@ function kcalPerServing(r: {
 
 export function RecipesListClient({
   initialRecipes,
+  initialCollectionToken,
 }: {
   initialRecipes: RecipeRow[];
+  initialCollectionToken: string | null;
 }) {
   const [recipes] = useState(initialRecipes);
   const [query, setQuery] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [collectionToken, setCollectionToken] = useState(
+    initialCollectionToken,
+  );
+  const [shareOpen, setShareOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,14 +66,31 @@ export function RecipesListClient({
               : `${recipes.length} gemt${recipes.length === 1 ? "" : "e"} opskrift${recipes.length === 1 ? "" : "er"}`}
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
-        >
-          <Plus className="size-3.5" strokeWidth={2.5} />
-          Ny opskrift
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            title="Del hele samlingen med et link"
+            className={`inline-flex min-h-[40px] min-w-[40px] cursor-pointer items-center justify-center gap-1.5 rounded-[8px] px-2.5 py-2 text-[13px] hover:bg-bg-elevated sm:min-h-0 sm:min-w-0 sm:px-3 ${
+              collectionToken !== null
+                ? "text-accent"
+                : "text-mid hover:text-ink"
+            }`}
+          >
+            <Share2 className="size-4" />
+            <span className="hidden sm:inline">
+              {collectionToken !== null ? "Delt" : "Del"}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright"
+          >
+            <Plus className="size-3.5" strokeWidth={2.5} />
+            Ny opskrift
+          </button>
+        </div>
       </header>
 
       <div className="mb-5 flex items-center gap-2 rounded-[10px] bg-bg-elevated px-3 py-2 shadow-[var(--shadow-card)]">
@@ -104,6 +128,22 @@ export function RecipesListClient({
       )}
 
       {showCreate && <CreateDialog onClose={() => setShowCreate(false)} />}
+
+      {shareOpen && (
+        <ShareDialog
+          label="Deling"
+          title="Hele samlingen"
+          description="Et hemmeligt link giver alle med linket læse-adgang til alle dine opskrifter — med søgning, billeder og portions-skalering. Nye opskrifter dukker automatisk op i den delte samling."
+          token={collectionToken}
+          pathForToken={(t) => `/samling/${t}`}
+          onToggle={async (enabled) => {
+            const res = await setCollectionSharing(enabled);
+            if (res.ok) setCollectionToken(res.token ?? null);
+            return res;
+          }}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }

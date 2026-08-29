@@ -12,15 +12,19 @@ import {
   ImagePlus,
   Loader2,
   Pencil,
+  Share2,
   Trash2,
   Users,
   X,
 } from "lucide-react";
 import { compressImage, formatFileSize } from "@/lib/image-compress";
 import { danishLongDate } from "@/lib/date";
+import { scaleLine } from "@/lib/recipe-scale";
+import { ShareDialog } from "@/components/share-dialog";
 import {
   deleteRecipe,
   deleteRecipeImage,
+  setRecipeSharing,
   updateRecipe,
   uploadRecipeImage,
 } from "../actions";
@@ -37,70 +41,13 @@ type RecipeData = {
   proteinG: number | null;
   fatG: number | null;
   hasImage: boolean;
+  shareToken: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-// --- Portions-skalering -----------------------------------------------------
-// Parser det ledende tal på en ingrediens-linje og skalerer det. Linjer uden
-// ledende tal ("Salt og peber") returneres uændret.
-
-const UNICODE_FRACTIONS: Record<string, number> = {
-  "½": 0.5,
-  "⅓": 1 / 3,
-  "⅔": 2 / 3,
-  "¼": 0.25,
-  "¾": 0.75,
-  "⅛": 0.125,
-};
-
-function parseLeadingQty(
-  line: string,
-): { qty: number; rest: string } | null {
-  // Blandet tal: "1 1/2 dl"
-  let m = line.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)(?=\s|$)/);
-  if (m) {
-    return {
-      qty: Number(m[1]) + Number(m[2]) / Number(m[3]),
-      rest: line.slice(m[0].length),
-    };
-  }
-  // Brøk: "1/2 dl"
-  m = line.match(/^(\d+)\s*\/\s*(\d+)(?=\s|$)/);
-  if (m) {
-    return { qty: Number(m[1]) / Number(m[2]), rest: line.slice(m[0].length) };
-  }
-  // Decimal/heltal: "400 g", "1,5 dl"
-  m = line.match(/^(\d+(?:[.,]\d+)?)/);
-  if (m) {
-    return {
-      qty: Number(m[1].replace(",", ".")),
-      rest: line.slice(m[0].length),
-    };
-  }
-  // Unicode-brøk: "½ løg"
-  const first = line[0];
-  if (first !== undefined && UNICODE_FRACTIONS[first] !== undefined) {
-    return { qty: UNICODE_FRACTIONS[first], rest: line.slice(1) };
-  }
-  return null;
-}
-
-function fmtQty(n: number): string {
-  // Køkken-pragmatisk afrunding: store mængder som heltal, små med decimaler.
-  let rounded: number;
-  if (n >= 20) rounded = Math.round(n);
-  else if (n >= 2) rounded = Math.round(n * 10) / 10;
-  else rounded = Math.round(n * 100) / 100;
-  return String(rounded).replace(".", ",");
-}
-
-function scaleLine(line: string, factor: number): string {
-  if (factor === 1) return line;
-  const parsed = parseLeadingQty(line);
-  if (!parsed) return line;
-  return `${fmtQty(parsed.qty * factor)}${parsed.rest}`;
-}
+// Portions-skalering bor i @/lib/recipe-scale — delt med de offentlige
+// delesider.
 
 export function RecipeDetailClient({
   recipe: initial,
@@ -118,6 +65,7 @@ export function RecipeDetailClient({
   const [saving, startSave] = useTransition();
   // Visnings-skalering af portioner — persisteres ikke.
   const [viewServings, setViewServings] = useState(initial.servings);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const scaleFactor =
     recipe.servings !== null &&
@@ -217,6 +165,19 @@ export function RecipeDetailClient({
               >
                 <Trash2 className="size-3.5" />
                 Slet
+              </button>
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                title="Del opskriften med et link"
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12px] hover:bg-bg-elevated ${
+                  recipe.shareToken !== null
+                    ? "text-accent"
+                    : "text-dim hover:text-ink"
+                }`}
+              >
+                <Share2 className="size-3.5" />
+                {recipe.shareToken !== null ? "Delt" : "Del"}
               </button>
               <button
                 type="button"
@@ -517,6 +478,25 @@ export function RecipeDetailClient({
           <> · senest redigeret {danishLongDate(recipe.updatedAt.slice(0, 10))}</>
         )}
       </p>
+
+      {shareOpen && (
+        <ShareDialog
+          label="Deling"
+          title={recipe.title}
+          description="Et hemmeligt link giver alle med linket læse-adgang til denne ene opskrift — inkl. billede og portions-skalering."
+          token={recipe.shareToken}
+          pathForToken={(t) => `/r/${t}`}
+          onToggle={async (enabled) => {
+            const res = await setRecipeSharing(recipe.id, enabled);
+            if (res.ok) {
+              setRecipe((r) => ({ ...r, shareToken: res.token ?? null }));
+              setDraft((d) => ({ ...d, shareToken: res.token ?? null }));
+            }
+            return res;
+          }}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -225,6 +225,13 @@
       "when": 1786531319458,
       "tag": "0031_blue_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1788005451704,
+      "tag": "0032_glossy_shockwave",
+      "breakpoints": true
     }
   ]
 }

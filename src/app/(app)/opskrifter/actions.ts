@@ -179,6 +179,37 @@ export async function uploadRecipeImage(formData: FormData) {
   return { ok: true as const };
 }
 
+// --- Deling -----------------------------------------------------------------
+// Hemmelige, ugættelige tokens (CSPRNG). null = deling slået fra; at slå
+// deling fra dræber linket permanent (nyt tryk genererer et NYT token).
+
+export async function setRecipeSharing(id: number, enabled: boolean) {
+  const user = await requireUser();
+  const recipe = await getOwnRecipe(user.id, id);
+  if (!recipe) return { ok: false as const, error: "Opskriften findes ikke" };
+
+  const { randomBytes } = await import("node:crypto");
+  const token = enabled ? randomBytes(16).toString("base64url") : null;
+  await db
+    .update(schema.recipes)
+    .set({ shareToken: token })
+    .where(eq(schema.recipes.id, id));
+  revalidatePath(`/opskrifter/${id}`);
+  return { ok: true as const, token };
+}
+
+export async function setCollectionSharing(enabled: boolean) {
+  const user = await requireUser();
+  const { randomBytes } = await import("node:crypto");
+  const token = enabled ? randomBytes(16).toString("base64url") : null;
+  await db
+    .update(schema.users)
+    .set({ recipesShareToken: token })
+    .where(eq(schema.users.id, user.id));
+  revalidatePath("/opskrifter");
+  return { ok: true as const, token };
+}
+
 export async function deleteRecipeImage(id: number) {
   const user = await requireUser();
   const recipe = await getOwnRecipe(user.id, id);

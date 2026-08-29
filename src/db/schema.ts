@@ -26,6 +26,9 @@ export const users = sqliteTable("users", {
   trainingEnabled: integer("training_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Hemmeligt token til offentlig deling af hele opskriftssamlingen
+  // (/samling/{token}). null = deling slået fra.
+  recipesShareToken: text("recipes_share_token"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
@@ -618,6 +621,9 @@ export const recipes = sqliteTable(
     // Valgfrit billede — fil ligger under data/recipes/, kun sti+mime i DB.
     imagePathname: text("image_pathname"),
     imageMime: text("image_mime"),
+    // Hemmeligt token til offentligt delelink (/r/{token}).
+    // null = deling slået fra.
+    shareToken: text("share_token"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
@@ -625,7 +631,10 @@ export const recipes = sqliteTable(
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
-  (t) => [index("recipes_user").on(t.userId)],
+  (t) => [
+    index("recipes_user").on(t.userId),
+    uniqueIndex("recipes_share_token").on(t.shareToken),
+  ],
 );
 
 export type Recipe = typeof recipes.$inferSelect;

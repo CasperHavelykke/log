@@ -2,24 +2,72 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import { getBlobStream } from "@/lib/blob";
+import { findCollectionOwner } from "@/lib/share";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ type: string; id: string }>;
 
-export async function GET(_req: Request, { params }: { params: Params }) {
-  const user = await requireUser();
+async function serve(
+  blobUrl: string,
+  mimeType: string,
+  filename: string,
+  inline: boolean,
+) {
+  const { stream, contentLength } = await getBlobStream(blobUrl);
+  if (!stream) {
+    return new Response("Blob not available", { status: 502 });
+  }
+  const headers: Record<string, string> = {
+    "Content-Type": mimeType,
+    "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(filename)}"`,
+    "Cache-Control": "private, max-age=3600",
+  };
+  if (contentLength !== undefined) {
+    headers["Content-Length"] = String(contentLength);
+  }
+  return new Response(stream, { headers });
+}
+
+export async function GET(req: Request, { params }: { params: Params }) {
   const { type, id: idStr } = await params;
   const id = Number(idStr);
   if (!Number.isFinite(id)) {
     return new Response("Bad id", { status: 400 });
   }
 
-  let blobUrl: string;
-  let mimeType: string;
-  let filename: string;
-  let inline = true;
+  // Offentlig token-adgang — KUN opskriftsbilleder, og kun når tokenet
+  // matcher opskriftens eget delelink eller ejerens samlings-link.
+  // Alt andet kræver login som hidtil.
+  if (type === "recipe") {
+    const token = new URL(req.url).searchParams.get("token");
+    if (token) {
+      const rows = await db
+        .select()
+        .from(schema.recipes)
+        .where(eq(schema.recipes.id, id))
+        .limit(1);
+      const row = rows[0];
+      if (!row || !row.imagePathname) {
+        return new Response("Not found", { status: 404 });
+      }
+      const viaRecipe = row.shareToken !== null && row.shareToken === token;
+      const viaCollection =
+        !viaRecipe && (await findCollectionOwner(token))?.id === row.userId;
+      if (!viaRecipe && !viaCollection) {
+        return new Response("Not found", { status: 404 });
+      }
+      return serve(
+        row.imagePathname,
+        row.imageMime ?? "image/jpeg",
+        `recipe-${row.id}.jpg`,
+        true,
+      );
+    }
+  }
+
+  const user = await requireUser();
 
   if (type === "photo") {
     const rows = await db
@@ -31,9 +79,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       .limit(1);
     const row = rows[0];
     if (!row) return new Response("Not found", { status: 404 });
-    blobUrl = row.blobUrl;
-    mimeType = row.mimeType;
-    filename = `photo-${row.id}.jpg`;
+    return serve(row.blobUrl, row.mimeType, `photo-${row.id}.jpg`, true);
   } else if (type === "document") {
     const rows = await db
       .select()
@@ -44,10 +90,9 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       .limit(1);
     const row = rows[0];
     if (!row) return new Response("Not found", { status: 404 });
-    blobUrl = row.blobUrl;
-    mimeType = row.mimeType;
-    filename = row.filename;
-    inline = mimeType === "application/pdf" || mimeType.startsWith("text/");
+    const inline =
+      row.mimeType === "application/pdf" || row.mimeType.startsWith("text/");
+    return serve(row.blobUrl, row.mimeType, row.filename, inline);
   } else if (type === "recipe") {
     const rows = await db
       .select()
@@ -60,26 +105,13 @@ export async function GET(_req: Request, { params }: { params: Params }) {
     if (!row || !row.imagePathname) {
       return new Response("Not found", { status: 404 });
     }
-    blobUrl = row.imagePathname;
-    mimeType = row.imageMime ?? "image/jpeg";
-    filename = `recipe-${row.id}.jpg`;
-  } else {
-    return new Response("Bad type", { status: 400 });
+    return serve(
+      row.imagePathname,
+      row.imageMime ?? "image/jpeg",
+      `recipe-${row.id}.jpg`,
+      true,
+    );
   }
 
-  const { stream, contentLength } = await getBlobStream(blobUrl);
-  if (!stream) {
-    return new Response("Blob not available", { status: 502 });
-  }
-
-  const headers: Record<string, string> = {
-    "Content-Type": mimeType,
-    "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(filename)}"`,
-    "Cache-Control": "private, max-age=3600",
-  };
-  if (contentLength !== undefined) {
-    headers["Content-Length"] = String(contentLength);
-  }
-
-  return new Response(stream, { headers });
+  return new Response("Bad type", { status: 400 });
 }

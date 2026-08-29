@@ -260,6 +260,7 @@ const recipeRow = z.object({
   fatG: z.number().int().nullable().optional(),
   imagePathname: z.string().nullable().optional(),
   imageMime: z.string().nullable().optional(),
+  shareToken: z.string().nullable().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -768,6 +769,7 @@ export async function performImport(
         fatG: r.fatG ?? null,
         imagePathname: r.imagePathname ?? null,
         imageMime: r.imageMime ?? null,
+        shareToken: r.shareToken ?? null,
         createdAt: r.createdAt ?? nowIso(),
         updatedAt: r.updatedAt ?? nowIso(),
       })),
