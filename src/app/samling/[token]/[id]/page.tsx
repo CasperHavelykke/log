@@ -65,6 +65,7 @@ export default async function SharedCollectionRecipePage({
         carbsG: recipe.carbsG,
         proteinG: recipe.proteinG,
         fatG: recipe.fatG,
+        fiberG: recipe.fiberG,
       }}
       imageUrl={
         recipe.imagePathname

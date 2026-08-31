@@ -31,9 +31,13 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     carbsG: row.carbsG,
     proteinG: row.proteinG,
     fatG: row.fatG,
+    fiberG: row.fiberG,
     kcal:
       row.carbsG !== null && row.proteinG !== null && row.fatG !== null
-        ? row.carbsG * 4 + row.proteinG * 4 + row.fatG * 9
+        ? row.carbsG * 4 +
+          row.proteinG * 4 +
+          row.fatG * 9 +
+          (row.fiberG ?? 0) * 2
         : null,
     updatedAt: row.updatedAt,
   };
@@ -291,6 +295,16 @@ export function registerDayEntryTools(server: McpServer) {
           .nullable()
           .optional()
           .describe("Fedt i gram for hele dagen."),
+        fiberG: z
+          .number()
+          .int()
+          .min(0)
+          .max(200)
+          .nullable()
+          .optional()
+          .describe(
+            "Kostfibre i gram for hele dagen. SEPARAT fra carbsG — EU-varedeklarationer angiver kulhydrat EKSKL. fibre. Fibre tæller 2 kcal/g i kalorie-beregningen.",
+          ),
         weightKg: z
           .number()
           .min(0)
@@ -376,6 +390,8 @@ export function registerDayEntryTools(server: McpServer) {
         proteinG:
           args.proteinG === undefined ? (existing?.proteinG ?? null) : args.proteinG,
         fatG: args.fatG === undefined ? (existing?.fatG ?? null) : args.fatG,
+        fiberG:
+          args.fiberG === undefined ? (existing?.fiberG ?? null) : args.fiberG,
         didExercise:
           args.didExercise === undefined
             ? (existing?.didExercise ?? false)

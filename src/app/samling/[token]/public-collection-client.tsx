@@ -12,6 +12,7 @@ type PublicRecipeRow = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
+  fiberG: number | null;
   hasImage: boolean;
 };
 
@@ -19,9 +20,10 @@ function kcalPerServing(r: {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
+  fiberG: number | null;
 }): number | null {
   if (r.carbsG === null || r.proteinG === null || r.fatG === null) return null;
-  return r.carbsG * 4 + r.proteinG * 4 + r.fatG * 9;
+  return r.carbsG * 4 + r.proteinG * 4 + r.fatG * 9 + (r.fiberG ?? 0) * 2;
 }
 
 export function PublicCollectionClient({

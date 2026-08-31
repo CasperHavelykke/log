@@ -1,0 +1,1 @@
+ALTER TABLE `recipes` ADD `fiber_g` integer;

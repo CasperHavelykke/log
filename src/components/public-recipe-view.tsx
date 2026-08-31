@@ -15,6 +15,7 @@ export type PublicRecipe = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
+  fiberG: number | null;
 };
 
 // Læse-kun offentlig visning af en opskrift (delelink). Ingen auth, ingen
@@ -40,7 +41,10 @@ export function PublicRecipeView({
 
   const kcal =
     recipe.carbsG !== null && recipe.proteinG !== null && recipe.fatG !== null
-      ? recipe.carbsG * 4 + recipe.proteinG * 4 + recipe.fatG * 9
+      ? recipe.carbsG * 4 +
+        recipe.proteinG * 4 +
+        recipe.fatG * 9 +
+        (recipe.fiberG ?? 0) * 2
       : null;
 
   return (
@@ -210,6 +214,25 @@ export function PublicRecipeView({
         </section>
       )}
 
+      {kcal !== null && (
+        <section className="mt-4 rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
+          <div className="mb-3 border-b border-hair pb-2 text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+            Makroer per portion
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <MacroPill label="Kulhydrat" value={recipe.carbsG!} />
+            {recipe.fiberG !== null && (
+              <MacroPill label="+ Fibre" value={recipe.fiberG} />
+            )}
+            <MacroPill label="Protein" value={recipe.proteinG!} />
+            <MacroPill label="Fedt" value={recipe.fatG!} />
+            <span className="inline-flex items-center rounded-full bg-[var(--accent-bg)] px-2.5 py-1 text-[12px] font-medium text-accent">
+              {kcal} kcal
+            </span>
+          </div>
+        </section>
+      )}
+
       <footer className="mt-8 border-t border-hair pt-4 text-center text-[11px] text-dim">
         Delt via{" "}
         <a
@@ -222,5 +245,14 @@ export function PublicRecipeView({
         </a>
       </footer>
     </div>
+  );
+}
+
+function MacroPill({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-2.5 py-1 text-[12px] text-mid">
+      {label}
+      <span className="font-medium text-ink">{value} g</span>
+    </span>
   );
 }

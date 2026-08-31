@@ -117,6 +117,7 @@ type DayState = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
+  fiberG: number | null;
   workNotes: string;
   healthNotes: string;
   dayNotes: string;
@@ -297,6 +298,7 @@ export function TodayPage(props: {
         carbsG: day.carbsG,
         proteinG: day.proteinG,
         fatG: day.fatG,
+        fiberG: day.fiberG,
         workNotes: day.workNotes || null,
         healthNotes: day.healthNotes || null,
         dayNotes: day.dayNotes || null,
@@ -1335,7 +1337,7 @@ function HealthBody({
         title="Ernæring"
         meta={kcalMetaText(kcalInfo)}
       >
-        <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
+        <div className="grid grid-cols-2 gap-3 md:block md:space-y-1">
           <GridField label="Kulhydrat">
             <CompactNumberInput
               fluid
@@ -1346,6 +1348,22 @@ function HealthBody({
                 const n = Number(t);
                 if (Number.isFinite(n) && n >= 0 && n <= 2000) {
                   setDay({ ...day, carbsG: Math.floor(n) });
+                }
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="+ Fibre">
+            <CompactNumberInput
+              fluid
+              value={day.fiberG === null ? "" : String(day.fiberG)}
+              onChange={(v) => {
+                const t = v.trim();
+                if (t === "") return setDay({ ...day, fiberG: null });
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 200) {
+                  setDay({ ...day, fiberG: Math.floor(n) });
                 }
               }}
               unit="g"
@@ -1385,6 +1403,10 @@ function HealthBody({
             />
           </GridField>
         </div>
+        <p className="mt-2 text-[11px] italic text-dim">
+          Fibre er kulhydrater, men står separat som på varedeklarationen —
+          kulhydrat-tallet er ekskl. fibre.
+        </p>
       </FieldSection>
 
       <FieldSection icon={<Activity className="size-3.5" />} title="Aktivitet">

@@ -253,6 +253,7 @@ async function main() {
       carbsG: 9,
       proteinG: 32,
       fatG: 21,
+      fiberG: 3,
     },
     {
       userId: uid,
@@ -267,6 +268,7 @@ async function main() {
       carbsG: 7,
       proteinG: 33,
       fatG: 17,
+      fiberG: 2,
     },
     {
       userId: uid,
@@ -280,6 +282,7 @@ async function main() {
       carbsG: 52,
       proteinG: 24,
       fatG: 9,
+      fiberG: 8,
     },
   ]);
 
@@ -332,6 +335,7 @@ async function main() {
     const carbs = logMacros ? randInt(120, 260) : null;
     const protein = logMacros ? randInt(110, 170) : null;
     const fat = logMacros ? randInt(45, 95) : null;
+    const fiber = logMacros ? randInt(18, 42) : null;
 
     await db.insert(schema.dayEntries).values({
       userId: uid,
@@ -346,6 +350,7 @@ async function main() {
       carbsG: carbs,
       proteinG: protein,
       fatG: fat,
+      fiberG: fiber,
       workNotes: chance(0.3)
         ? "God fokusdag — kom igennem det planlagte."
         : null,

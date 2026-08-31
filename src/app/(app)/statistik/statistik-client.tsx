@@ -64,6 +64,7 @@ type MetricKey =
   | "carbs"
   | "protein"
   | "fat"
+  | "fiber"
   | "kcal";
 
 type Category =
@@ -145,6 +146,9 @@ const METRICS: Metric[] = [
   { key: "alcohol", label: "Alkohol", short: "Alkohol", category: "other", unit: " g", color: "#fbbf24", decimals: 0 },
   { key: "fastHours", label: "Faste-varighed", short: "Faste", category: "other", unit: "t", color: "#a78bfa", decimals: 1 },
   { key: "carbs", label: "Kulhydrater", short: "Carbs", category: "nutrition", unit: " g", color: "#fbbf24", decimals: 0 },
+  // Fibre er kulhydrater, men angives separat (EU-deklaration: kulhydrat
+  // ekskl. fibre) — derfor placeret lige under Kulhydrater.
+  { key: "fiber", label: "+ Fibre", short: "Fibre", category: "nutrition", unit: " g", color: "#4ade80", decimals: 0 },
   { key: "protein", label: "Protein", short: "Protein", category: "nutrition", unit: " g", color: "#ec4899", decimals: 0 },
   { key: "fat", label: "Fedt", short: "Fedt", category: "nutrition", unit: " g", color: "#a78bfa", decimals: 0 },
   { key: "kcal", label: "Kalorier", short: "Kcal", category: "nutrition", unit: " kcal", color: "#f97316", decimals: 0 },

@@ -246,6 +246,7 @@ export default async function Today() {
         carbsG: entry?.carbsG ?? null,
         proteinG: entry?.proteinG ?? null,
         fatG: entry?.fatG ?? null,
+        fiberG: entry?.fiberG ?? null,
         workNotes: entry?.workNotes ?? "",
         healthNotes: entry?.healthNotes ?? "",
         dayNotes: entry?.dayNotes ?? "",

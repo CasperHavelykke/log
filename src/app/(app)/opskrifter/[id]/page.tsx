@@ -43,6 +43,7 @@ export default async function RecipeDetailPage({
         carbsG: recipe.carbsG,
         proteinG: recipe.proteinG,
         fatG: recipe.fatG,
+        fiberG: recipe.fiberG,
         hasImage: recipe.imagePathname !== null,
         shareToken: recipe.shareToken,
         createdAt: recipe.createdAt,

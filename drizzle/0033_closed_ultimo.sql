@@ -1,0 +1,1 @@
+ALTER TABLE `day_entries` ADD `fiber_g` integer;

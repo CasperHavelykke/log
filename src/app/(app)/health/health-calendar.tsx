@@ -71,6 +71,7 @@ type Entry = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
+  fiberG: number | null;
   healthNotes: string;
   workNotes: string;
   dayNotes: string;
@@ -599,6 +600,7 @@ function DayEditorPanel({
     entry?.proteinG ?? null,
   );
   const [fatG, setFatG] = useState<number | null>(entry?.fatG ?? null);
+  const [fiberG, setFiberG] = useState<number | null>(entry?.fiberG ?? null);
   const [sleepInput, setSleepInput] = useState(
     fmtHours(entry?.sleepHoursX10 ?? null),
   );
@@ -646,6 +648,7 @@ function DayEditorPanel({
       carbsG,
       proteinG,
       fatG,
+      fiberG,
       healthNotes: healthNotes.trim() || null,
       workNotes: entry?.workNotes || null,
       dayNotes: entry?.dayNotes || null,
@@ -686,6 +689,7 @@ function DayEditorPanel({
             carbsG,
             proteinG,
             fatG,
+            fiberG,
             healthNotes,
             workNotes: entry?.workNotes ?? "",
             dayNotes: entry?.dayNotes ?? "",
@@ -702,7 +706,8 @@ function DayEditorPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mood, energy, sleepInput, sleepQuality, alcoholUnits, didExercise,
-    exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, healthNotes,
+    exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, fiberG,
+    healthNotes,
   ]);
 
   const hasGarminScore =
@@ -713,7 +718,7 @@ function DayEditorPanel({
     sleep?.durationMin !== undefined;
 
   // Fælles kalorie-beregning med /today og /statistik — alkohol tæller med.
-  const kcalInfo = dayKcal({ carbsG, proteinG, fatG, alcoholUnits });
+  const kcalInfo = dayKcal({ carbsG, proteinG, fatG, fiberG, alcoholUnits });
 
   return (
     <aside className="md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
@@ -803,12 +808,24 @@ function DayEditorPanel({
         title="Ernæring"
         meta={kcalMetaText(kcalInfo)}
       >
-        <div className="grid grid-cols-3 gap-3 md:block md:space-y-1">
+        <div className="grid grid-cols-2 gap-3 md:block md:space-y-1">
           <GridField label="Kulhydrat">
             <NumberInput
               fluid
               value={carbsG === null ? "" : String(carbsG)}
               onChange={(v) => setCarbsG(parseInt0to2000(v))}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="+ Fibre">
+            <NumberInput
+              fluid
+              value={fiberG === null ? "" : String(fiberG)}
+              onChange={(v) => {
+                const n = parseInt0to1000(v);
+                setFiberG(n === null ? null : Math.min(200, n));
+              }}
               unit="g"
               placeholder="0"
             />
@@ -832,6 +849,10 @@ function DayEditorPanel({
             />
           </GridField>
         </div>
+        <p className="mt-2 text-[11px] italic text-dim">
+          Fibre er kulhydrater, men står separat som på varedeklarationen —
+          kulhydrat-tallet er ekskl. fibre.
+        </p>
       </Section>
 
       <Section icon={<Activity className="size-3.5" />} title="Aktivitet">

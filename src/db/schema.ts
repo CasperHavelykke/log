@@ -429,6 +429,9 @@ export const dayEntries = sqliteTable(
     carbsG: integer("carbs_g"),
     proteinG: integer("protein_g"),
     fatG: integer("fat_g"),
+    // Kostfibre i gram. Separat fra carbsG: EU-deklarationer angiver
+    // kulhydrat EKSKL. fibre; fibre bidrager ~2 kcal/g (se lib/kcal.ts).
+    fiberG: integer("fiber_g"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
@@ -615,9 +618,11 @@ export const recipes = sqliteTable(
     servings: integer("servings"),
     sourceUrl: text("source_url"),
     // Makroer PER PORTION — kun reference, ingen automatisk logning.
+    // fiberG er separat fra carbsG (EU-deklaration: kulhydrat ekskl. fibre).
     carbsG: integer("carbs_g"),
     proteinG: integer("protein_g"),
     fatG: integer("fat_g"),
+    fiberG: integer("fiber_g"),
     // Valgfrit billede — fil ligger under data/recipes/, kun sti+mime i DB.
     imagePathname: text("image_pathname"),
     imageMime: text("image_mime"),

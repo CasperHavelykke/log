@@ -232,6 +232,20 @@
       "when": 1788005451704,
       "tag": "0032_glossy_shockwave",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1788163975560,
+      "tag": "0033_closed_ultimo",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1788164677273,
+      "tag": "0034_dry_ink",
+      "breakpoints": true
     }
   ]
 }

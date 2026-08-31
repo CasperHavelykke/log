@@ -40,6 +40,7 @@ type RecipeData = {
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
+  fiberG: number | null;
   hasImage: boolean;
   shareToken: string | null;
   createdAt: string;
@@ -77,7 +78,10 @@ export function RecipeDetailClient({
 
   const kcal =
     recipe.carbsG !== null && recipe.proteinG !== null && recipe.fatG !== null
-      ? recipe.carbsG * 4 + recipe.proteinG * 4 + recipe.fatG * 9
+      ? recipe.carbsG * 4 +
+        recipe.proteinG * 4 +
+        recipe.fatG * 9 +
+        (recipe.fiberG ?? 0) * 2
       : null;
 
   function startEditing() {
@@ -104,6 +108,7 @@ export function RecipeDetailClient({
         carbsG: draft.carbsG,
         proteinG: draft.proteinG,
         fatG: draft.fatG,
+        fiberG: draft.fiberG,
       });
       if (!res.ok) {
         setError(res.error);
@@ -439,26 +444,40 @@ export function RecipeDetailClient({
           </span>
         </div>
         {editing ? (
-          <div className="grid grid-cols-3 gap-3">
-            <MacroField
-              label="Kulhydrat"
-              value={draft.carbsG}
-              onChange={(n) => setDraft({ ...draft, carbsG: n })}
-            />
-            <MacroField
-              label="Protein"
-              value={draft.proteinG}
-              onChange={(n) => setDraft({ ...draft, proteinG: n })}
-            />
-            <MacroField
-              label="Fedt"
-              value={draft.fatG}
-              onChange={(n) => setDraft({ ...draft, fatG: n })}
-            />
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <MacroField
+                label="Kulhydrat"
+                value={draft.carbsG}
+                onChange={(n) => setDraft({ ...draft, carbsG: n })}
+              />
+              <MacroField
+                label="+ Fibre"
+                value={draft.fiberG}
+                onChange={(n) => setDraft({ ...draft, fiberG: n })}
+              />
+              <MacroField
+                label="Protein"
+                value={draft.proteinG}
+                onChange={(n) => setDraft({ ...draft, proteinG: n })}
+              />
+              <MacroField
+                label="Fedt"
+                value={draft.fatG}
+                onChange={(n) => setDraft({ ...draft, fatG: n })}
+              />
+            </div>
+            <p className="mt-2 text-[11px] italic text-dim">
+              Fibre er kulhydrater, men står separat som på varedeklarationen
+              — kulhydrat-tallet er ekskl. fibre.
+            </p>
+          </>
         ) : kcal !== null ? (
           <div className="flex flex-wrap gap-2">
             <MacroPill label="Kulhydrat" value={recipe.carbsG!} />
+            {recipe.fiberG !== null && (
+              <MacroPill label="+ Fibre" value={recipe.fiberG} />
+            )}
             <MacroPill label="Protein" value={recipe.proteinG!} />
             <MacroPill label="Fedt" value={recipe.fatG!} />
             <span className="inline-flex items-center rounded-full bg-[var(--accent-bg)] px-2.5 py-1 text-[12px] font-medium text-accent">

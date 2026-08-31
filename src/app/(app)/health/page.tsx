@@ -61,6 +61,7 @@ export default async function Health() {
         carbsG: e.carbsG ?? null,
         proteinG: e.proteinG ?? null,
         fatG: e.fatG ?? null,
+        fiberG: e.fiberG ?? null,
         healthNotes: e.healthNotes ?? "",
         workNotes: e.workNotes ?? "",
         dayNotes: e.dayNotes ?? "",

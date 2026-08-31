@@ -8,7 +8,10 @@ import { errorContent, jsonContent } from "../format";
 function shapeRecipeSummary(row: typeof schema.recipes.$inferSelect) {
   const kcal =
     row.carbsG !== null && row.proteinG !== null && row.fatG !== null
-      ? row.carbsG * 4 + row.proteinG * 4 + row.fatG * 9
+      ? row.carbsG * 4 +
+        row.proteinG * 4 +
+        row.fatG * 9 +
+        (row.fiberG ?? 0) * 2
       : null;
   return {
     id: row.id,
@@ -30,6 +33,7 @@ function shapeRecipeFull(row: typeof schema.recipes.$inferSelect) {
     carbsG: row.carbsG,
     proteinG: row.proteinG,
     fatG: row.fatG,
+    fiberG: row.fiberG,
     createdAt: row.createdAt,
   };
 }
@@ -87,6 +91,16 @@ const recipeInputShape = {
     .describe("Kulhydrater i gram PER PORTION (valgfri reference)."),
   proteinG: z.number().int().min(0).max(2000).nullable().default(null),
   fatG: z.number().int().min(0).max(2000).nullable().default(null),
+  fiberG: z
+    .number()
+    .int()
+    .min(0)
+    .max(200)
+    .nullable()
+    .default(null)
+    .describe(
+      "Kostfibre i gram PER PORTION. SEPARAT fra carbsG — EU-varedeklarationer angiver kulhydrat EKSKL. fibre. Fibre tæller 2 kcal/g i kcal/portion.",
+    ),
 };
 
 export function registerRecipeTools(server: McpServer) {
@@ -172,6 +186,7 @@ export function registerRecipeTools(server: McpServer) {
           carbsG: input.carbsG,
           proteinG: input.proteinG,
           fatG: input.fatG,
+          fiberG: input.fiberG,
           createdAt: now,
           updatedAt: now,
         })
@@ -212,6 +227,7 @@ export function registerRecipeTools(server: McpServer) {
         carbsG: z.number().int().min(0).max(2000).nullable().optional(),
         proteinG: z.number().int().min(0).max(2000).nullable().optional(),
         fatG: z.number().int().min(0).max(2000).nullable().optional(),
+        fiberG: z.number().int().min(0).max(200).nullable().optional(),
       },
     },
     async ({ id, ...patch }) => {
@@ -242,6 +258,7 @@ export function registerRecipeTools(server: McpServer) {
           proteinG:
             patch.proteinG !== undefined ? patch.proteinG : recipe.proteinG,
           fatG: patch.fatG !== undefined ? patch.fatG : recipe.fatG,
+          fiberG: patch.fiberG !== undefined ? patch.fiberG : recipe.fiberG,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(schema.recipes.id, id));
