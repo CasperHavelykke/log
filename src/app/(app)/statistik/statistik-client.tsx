@@ -1359,7 +1359,7 @@ function StackedView({
                   strokeWidth={1.5}
                   dot={{ r: 2, fill: m.color, strokeWidth: 0 }}
                   activeDot={{ r: 4 }}
-                  connectNulls={false}
+                  connectNulls
                   isAnimationActive={false}
                 />
               </LineChart>
@@ -1468,7 +1468,7 @@ function OverlayView({
                 strokeWidth={1.8}
                 dot={{ r: 2, fill: OVERLAY_COLORS[i], strokeWidth: 0 }}
                 activeDot={{ r: 4 }}
-                connectNulls={false}
+                connectNulls
                 isAnimationActive={false}
               />
             ))}
