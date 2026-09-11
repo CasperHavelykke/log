@@ -22,7 +22,7 @@ import {
   listCustomValuesForDate,
 } from "@/lib/custom-parameters";
 import { TodayPage } from "./today-form";
-import { occursOn, toPlanItemData } from "@/lib/plan";
+import { occursOn, sumSupplementDoseX100, toPlanItemData } from "@/lib/plan";
 import { dayKcal } from "@/lib/kcal";
 import type { TodayPlanEntry } from "./today-plan-card";
 
@@ -197,14 +197,26 @@ export default async function Today() {
     .map((i) => {
       let title = i.label ?? "";
       let doseText: string | null = null;
+      let doseProgress: TodayPlanEntry["doseProgress"] = null;
       if (i.kind === "supplement") {
         const s =
           i.supplementId !== null ? supplementsById.get(i.supplementId) : undefined;
         title = s?.name ?? i.label ?? "Tilskud";
         if (s && s.defaultDoseAmountX100 !== null) {
-          doseText = `${(s.defaultDoseAmountX100 / 100)
-            .toString()
-            .replace(".", ",")} ${s.defaultDoseUnit ?? ""}`.trim();
+          // Dosis-mål: dagens indtag summeres mod standard-dosen — krydset
+          // kommer først når målet er nået (6+9 g mod 12 g-mål = klaret).
+          doseProgress = {
+            doneX100: sumSupplementDoseX100(
+              todaysIntakes,
+              i.supplementId!,
+              s.defaultDoseAmountX100,
+              s.defaultDoseUnit,
+            ),
+            targetX100: s.defaultDoseAmountX100,
+            unit: s.defaultDoseUnit,
+          };
+        } else if (s) {
+          doseText = null;
         }
       } else if (i.kind === "project") {
         const p = i.projectId !== null ? projectsById.get(i.projectId) : undefined;
@@ -233,12 +245,18 @@ export default async function Today() {
       let state: TodayPlanEntry["state"] =
         mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
       if (state === "open") {
-        if (
-          i.kind === "supplement" &&
-          i.supplementId !== null &&
-          todaysIntakes.some((x) => x.supplementId === i.supplementId)
-        ) {
-          state = "done";
+        if (i.kind === "supplement" && i.supplementId !== null) {
+          // Med dosis-mål: klaret først når summen når standard-dosen.
+          // Uden standard-dosis: binært — ét koblet indtag tæller.
+          if (doseProgress !== null) {
+            if (doseProgress.doneX100 >= doseProgress.targetX100) {
+              state = "done";
+            }
+          } else if (
+            todaysIntakes.some((x) => x.supplementId === i.supplementId)
+          ) {
+            state = "done";
+          }
         } else if (
           i.kind === "training" &&
           (workoutsToday.length > 0 || (entry?.didExercise ?? false))
@@ -261,6 +279,7 @@ export default async function Today() {
         state,
         supplementId: i.supplementId,
         doseText,
+        doseProgress,
         workoutTemplateId: i.workoutTemplateId,
         minutesPlanned: i.minutesPlanned,
         minutesActual,

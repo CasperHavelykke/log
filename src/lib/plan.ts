@@ -111,6 +111,38 @@ export function occursOn(item: ScheduleFields, dateIso: string): boolean {
   return false;
 }
 
+// Summér dagens indtag for et tilskud mod standard-dosen (×100-heltal).
+// Regler: indtag uden dosis tæller som én standard-dosis; indtag uden
+// enhed antages at være i standard-enheden; indtag i en ANDEN enhed
+// tælles ikke med (vi konverterer ikke mg↔g — hellere undertælle end lyve).
+export function sumSupplementDoseX100(
+  intakes: {
+    supplementId: number | null;
+    doseAmountX100: number | null;
+    doseUnit: string | null;
+  }[],
+  supplementId: number,
+  defaultDoseX100: number | null,
+  defaultUnit: string | null,
+): number {
+  const unitNorm = (defaultUnit ?? "").trim().toLowerCase();
+  let sum = 0;
+  for (const i of intakes) {
+    if (i.supplementId !== supplementId) continue;
+    if (i.doseAmountX100 === null) {
+      sum += defaultDoseX100 ?? 0;
+      continue;
+    }
+    const iUnit = (i.doseUnit ?? "").trim().toLowerCase();
+    if (iUnit === "" || iUnit === unitNorm) sum += i.doseAmountX100;
+  }
+  return sum;
+}
+
+export function fmtDoseX100(x100: number): string {
+  return (x100 / 100).toString().replace(".", ",");
+}
+
 const WEEKDAY_SHORT = ["man", "tir", "ons", "tor", "fre", "lør", "søn"];
 
 // Menneskelig beskrivelse af rytmen, til visning i editorer og på kortet.

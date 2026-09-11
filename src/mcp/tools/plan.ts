@@ -4,7 +4,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db, schema } from "../../db";
 import { getActiveUser } from "../active-user";
 import { errorContent, jsonContent } from "../format";
-import { occursOn, scheduleLabel } from "../../lib/plan";
+import {
+  occursOn,
+  scheduleLabel,
+  sumSupplementDoseX100,
+} from "../../lib/plan";
 
 // Planlæggeren: tilbagevendende planer for projekter, kosttilskud, træning,
 // ernærings-mål og måltider. Vises som "Dagens plan" på /today.
@@ -87,7 +91,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Hent dagens plan",
       description:
-        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskud markeres automatisk done når et intake er logget; træning når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte.",
+        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskud med standard-dosis er done når dagens summerede indtag når dosen (doseDone/doseTarget viser fremdrift — fx 6 af 12 g); uden standard-dosis tæller ét logget intake. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte.",
       inputSchema: {
         date: z
           .string()
@@ -99,8 +103,16 @@ export function registerPlanTools(server: McpServer) {
     async ({ date }) => {
       const user = await getActiveUser();
       const d = date ?? todayIso();
-      const [items, marks, intakes, workouts, entryRows, timeRows, names] =
-        await Promise.all([
+      const [
+        items,
+        marks,
+        intakes,
+        workouts,
+        entryRows,
+        timeRows,
+        names,
+        supplementRows,
+      ] = await Promise.all([
           db
             .select()
             .from(schema.planItems)
@@ -152,9 +164,14 @@ export function registerPlanTools(server: McpServer) {
               ),
             ),
           loadNames(user.id),
+          db
+            .select()
+            .from(schema.supplements)
+            .where(eq(schema.supplements.userId, user.id)),
         ]);
       const entry = entryRows[0];
       const markByItem = new Map(marks.map((m) => [m.planItemId, m.kind]));
+      const supplementById = new Map(supplementRows.map((s) => [s.id, s]));
 
       const due = items
         .filter((i) => occursOn(i, d))
@@ -168,16 +185,34 @@ export function registerPlanTools(server: McpServer) {
                     .reduce((sum, t) => sum + t.hoursX10, 0) * 6,
                 )
               : null;
+          // Dosis-mål: dagens indtag summeres mod tilskuddets standard-dosis.
+          const supp =
+            i.kind === "supplement" && i.supplementId !== null
+              ? supplementById.get(i.supplementId)
+              : undefined;
+          const doseTarget = supp?.defaultDoseAmountX100 ?? null;
+          const doseDone =
+            supp && doseTarget !== null
+              ? sumSupplementDoseX100(
+                  intakes,
+                  supp.id,
+                  doseTarget,
+                  supp.defaultDoseUnit,
+                )
+              : null;
+
           const mark = markByItem.get(i.id);
           let status =
             mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
           if (status === "open") {
-            if (
-              i.kind === "supplement" &&
-              i.supplementId !== null &&
-              intakes.some((x) => x.supplementId === i.supplementId)
-            ) {
-              status = "done";
+            if (i.kind === "supplement" && i.supplementId !== null) {
+              if (doseTarget !== null) {
+                if ((doseDone ?? 0) >= doseTarget) status = "done";
+              } else if (
+                intakes.some((x) => x.supplementId === i.supplementId)
+              ) {
+                status = "done";
+              }
             } else if (
               i.kind === "training" &&
               (workouts.length > 0 || (entry?.didExercise ?? false))
@@ -191,7 +226,14 @@ export function registerPlanTools(server: McpServer) {
               status = "done";
             }
           }
-          return { ...base, status, minutesActual };
+          return {
+            ...base,
+            status,
+            minutesActual,
+            doseDone: doseDone === null ? null : doseDone / 100,
+            doseTarget: doseTarget === null ? null : doseTarget / 100,
+            doseUnit: supp?.defaultDoseUnit ?? null,
+          };
         });
       return jsonContent({ date: d, count: due.length, items: due });
     },

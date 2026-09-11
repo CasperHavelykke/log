@@ -20,6 +20,7 @@ import {
   unmarkPlanItem,
 } from "./plan-actions";
 import { logSupplementIntake } from "./supplement-actions";
+import { fmtDoseX100 } from "@/lib/plan";
 import type { PlanKind } from "@/db/schema";
 
 // Én post på Dagens plan — beregnet server-side i today/page.tsx.
@@ -31,6 +32,12 @@ export type TodayPlanEntry = {
   state: "open" | "done" | "skipped";
   supplementId: number | null;
   doseText: string | null;
+  // Dosis-mål: dagens summerede indtag mod tilskuddets standard-dosis.
+  doseProgress: {
+    doneX100: number;
+    targetX100: number;
+    unit: string | null;
+  } | null;
   workoutTemplateId: number | null;
   minutesPlanned: number | null;
   minutesActual: number | null;
@@ -93,7 +100,20 @@ export function TodayPlanCard({
 
   function onPrimary(e: TodayPlanEntry) {
     if (e.kind === "supplement" && e.supplementId !== null) {
-      run(e.id, () => logSupplementIntake({ supplementId: e.supplementId! }));
+      // Delvist taget? Log kun RESTEN op til dosis-målet — ellers standard-
+      // dosen (6 af 12 g taget → klik logger 6 g, ikke 12 oveni).
+      const remaining =
+        e.doseProgress !== null && e.doseProgress.doneX100 > 0
+          ? e.doseProgress.targetX100 - e.doseProgress.doneX100
+          : null;
+      run(e.id, () =>
+        logSupplementIntake({
+          supplementId: e.supplementId!,
+          ...(remaining !== null && remaining > 0
+            ? { doseAmountX100: remaining }
+            : {}),
+        }),
+      );
     } else if (e.kind === "training") {
       if (e.workoutTemplateId !== null) {
         setPendingId(e.id);
@@ -165,7 +185,9 @@ export function TodayPlanCard({
                   disabled={pending || e.state === "skipped"}
                   title={
                     e.kind === "supplement"
-                      ? "Log indtag med standard-dosis"
+                      ? e.doseProgress !== null && e.doseProgress.doneX100 > 0
+                        ? `Log resten (${fmtDoseX100(e.doseProgress.targetX100 - e.doseProgress.doneX100)}${e.doseProgress.unit ? ` ${e.doseProgress.unit}` : ""})`
+                        : "Log indtag med standard-dosis"
                       : e.kind === "training"
                         ? e.workoutTemplateId !== null
                           ? "Start session fra skabelon"
@@ -198,6 +220,14 @@ export function TodayPlanCard({
                 </div>
                 <div className="text-[11px] text-light">
                   {e.timeOfDay && <span>{e.timeOfDay}</span>}
+                  {e.kind === "supplement" && e.doseProgress && (
+                    <span>
+                      {e.timeOfDay ? " · " : ""}
+                      {fmtDoseX100(e.doseProgress.doneX100)} af{" "}
+                      {fmtDoseX100(e.doseProgress.targetX100)}
+                      {e.doseProgress.unit ? ` ${e.doseProgress.unit}` : ""}
+                    </span>
+                  )}
                   {e.kind === "project" && e.minutesPlanned !== null && (
                     <span>
                       {e.timeOfDay ? " · " : ""}
