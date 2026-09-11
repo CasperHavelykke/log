@@ -475,6 +475,17 @@ export function registerSupplementTools(server: McpServer) {
             ((t.defaultDoseUnit ?? "").trim() || null) === toU,
         );
         if (sourceTpl && targetTpl && sourceTpl.id !== targetTpl.id) {
+          // Planer der peger på source-skabelonen ompeges til target,
+          // så de ikke bliver forældreløse ved sletningen.
+          await tx
+            .update(schema.planItems)
+            .set({ supplementId: targetTpl.id })
+            .where(
+              and(
+                eq(schema.planItems.supplementId, sourceTpl.id),
+                eq(schema.planItems.userId, user.id),
+              ),
+            );
           await tx
             .delete(schema.supplements)
             .where(eq(schema.supplements.id, sourceTpl.id));

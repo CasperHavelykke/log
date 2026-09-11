@@ -46,6 +46,16 @@ export async function deleteProject(id: number) {
       .where(eq(schema.users.id, user.id));
   }
 
+  // Projektets plan slettes med — den er meningsløs uden projektet og
+  // ville ellers stå forældreløs uden UI til at fjerne den.
+  await db
+    .delete(schema.planItems)
+    .where(
+      and(
+        eq(schema.planItems.projectId, id),
+        eq(schema.planItems.userId, user.id),
+      ),
+    );
   await db
     .delete(schema.projects)
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, user.id)));
