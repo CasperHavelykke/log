@@ -698,6 +698,101 @@ export const workoutTemplates = sqliteTable(
 export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
 export type NewWorkoutTemplate = typeof workoutTemplates.$inferInsert;
 
+// --- Planlægger -------------------------------------------------------------
+// Tilbagevendende planer for projekter, kosttilskud, træning, ernærings-mål
+// og måltider. Vises samlet som "Dagens plan" på /today; redigeres decentralt
+// dér hvor tingene bor. Forekomster materialiseres IKKE — de beregnes ved
+// læsning ud fra scheduleType (se src/lib/plan.ts).
+
+export const PLAN_KINDS = [
+  "project",
+  "supplement",
+  "training",
+  "nutrition",
+  "meal",
+] as const;
+export type PlanKind = (typeof PLAN_KINDS)[number];
+
+export const PLAN_SCHEDULE_TYPES = ["weekdays", "interval", "monthly"] as const;
+export type PlanScheduleType = (typeof PLAN_SCHEDULE_TYPES)[number];
+
+export const planItems = sqliteTable(
+  "plan_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // PlanKind
+    // FK per kind — set-null så sletning af målet ikke sletter planen
+    // (den vises så med label som fallback / kan ryddes op af brugeren).
+    projectId: integer("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+    supplementId: integer("supplement_id").references(() => supplements.id, {
+      onDelete: "set null",
+    }),
+    workoutTemplateId: integer("workout_template_id").references(
+      () => workoutTemplates.id,
+      { onDelete: "set null" },
+    ),
+    // Fritekst-navn: måltider, træning uden skabelon, fallback ved slettet FK.
+    label: text("label"),
+    // Gentagelse: 'weekdays' = fast ugedags-sæt; 'interval' = hver N. dag i
+    // FAST kalender-rytme fra anchorDate (misset dag skrider ikke);
+    // 'monthly' = månedligt på anchorDates dag-i-måneden (clampet til
+    // månedens sidste dag).
+    scheduleType: text("schedule_type").notNull(), // PlanScheduleType
+    weekdays: text("weekdays"), // "0,2,4" — 0=mandag..6=søndag
+    intervalDays: integer("interval_days"),
+    anchorDate: text("anchor_date"), // ISO YYYY-MM-DD
+    timeOfDay: text("time_of_day"), // fritekst, fx "formiddag" eller "08:30"
+    // project-kind: planlagt tid den dag.
+    minutesPlanned: integer("minutes_planned"),
+    // nutrition-kind: mål for dagen (samme enheder som day_entries).
+    kcalTarget: integer("kcal_target"),
+    carbsTargetG: integer("carbs_target_g"),
+    proteinTargetG: integer("protein_target_g"),
+    fatTargetG: integer("fat_target_g"),
+    fiberTargetG: integer("fiber_target_g"),
+    paused: integer("paused", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("plan_items_user").on(t.userId)],
+);
+
+// Per-dag markeringer: 'done' (manuel afkrydsning, fx måltider) og 'skip'
+// ("ikke i dag" — fjerner posten fra dagens kort uden at røre rytmen).
+export const planMarks = sqliteTable(
+  "plan_marks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    planItemId: integer("plan_item_id")
+      .notNull()
+      .references(() => planItems.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // ISO YYYY-MM-DD
+    kind: text("kind").notNull(), // 'done' | 'skip'
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("plan_marks_item_date").on(t.planItemId, t.date)],
+);
+
+export type PlanItem = typeof planItems.$inferSelect;
+export type NewPlanItem = typeof planItems.$inferInsert;
+export type PlanMark = typeof planMarks.$inferSelect;
+export type NewPlanMark = typeof planMarks.$inferInsert;
+
 export const PHOTO_CATEGORIES = ["skin_spot", "body_progress", "other"] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
 

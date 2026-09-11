@@ -22,6 +22,9 @@ import {
   listCustomValuesForDate,
 } from "@/lib/custom-parameters";
 import { TodayPage } from "./today-form";
+import { occursOn, toPlanItemData } from "@/lib/plan";
+import { dayKcal } from "@/lib/kcal";
+import type { TodayPlanEntry } from "./today-plan-card";
 
 export const metadata = { title: "Log" };
 
@@ -131,6 +134,159 @@ export default async function Today() {
       notes: t.notes ?? "",
     }));
 
+  // --- Dagens plan ----------------------------------------------------------
+  const [planItemsRows, planMarksRows, workoutsToday, allTemplates] =
+    await Promise.all([
+      db
+        .select()
+        .from(schema.planItems)
+        .where(eq(schema.planItems.userId, user.id)),
+      db
+        .select()
+        .from(schema.planMarks)
+        .where(
+          and(
+            eq(schema.planMarks.userId, user.id),
+            eq(schema.planMarks.date, date),
+          ),
+        ),
+      (user.trainingEnabled ?? false)
+        ? db
+            .select({ id: schema.workouts.id })
+            .from(schema.workouts)
+            .where(
+              and(
+                eq(schema.workouts.userId, user.id),
+                eq(schema.workouts.date, date),
+              ),
+            )
+        : Promise.resolve([] as { id: number }[]),
+      db
+        .select()
+        .from(schema.workoutTemplates)
+        .where(eq(schema.workoutTemplates.userId, user.id)),
+    ]);
+
+  const marksByItem = new Map(planMarksRows.map((m) => [m.planItemId, m.kind]));
+  const supplementsById = new Map(supplements.map((s) => [s.id, s]));
+  const projectsById = new Map(projects.map((p) => [p.id, p]));
+  const templatesById = new Map(allTemplates.map((t) => [t.id, t]));
+  const dayK = dayKcal({
+    carbsG: entry?.carbsG ?? null,
+    proteinG: entry?.proteinG ?? null,
+    fatG: entry?.fatG ?? null,
+    fiberG: entry?.fiberG ?? null,
+    alcoholUnits: entry?.alcoholUnits ?? null,
+  });
+
+  const kindOrder: Record<string, number> = {
+    supplement: 0,
+    training: 1,
+    meal: 2,
+    project: 3,
+    nutrition: 4,
+  };
+  const planEntries: TodayPlanEntry[] = planItemsRows
+    .filter((i) => occursOn(i, date))
+    .sort(
+      (a, b) =>
+        (kindOrder[a.kind] ?? 9) - (kindOrder[b.kind] ?? 9) ||
+        a.sortOrder - b.sortOrder ||
+        a.id - b.id,
+    )
+    .map((i) => {
+      let title = i.label ?? "";
+      let doseText: string | null = null;
+      if (i.kind === "supplement") {
+        const s =
+          i.supplementId !== null ? supplementsById.get(i.supplementId) : undefined;
+        title = s?.name ?? i.label ?? "Tilskud";
+        if (s && s.defaultDoseAmountX100 !== null) {
+          doseText = `${(s.defaultDoseAmountX100 / 100)
+            .toString()
+            .replace(".", ",")} ${s.defaultDoseUnit ?? ""}`.trim();
+        }
+      } else if (i.kind === "project") {
+        const p = i.projectId !== null ? projectsById.get(i.projectId) : undefined;
+        title = p?.name ?? i.label ?? "Projekt";
+      } else if (i.kind === "training") {
+        const t =
+          i.workoutTemplateId !== null
+            ? templatesById.get(i.workoutTemplateId)
+            : undefined;
+        title = t?.title ?? i.label ?? "Træning";
+      } else if (i.kind === "nutrition") {
+        title = i.label ?? "Dagens mål";
+      }
+
+      // hoursX10 → minutter: ×10-timer × 6.
+      const minutesActual =
+        i.kind === "project" && i.projectId !== null
+          ? Math.round(
+              todaysTimeEntries
+                .filter((t) => t.projectId === i.projectId)
+                .reduce((sum, t) => sum + t.hoursX10, 0) * 6,
+            )
+          : null;
+
+      const mark = marksByItem.get(i.id);
+      let state: TodayPlanEntry["state"] =
+        mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
+      if (state === "open") {
+        if (
+          i.kind === "supplement" &&
+          i.supplementId !== null &&
+          todaysIntakes.some((x) => x.supplementId === i.supplementId)
+        ) {
+          state = "done";
+        } else if (
+          i.kind === "training" &&
+          (workoutsToday.length > 0 || (entry?.didExercise ?? false))
+        ) {
+          state = "done";
+        } else if (
+          i.kind === "project" &&
+          i.minutesPlanned !== null &&
+          (minutesActual ?? 0) >= i.minutesPlanned
+        ) {
+          state = "done";
+        }
+      }
+
+      return {
+        id: i.id,
+        kind: i.kind as TodayPlanEntry["kind"],
+        title,
+        timeOfDay: i.timeOfDay,
+        state,
+        supplementId: i.supplementId,
+        doseText,
+        workoutTemplateId: i.workoutTemplateId,
+        minutesPlanned: i.minutesPlanned,
+        minutesActual,
+        targets:
+          i.kind === "nutrition"
+            ? {
+                kcal: i.kcalTarget,
+                carbs: i.carbsTargetG,
+                protein: i.proteinTargetG,
+                fat: i.fatTargetG,
+                fiber: i.fiberTargetG,
+              }
+            : null,
+        actuals:
+          i.kind === "nutrition"
+            ? {
+                kcal: dayK.totalKcal,
+                carbs: entry?.carbsG ?? null,
+                protein: entry?.proteinG ?? null,
+                fat: entry?.fatG ?? null,
+                fiber: entry?.fiberG ?? null,
+              }
+            : null,
+      };
+    });
+
   return (
     <TodayPage
       date={date}
@@ -147,6 +303,13 @@ export default async function Today() {
         focusHoursTargetX10: entry?.focusHoursTargetX10 ?? null,
         goalNote: await resolveGoalNote(user.id, date, entry?.goalNote),
       }}
+      planEntries={planEntries}
+      supplementPlans={planItemsRows
+        .filter((i) => i.kind === "supplement")
+        .map(toPlanItemData)}
+      nutritionPlans={planItemsRows
+        .filter((i) => i.kind === "nutrition" || i.kind === "meal")
+        .map(toPlanItemData)}
       projects={projects.map((p) => ({ id: p.id, name: p.name }))}
       initialFocusProjectId={focusProjectId}
       initialTimeEntries={todaysTimeEntries}

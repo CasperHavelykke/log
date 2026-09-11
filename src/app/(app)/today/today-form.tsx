@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   createJobApplication,
   createProject,
@@ -34,6 +35,7 @@ import {
   Activity,
   Apple,
   Briefcase,
+  CalendarClock,
   Camera,
   Check,
   Circle,
@@ -51,6 +53,9 @@ import {
 import { ElasticTimerBar } from "@/components/elastic-timer-bar";
 import { WeekStrip } from "./week-strip";
 import { DayIntention } from "./day-intention";
+import { TodayPlanCard, type TodayPlanEntry } from "./today-plan-card";
+import { PlanDialog, type PlanItemData } from "@/components/plan-dialog";
+import { scheduleLabel } from "@/lib/plan";
 import { StartCounterTrigger } from "../drink-counter/start-trigger";
 import { dayKcal, kcalMetaText } from "@/lib/kcal";
 import {
@@ -224,6 +229,9 @@ export function TodayPage(props: {
   weekAppsCount: number;
   weekHoursX10: number;
   initialWeekGoal: WeekGoalState;
+  planEntries: TodayPlanEntry[];
+  supplementPlans: PlanItemData[];
+  nutritionPlans: PlanItemData[];
   initialDayGoals: DayGoalsState;
   projects: ProjectRef[];
   initialFocusProjectId: number | null;
@@ -331,6 +339,7 @@ export function TodayPage(props: {
         }
         focusHoursTargetX10={weekGoal.focusHoursTargetX10}
       />
+      <TodayPlanCard date={props.date} entries={props.planEntries} />
       <DayIntention
         date={props.date}
         initialNote={dayGoals.goalNote ?? ""}
@@ -402,6 +411,7 @@ export function TodayPage(props: {
             trackers={props.trackers}
             customParameters={props.customParameters}
             customValues={props.customValues}
+            nutritionPlans={props.nutritionPlans}
           />
         </Card>
       </div>
@@ -415,6 +425,7 @@ export function TodayPage(props: {
             intakes={supplementIntakes}
             setIntakes={setSupplementIntakes}
             onError={setError}
+            plans={props.supplementPlans}
           />
         </Card>
       </div>
@@ -1188,6 +1199,7 @@ function HealthBody({
   trackers,
   customParameters,
   customValues,
+  nutritionPlans,
 }: {
   day: DayState;
   setDay: (d: DayState) => void;
@@ -1203,7 +1215,13 @@ function HealthBody({
   trackers: TrackerRef[];
   customParameters: CustomParamSummary[];
   customValues: CustomValueRow[];
+  nutritionPlans: PlanItemData[];
 }) {
+  const router = useRouter();
+  // null = lukket; "nutrition"/"meal" = opret ny; ellers redigér eksisterende.
+  const [nutritionPlanEdit, setNutritionPlanEdit] = useState<
+    PlanItemData | "nutrition" | "meal" | null
+  >(null);
   const hasGarminDuration =
     garminSleepEnabled &&
     garminSleep !== null &&
@@ -1407,6 +1425,82 @@ function HealthBody({
           Fibre er kulhydrater, men står separat som på varedeklarationen —
           kulhydrat-tallet er ekskl. fibre.
         </p>
+
+        {/* Planlagte mål og måltider — vises på Dagens plan de valgte dage. */}
+        <div className="mt-3 border-t border-hair pt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {nutritionPlans.map((pl) => (
+              <button
+                key={pl.id}
+                type="button"
+                onClick={() => setNutritionPlanEdit(pl)}
+                title="Redigér planen"
+                className={`inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-bg-subtle px-2.5 py-1.5 text-[12px] text-mid hover:text-ink ${
+                  pl.paused ? "opacity-55" : ""
+                }`}
+              >
+                <CalendarClock
+                  className={`size-3 ${pl.paused ? "text-dim" : "text-accent"}`}
+                />
+                {pl.kind === "meal"
+                  ? (pl.label ?? "Måltid")
+                  : (pl.label ?? "Dagens mål")}
+                <span className="text-[11px] text-light">
+                  {pl.paused ? "på pause" : scheduleLabel(pl)}
+                </span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setNutritionPlanEdit("nutrition")}
+              className="inline-flex min-h-[40px] cursor-pointer items-center gap-1 rounded-[8px] border border-dashed border-hair-strong px-2.5 py-1.5 text-[12px] text-light hover:border-accent hover:text-accent"
+            >
+              + Planlæg mål
+            </button>
+            <button
+              type="button"
+              onClick={() => setNutritionPlanEdit("meal")}
+              className="inline-flex min-h-[40px] cursor-pointer items-center gap-1 rounded-[8px] border border-dashed border-hair-strong px-2.5 py-1.5 text-[12px] text-light hover:border-accent hover:text-accent"
+            >
+              + Planlæg måltid
+            </button>
+          </div>
+        </div>
+
+        {nutritionPlanEdit !== null && (
+          <PlanDialog
+            label="Planlægning"
+            title={
+              typeof nutritionPlanEdit === "string"
+                ? nutritionPlanEdit === "meal"
+                  ? "Nyt måltid"
+                  : "Ernærings-mål"
+                : nutritionPlanEdit.kind === "meal"
+                  ? (nutritionPlanEdit.label ?? "Måltid")
+                  : (nutritionPlanEdit.label ?? "Dagens mål")
+            }
+            kind={
+              typeof nutritionPlanEdit === "string"
+                ? nutritionPlanEdit
+                : nutritionPlanEdit.kind
+            }
+            existing={
+              typeof nutritionPlanEdit === "string" ? null : nutritionPlanEdit
+            }
+            showLabel={
+              typeof nutritionPlanEdit === "string"
+                ? nutritionPlanEdit === "meal"
+                : nutritionPlanEdit.kind === "meal"
+            }
+            showNutritionTargets={
+              typeof nutritionPlanEdit === "string"
+                ? nutritionPlanEdit === "nutrition"
+                : nutritionPlanEdit.kind === "nutrition"
+            }
+            onChanged={() => router.refresh()}
+            onClose={() => setNutritionPlanEdit(null)}
+          />
+        )}
       </FieldSection>
 
       <FieldSection icon={<Activity className="size-3.5" />} title="Aktivitet">
@@ -1997,6 +2091,7 @@ function SupplementsBody({
   intakes,
   setIntakes,
   onError,
+  plans,
 }: {
   date: string;
   supplements: SupplementDef[];
@@ -2006,10 +2101,13 @@ function SupplementsBody({
     i: SupplementIntake[] | ((prev: SupplementIntake[]) => SupplementIntake[]),
   ) => void;
   onError: (msg: string) => void;
+  plans: PlanItemData[];
 }) {
+  const router = useRouter();
   const [picking, setPicking] = useState(false);
   const [creating, setCreating] = useState(false);
   const [customizing, setCustomizing] = useState<SupplementDef | null>(null);
+  const [planFor, setPlanFor] = useState<SupplementDef | null>(null);
   const [pending, startTx] = useTransition();
 
   function logWithValues(
@@ -2165,6 +2263,24 @@ function SupplementsBody({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setPlanFor(s);
+                    }}
+                    className={`cursor-pointer px-1.5 py-1 opacity-60 hover:bg-bg-subtle hover:opacity-100 ${
+                      plans.some(
+                        (pl) => pl.supplementId === s.id && !pl.paused,
+                      )
+                        ? "text-accent opacity-100"
+                        : "text-dim hover:text-ink"
+                    }`}
+                    title={`Planlæg ${s.name} (faste dage/interval)`}
+                    aria-label={`Planlæg ${s.name}`}
+                  >
+                    <CalendarClock className="size-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       removeSupplement(s);
                     }}
                     className="cursor-pointer rounded-r-full px-2 py-1 text-dim opacity-50 hover:bg-bg-subtle hover:text-danger hover:opacity-100"
@@ -2209,6 +2325,20 @@ function SupplementsBody({
             setCreating(false);
           }}
           onError={onError}
+        />
+      )}
+
+      {planFor && (
+        <PlanDialog
+          label="Planlægning"
+          title={planFor.name}
+          kind="supplement"
+          fixed={{ supplementId: planFor.id }}
+          existing={
+            plans.find((pl) => pl.supplementId === planFor.id) ?? null
+          }
+          onChanged={() => router.refresh()}
+          onClose={() => setPlanFor(null)}
         />
       )}
     </div>

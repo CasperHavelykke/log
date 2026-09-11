@@ -1,0 +1,385 @@
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { db, schema } from "../../db";
+import { getActiveUser } from "../active-user";
+import { errorContent, jsonContent } from "../format";
+import { occursOn, scheduleLabel } from "../../lib/plan";
+
+// Planlæggeren: tilbagevendende planer for projekter, kosttilskud, træning,
+// ernærings-mål og måltider. Vises som "Dagens plan" på /today.
+
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function shapeItem(
+  row: typeof schema.planItems.$inferSelect,
+  names: {
+    projects: Map<number, string>;
+    supplements: Map<number, string>;
+    templates: Map<number, string>;
+  },
+) {
+  const target =
+    row.kind === "project" && row.projectId !== null
+      ? (names.projects.get(row.projectId) ?? null)
+      : row.kind === "supplement" && row.supplementId !== null
+        ? (names.supplements.get(row.supplementId) ?? null)
+        : row.kind === "training" && row.workoutTemplateId !== null
+          ? (names.templates.get(row.workoutTemplateId) ?? null)
+          : null;
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: target ?? row.label ?? null,
+    projectId: row.projectId,
+    supplementId: row.supplementId,
+    workoutTemplateId: row.workoutTemplateId,
+    label: row.label,
+    scheduleType: row.scheduleType,
+    weekdays: row.weekdays,
+    intervalDays: row.intervalDays,
+    anchorDate: row.anchorDate,
+    schedule: scheduleLabel(row),
+    timeOfDay: row.timeOfDay,
+    minutesPlanned: row.minutesPlanned,
+    kcalTarget: row.kcalTarget,
+    carbsTargetG: row.carbsTargetG,
+    proteinTargetG: row.proteinTargetG,
+    fatTargetG: row.fatTargetG,
+    fiberTargetG: row.fiberTargetG,
+    paused: row.paused,
+  };
+}
+
+async function loadNames(userId: number) {
+  const [projects, supplements, templates] = await Promise.all([
+    db
+      .select({ id: schema.projects.id, name: schema.projects.name })
+      .from(schema.projects)
+      .where(eq(schema.projects.userId, userId)),
+    db
+      .select({ id: schema.supplements.id, name: schema.supplements.name })
+      .from(schema.supplements)
+      .where(eq(schema.supplements.userId, userId)),
+    db
+      .select({
+        id: schema.workoutTemplates.id,
+        title: schema.workoutTemplates.title,
+      })
+      .from(schema.workoutTemplates)
+      .where(eq(schema.workoutTemplates.userId, userId)),
+  ]);
+  return {
+    projects: new Map(projects.map((p) => [p.id, p.name])),
+    supplements: new Map(supplements.map((s) => [s.id, s.name])),
+    templates: new Map(templates.map((t) => [t.id, t.title])),
+  };
+}
+
+export function registerPlanTools(server: McpServer) {
+  server.registerTool(
+    "get_today_plan",
+    {
+      title: "Hent dagens plan",
+      description:
+        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskud markeres automatisk done når et intake er logget; træning når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte.",
+      inputSchema: {
+        date: z
+          .string()
+          .regex(DATE_RE)
+          .optional()
+          .describe("ISO-dato; udelades = i dag."),
+      },
+    },
+    async ({ date }) => {
+      const user = await getActiveUser();
+      const d = date ?? todayIso();
+      const [items, marks, intakes, workouts, entryRows, timeRows, names] =
+        await Promise.all([
+          db
+            .select()
+            .from(schema.planItems)
+            .where(eq(schema.planItems.userId, user.id)),
+          db
+            .select()
+            .from(schema.planMarks)
+            .where(
+              and(
+                eq(schema.planMarks.userId, user.id),
+                eq(schema.planMarks.date, d),
+              ),
+            ),
+          db
+            .select()
+            .from(schema.supplementIntakes)
+            .where(
+              and(
+                eq(schema.supplementIntakes.userId, user.id),
+                eq(schema.supplementIntakes.date, d),
+              ),
+            ),
+          db
+            .select({ id: schema.workouts.id })
+            .from(schema.workouts)
+            .where(
+              and(
+                eq(schema.workouts.userId, user.id),
+                eq(schema.workouts.date, d),
+              ),
+            ),
+          db
+            .select()
+            .from(schema.dayEntries)
+            .where(
+              and(
+                eq(schema.dayEntries.userId, user.id),
+                eq(schema.dayEntries.date, d),
+              ),
+            )
+            .limit(1),
+          db
+            .select()
+            .from(schema.timeEntries)
+            .where(
+              and(
+                eq(schema.timeEntries.userId, user.id),
+                eq(schema.timeEntries.date, d),
+              ),
+            ),
+          loadNames(user.id),
+        ]);
+      const entry = entryRows[0];
+      const markByItem = new Map(marks.map((m) => [m.planItemId, m.kind]));
+
+      const due = items
+        .filter((i) => occursOn(i, d))
+        .map((i) => {
+          const base = shapeItem(i, names);
+          const minutesActual =
+            i.kind === "project" && i.projectId !== null
+              ? Math.round(
+                  timeRows
+                    .filter((t) => t.projectId === i.projectId)
+                    .reduce((sum, t) => sum + t.hoursX10, 0) * 6,
+                )
+              : null;
+          const mark = markByItem.get(i.id);
+          let status =
+            mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
+          if (status === "open") {
+            if (
+              i.kind === "supplement" &&
+              i.supplementId !== null &&
+              intakes.some((x) => x.supplementId === i.supplementId)
+            ) {
+              status = "done";
+            } else if (
+              i.kind === "training" &&
+              (workouts.length > 0 || (entry?.didExercise ?? false))
+            ) {
+              status = "done";
+            } else if (
+              i.kind === "project" &&
+              i.minutesPlanned !== null &&
+              (minutesActual ?? 0) >= i.minutesPlanned
+            ) {
+              status = "done";
+            }
+          }
+          return { ...base, status, minutesActual };
+        });
+      return jsonContent({ date: d, count: due.length, items: due });
+    },
+  );
+
+  server.registerTool(
+    "list_plan_items",
+    {
+      title: "List alle planer",
+      description:
+        "Returnerer alle planlægger-poster (også pausede og dem der ikke falder i dag) med deres gentagelses-regler. Brug den før upsert for at finde eksisterende id'er.",
+      inputSchema: {},
+    },
+    async () => {
+      const user = await getActiveUser();
+      const [items, names] = await Promise.all([
+        db
+          .select()
+          .from(schema.planItems)
+          .where(eq(schema.planItems.userId, user.id)),
+        loadNames(user.id),
+      ]);
+      return jsonContent({
+        count: items.length,
+        items: items.map((i) => shapeItem(i, names)),
+      });
+    },
+  );
+
+  server.registerTool(
+    "upsert_plan_item",
+    {
+      title: "Opret/opdatér plan",
+      description:
+        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver supplementId — ét klik på /today logger så indtaget), 'training' (evt. workoutTemplateId eller label), 'nutrition' (kcal/makro-mål for dagen), 'meal' (label påkrævet). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke) eller 'monthly' (anchorDates dag-i-måneden). anchorDate udeladt = i dag.",
+      inputSchema: {
+        id: z.number().int().optional(),
+        kind: z.enum(schema.PLAN_KINDS),
+        projectId: z.number().int().nullable().default(null),
+        supplementId: z.number().int().nullable().default(null),
+        workoutTemplateId: z.number().int().nullable().default(null),
+        label: z.string().max(200).nullable().default(null),
+        scheduleType: z.enum(schema.PLAN_SCHEDULE_TYPES),
+        weekdays: z
+          .string()
+          .regex(/^[0-6](,[0-6]){0,6}$/)
+          .nullable()
+          .default(null)
+          .describe("Kun for scheduleType 'weekdays'. 0=mandag..6=søndag."),
+        intervalDays: z.number().int().min(1).max(365).nullable().default(null),
+        anchorDate: z.string().regex(DATE_RE).nullable().default(null),
+        timeOfDay: z
+          .string()
+          .max(50)
+          .nullable()
+          .default(null)
+          .describe("Fritekst, fx 'formiddag' eller '08:30'."),
+        minutesPlanned: z.number().int().min(5).max(1440).nullable().default(null),
+        kcalTarget: z.number().int().min(0).max(10_000).nullable().default(null),
+        carbsTargetG: z.number().int().min(0).max(2000).nullable().default(null),
+        proteinTargetG: z.number().int().min(0).max(1000).nullable().default(null),
+        fatTargetG: z.number().int().min(0).max(1000).nullable().default(null),
+        fiberTargetG: z.number().int().min(0).max(200).nullable().default(null),
+        paused: z.boolean().default(false),
+      },
+    },
+    async (input) => {
+      const user = await getActiveUser();
+      if (input.scheduleType === "weekdays" && !input.weekdays) {
+        return errorContent("scheduleType 'weekdays' kræver weekdays-feltet");
+      }
+      if (input.scheduleType === "interval" && !input.intervalDays) {
+        return errorContent("scheduleType 'interval' kræver intervalDays");
+      }
+      const now = new Date().toISOString();
+      const values = {
+        kind: input.kind,
+        projectId: input.projectId,
+        supplementId: input.supplementId,
+        workoutTemplateId: input.workoutTemplateId,
+        label: input.label?.trim() || null,
+        scheduleType: input.scheduleType,
+        weekdays: input.scheduleType === "weekdays" ? input.weekdays : null,
+        intervalDays:
+          input.scheduleType === "interval" ? input.intervalDays : null,
+        anchorDate:
+          input.scheduleType === "weekdays"
+            ? null
+            : (input.anchorDate ?? todayIso()),
+        timeOfDay: input.timeOfDay?.trim() || null,
+        minutesPlanned: input.kind === "project" ? input.minutesPlanned : null,
+        kcalTarget: input.kind === "nutrition" ? input.kcalTarget : null,
+        carbsTargetG: input.kind === "nutrition" ? input.carbsTargetG : null,
+        proteinTargetG:
+          input.kind === "nutrition" ? input.proteinTargetG : null,
+        fatTargetG: input.kind === "nutrition" ? input.fatTargetG : null,
+        fiberTargetG: input.kind === "nutrition" ? input.fiberTargetG : null,
+        paused: input.paused,
+        updatedAt: now,
+      };
+      if (input.id !== undefined) {
+        const existing = await db
+          .select({ id: schema.planItems.id })
+          .from(schema.planItems)
+          .where(
+            and(
+              eq(schema.planItems.id, input.id),
+              eq(schema.planItems.userId, user.id),
+            ),
+          )
+          .limit(1);
+        if (!existing[0]) return errorContent("Planen findes ikke");
+        await db
+          .update(schema.planItems)
+          .set(values)
+          .where(eq(schema.planItems.id, input.id));
+        return jsonContent({ ok: true, id: input.id });
+      }
+      const inserted = await db
+        .insert(schema.planItems)
+        .values({ userId: user.id, ...values, createdAt: now })
+        .returning({ id: schema.planItems.id });
+      return jsonContent({ ok: true, id: inserted[0].id });
+    },
+  );
+
+  server.registerTool(
+    "delete_plan_item",
+    {
+      title: "Slet plan",
+      description:
+        "Sletter en planlægger-post permanent (historikken — intakes, sessioner, tid — røres ikke). Bekræft med brugeren først.",
+      inputSchema: { id: z.number().int() },
+    },
+    async ({ id }) => {
+      const user = await getActiveUser();
+      const deleted = await db
+        .delete(schema.planItems)
+        .where(
+          and(eq(schema.planItems.id, id), eq(schema.planItems.userId, user.id)),
+        )
+        .returning({ id: schema.planItems.id });
+      if (deleted.length === 0) return errorContent("Planen findes ikke");
+      return jsonContent({ ok: true, deletedId: id });
+    },
+  );
+
+  server.registerTool(
+    "mark_plan_item",
+    {
+      title: "Markér plan-post for en dag",
+      description:
+        "Sætter dagens markering på en plan-post: 'done' (manuelt klaret — mest til måltider), 'skip' ('ikke i dag' — rører ikke rytmen) eller 'clear' (fjern markeringen). Tilskud bør IKKE markeres done manuelt — log i stedet indtaget med log_supplement, så følger status automatisk.",
+      inputSchema: {
+        id: z.number().int(),
+        date: z
+          .string()
+          .regex(DATE_RE)
+          .optional()
+          .describe("ISO-dato; udelades = i dag."),
+        mark: z.enum(["done", "skip", "clear"]),
+      },
+    },
+    async ({ id, date, mark }) => {
+      const user = await getActiveUser();
+      const d = date ?? todayIso();
+      const item = await db
+        .select({ id: schema.planItems.id })
+        .from(schema.planItems)
+        .where(
+          and(eq(schema.planItems.id, id), eq(schema.planItems.userId, user.id)),
+        )
+        .limit(1);
+      if (!item[0]) return errorContent("Planen findes ikke");
+      await db
+        .delete(schema.planMarks)
+        .where(
+          and(eq(schema.planMarks.planItemId, id), eq(schema.planMarks.date, d)),
+        );
+      if (mark !== "clear") {
+        await db.insert(schema.planMarks).values({
+          userId: user.id,
+          planItemId: id,
+          date: d,
+          kind: mark,
+        });
+      }
+      return jsonContent({ ok: true, id, date: d, mark });
+    },
+  );
+}

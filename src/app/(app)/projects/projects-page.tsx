@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   Archive,
   ArchiveRestore,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   Pencil,
@@ -12,6 +13,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { PlanDialog, type PlanItemData } from "@/components/plan-dialog";
+import { scheduleLabel } from "@/lib/plan";
 import { useRouter } from "next/navigation";
 import { createProject, setFocusProject, setWeekGoal } from "../today/actions";
 import { deleteProject, deleteTimeEntry, saveTimeEntry, updateProject } from "./actions";
@@ -52,6 +55,7 @@ export function ProjectsPage({
   weekStart,
   weekFocusTargetX10,
   reflectionInitial,
+  plans,
 }: {
   focusProjectId: number | null;
   projects: Project[];
@@ -64,8 +68,11 @@ export function ProjectsPage({
     wentWell: string;
     nextStep: string;
   };
+  plans: PlanItemData[];
 }) {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [planFor, setPlanFor] = useState<Project | null>(null);
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
   const [focusId, setFocusId] = useState<number | null>(focusProjectId);
   const [period, setPeriod] = useState<Period>("month");
@@ -280,9 +287,24 @@ export function ProjectsPage({
               onEntrySaved={(saved, date) => applyEntry(saved, p.id, date)}
               onEntryDeleted={handleDeleteEntry}
               onError={setError}
+              plan={plans.find((pl) => pl.projectId === p.id) ?? null}
+              onPlan={() => setPlanFor(p)}
             />
           ))}
         </div>
+      )}
+
+      {planFor && (
+        <PlanDialog
+          label="Planlægning"
+          title={planFor.name}
+          kind="project"
+          fixed={{ projectId: planFor.id }}
+          existing={plans.find((pl) => pl.projectId === planFor.id) ?? null}
+          showMinutes
+          onChanged={() => router.refresh()}
+          onClose={() => setPlanFor(null)}
+        />
       )}
     </div>
   );
@@ -364,6 +386,8 @@ function ProjectCard({
   onEntrySaved,
   onEntryDeleted,
   onError,
+  plan,
+  onPlan,
 }: {
   project: Project;
   isFocus: boolean;
@@ -379,6 +403,8 @@ function ProjectCard({
   onEntrySaved: (saved: Entry | null, date: string) => void;
   onEntryDeleted: (id: number) => void;
   onError: (msg: string) => void;
+  plan: PlanItemData | null;
+  onPlan: () => void;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState(project.name);
@@ -444,6 +470,20 @@ function ProjectCard({
             {stats.lastDate && (
               <span>senest {danishLongDate(stats.lastDate)}</span>
             )}
+            {plan && !plan.paused && (
+              <span className="inline-flex items-center gap-1 text-accent">
+                <CalendarClock className="size-3" />
+                {scheduleLabel(plan)}
+                {plan.minutesPlanned !== null &&
+                  ` · ${plan.minutesPlanned} min`}
+              </span>
+            )}
+            {plan?.paused && (
+              <span className="inline-flex items-center gap-1">
+                <CalendarClock className="size-3" />
+                plan på pause
+              </span>
+            )}
           </div>
         </button>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -470,6 +510,21 @@ function ProjectCard({
               aria-label="Omdøb"
             >
               <Pencil className="size-3.5" />
+            </button>
+          )}
+          {!project.archived && (
+            <button
+              type="button"
+              onClick={onPlan}
+              className={`inline-flex size-7 cursor-pointer items-center justify-center rounded-[6px] hover:bg-bg ${
+                plan && !plan.paused
+                  ? "text-accent"
+                  : "text-mid hover:text-ink"
+              }`}
+              title="Planlæg arbejdsdage"
+              aria-label="Planlæg arbejdsdage"
+            >
+              <CalendarClock className="size-3.5" />
             </button>
           )}
           {!isFocus && !project.archived && (

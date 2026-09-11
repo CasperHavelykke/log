@@ -6,6 +6,7 @@ import {
   getAllTimeEntries,
   getEffectiveWeekGoal,
 } from "@/lib/queries";
+import { toPlanItemData } from "@/lib/plan";
 import { todayIsoDate, mondayOf } from "@/lib/date";
 import { ProjectsPage } from "./projects-page";
 
@@ -15,7 +16,7 @@ export default async function Projects() {
   const user = await requireUser();
   const date = todayIsoDate();
   const weekStart = mondayOf(new Date());
-  const [projects, timeEntries, todayEntry, weekGoal] = await Promise.all([
+  const [projects, timeEntries, todayEntry, weekGoal, planRows] = await Promise.all([
     getAllProjects(user.id),
     getAllTimeEntries(user.id),
     db
@@ -30,6 +31,15 @@ export default async function Projects() {
       .limit(1)
       .then((rows) => rows[0] ?? null),
     getEffectiveWeekGoal(user.id, weekStart),
+    db
+      .select()
+      .from(schema.planItems)
+      .where(
+        and(
+          eq(schema.planItems.userId, user.id),
+          eq(schema.planItems.kind, "project"),
+        ),
+      ),
   ]);
 
   return (
@@ -55,6 +65,7 @@ export default async function Projects() {
         hoursX10: t.hoursX10,
         notes: t.notes ?? "",
       }))}
+      plans={planRows.map(toPlanItemData)}
     />
   );
 }

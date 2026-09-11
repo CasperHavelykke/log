@@ -287,7 +287,7 @@ async function main() {
   ]);
 
   // --- Trænings-skabeloner --------------------------------------------------
-  await db.insert(schema.workoutTemplates).values([
+  const templateRows = await db.insert(schema.workoutTemplates).values([
     {
       userId: uid,
       title: "Pull + press",
@@ -299,6 +299,77 @@ async function main() {
       title: "Push + ben",
       durationMin: 45,
       body: "Armhævelser på greb — 3×10\nGoblet squat — 4×10 @ 16 kg\nPike push-ups — 3×8-12\nBulgarian split squat — 3×8 per ben",
+    },
+  ]).returning();
+
+  // --- Planlægger -----------------------------------------------------------
+  await db.insert(schema.planItems).values([
+    {
+      userId: uid,
+      kind: "supplement",
+      supplementId: suppRows[0].id, // D-vitamin
+      scheduleType: "interval",
+      intervalDays: 1,
+      anchorDate: isoDaysAgo(30),
+      timeOfDay: "morgen",
+      sortOrder: 0,
+    },
+    {
+      userId: uid,
+      kind: "supplement",
+      supplementId: suppRows[1].id, // Magnesium
+      scheduleType: "interval",
+      intervalDays: 2,
+      anchorDate: isoDaysAgo(30),
+      timeOfDay: "aften",
+      sortOrder: 1,
+    },
+    {
+      userId: uid,
+      kind: "training",
+      workoutTemplateId: templateRows[0].id, // Pull + press
+      scheduleType: "weekdays",
+      weekdays: "0,4",
+      sortOrder: 2,
+    },
+    {
+      userId: uid,
+      kind: "training",
+      workoutTemplateId: templateRows[1].id, // Push + ben
+      scheduleType: "weekdays",
+      weekdays: "2",
+      sortOrder: 3,
+    },
+    {
+      userId: uid,
+      kind: "project",
+      projectId: projectRows[0].id, // Havekassen
+      scheduleType: "weekdays",
+      weekdays: "0,1,2,3,4",
+      minutesPlanned: 120,
+      timeOfDay: "formiddag",
+      sortOrder: 4,
+    },
+    {
+      userId: uid,
+      kind: "nutrition",
+      label: "Dagens mål",
+      scheduleType: "interval",
+      intervalDays: 1,
+      anchorDate: isoDaysAgo(30),
+      kcalTarget: 2200,
+      proteinTargetG: 150,
+      fiberTargetG: 30,
+      sortOrder: 5,
+    },
+    {
+      userId: uid,
+      kind: "meal",
+      label: "Meal prep til ugen",
+      scheduleType: "weekdays",
+      weekdays: "6",
+      timeOfDay: "aften",
+      sortOrder: 6,
     },
   ]);
 

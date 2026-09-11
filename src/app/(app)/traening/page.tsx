@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import { countExercises } from "@/lib/workout";
+import { toPlanItemData } from "@/lib/plan";
 import { TraeningListClient } from "./traening-list-client";
 
 export const metadata = { title: "Træning | Loggen" };
@@ -38,7 +39,7 @@ export default async function TraeningPage() {
     );
   }
 
-  const [workouts, templates] = await Promise.all([
+  const [workouts, templates, planRows] = await Promise.all([
     db
       .select()
       .from(schema.workouts)
@@ -49,6 +50,15 @@ export default async function TraeningPage() {
       .from(schema.workoutTemplates)
       .where(eq(schema.workoutTemplates.userId, user.id))
       .orderBy(desc(schema.workoutTemplates.updatedAt)),
+    db
+      .select()
+      .from(schema.planItems)
+      .where(
+        and(
+          eq(schema.planItems.userId, user.id),
+          eq(schema.planItems.kind, "training"),
+        ),
+      ),
   ]);
 
   return (
@@ -67,6 +77,7 @@ export default async function TraeningPage() {
         body: t.body,
         exerciseCount: countExercises(t.body),
       }))}
+      plans={planRows.map(toPlanItemData)}
     />
   );
 }

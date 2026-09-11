@@ -3,9 +3,18 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookmarkMinus, Clock, Dumbbell, Plus, X } from "lucide-react";
+import {
+  BookmarkMinus,
+  CalendarClock,
+  Clock,
+  Dumbbell,
+  Plus,
+  X,
+} from "lucide-react";
 import { createWorkout, deleteWorkoutTemplate } from "./actions";
 import { danishLongDate, danishWeekday, todayIsoDate } from "@/lib/date";
+import { PlanDialog, type PlanItemData } from "@/components/plan-dialog";
+import { scheduleLabel } from "@/lib/plan";
 
 type WorkoutRow = {
   id: number;
@@ -26,14 +35,21 @@ type TemplateRow = {
 export function TraeningListClient({
   initialWorkouts,
   initialTemplates,
+  plans,
 }: {
   initialWorkouts: WorkoutRow[];
   initialTemplates: TemplateRow[];
+  plans: PlanItemData[];
 }) {
+  const router = useRouter();
   const [workouts] = useState(initialWorkouts);
   const [templates, setTemplates] = useState(initialTemplates);
   // null = dialog lukket; undefined = tom session; ellers valgt skabelon.
   const [createFrom, setCreateFrom] = useState<TemplateRow | undefined | null>(
+    null,
+  );
+  // null = lukket; undefined = opret ny plan; ellers redigér eksisterende.
+  const [planEdit, setPlanEdit] = useState<PlanItemData | undefined | null>(
     null,
   );
 
@@ -102,6 +118,49 @@ export function TraeningListClient({
         </section>
       )}
 
+      <section className="mb-5">
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.6px] text-dim">
+          Planlagt træning
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {plans.map((pl) => {
+            const templateTitle =
+              pl.workoutTemplateId !== null
+                ? templates.find((t) => t.id === pl.workoutTemplateId)?.title
+                : undefined;
+            return (
+              <button
+                key={pl.id}
+                type="button"
+                onClick={() => setPlanEdit(pl)}
+                title="Redigér planen"
+                className={`inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-[8px] bg-bg-elevated px-3 py-2 text-left shadow-[var(--shadow-card)] hover:bg-bg-subtle ${
+                  pl.paused ? "opacity-55" : ""
+                }`}
+              >
+                <CalendarClock
+                  className={`size-3.5 ${pl.paused ? "text-dim" : "text-accent"}`}
+                />
+                <span className="text-[13px] font-medium text-ink">
+                  {templateTitle ?? pl.label ?? "Træning"}
+                </span>
+                <span className="text-[11px] text-light">
+                  {pl.paused ? "på pause" : scheduleLabel(pl)}
+                </span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setPlanEdit(undefined)}
+            className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-[8px] border border-dashed border-hair-strong px-3 py-2 text-[12px] text-light hover:border-accent hover:text-accent"
+          >
+            <Plus className="size-3.5" />
+            Planlæg træning
+          </button>
+        </div>
+      </section>
+
       {workouts.length === 0 ? (
         <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
           Log din første session — øvelser, sæt og noter i fri tekst.
@@ -118,6 +177,28 @@ export function TraeningListClient({
         <CreateDialog
           template={createFrom}
           onClose={() => setCreateFrom(null)}
+        />
+      )}
+
+      {planEdit !== null && (
+        <PlanDialog
+          label="Planlægning"
+          title={
+            planEdit === undefined
+              ? "Planlæg træning"
+              : (planEdit.workoutTemplateId !== null
+                  ? templates.find((t) => t.id === planEdit.workoutTemplateId)
+                      ?.title
+                  : undefined) ??
+                planEdit.label ??
+                "Træning"
+          }
+          kind="training"
+          existing={planEdit ?? null}
+          templates={templates.map((t) => ({ id: t.id, title: t.title }))}
+          showLabel
+          onChanged={() => router.refresh()}
+          onClose={() => setPlanEdit(null)}
         />
       )}
     </div>

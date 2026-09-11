@@ -286,6 +286,38 @@ const workoutTemplateRow = z.object({
   updatedAt: z.string().optional(),
 });
 
+const planItemRow = z.object({
+  id: z.number().int(),
+  kind: z.enum(schema.PLAN_KINDS),
+  projectId: z.number().int().nullable().optional(),
+  supplementId: z.number().int().nullable().optional(),
+  workoutTemplateId: z.number().int().nullable().optional(),
+  label: z.string().nullable().optional(),
+  scheduleType: z.enum(schema.PLAN_SCHEDULE_TYPES),
+  weekdays: z.string().nullable().optional(),
+  intervalDays: z.number().int().nullable().optional(),
+  anchorDate: z.string().nullable().optional(),
+  timeOfDay: z.string().nullable().optional(),
+  minutesPlanned: z.number().int().nullable().optional(),
+  kcalTarget: z.number().int().nullable().optional(),
+  carbsTargetG: z.number().int().nullable().optional(),
+  proteinTargetG: z.number().int().nullable().optional(),
+  fatTargetG: z.number().int().nullable().optional(),
+  fiberTargetG: z.number().int().nullable().optional(),
+  paused: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+const planMarkRow = z.object({
+  id: z.number().int(),
+  planItemId: z.number().int(),
+  date: z.string(),
+  kind: z.string(),
+  createdAt: z.string().optional(),
+});
+
 export const backupSchema = z.object({
   format: z.literal("log-backup"),
   version: z.number(),
@@ -314,6 +346,8 @@ export const backupSchema = z.object({
     recipes: z.array(recipeRow).optional().default([]),
     workouts: z.array(workoutRow).optional().default([]),
     workoutTemplates: z.array(workoutTemplateRow).optional().default([]),
+    planItems: z.array(planItemRow).optional().default([]),
+    planMarks: z.array(planMarkRow).optional().default([]),
   }),
 });
 
@@ -406,6 +440,8 @@ export async function performImport(
   await tx.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
   await tx.delete(schema.recipes).where(eq(schema.recipes.userId, uid));
   await tx.delete(schema.workouts).where(eq(schema.workouts.userId, uid));
+  await tx.delete(schema.planMarks).where(eq(schema.planMarks.userId, uid));
+  await tx.delete(schema.planItems).where(eq(schema.planItems.userId, uid));
   await tx
     .delete(schema.workoutTemplates)
     .where(eq(schema.workoutTemplates.userId, uid));
@@ -792,17 +828,74 @@ export async function performImport(
       })),
     );
   }
-  if (d.workoutTemplates.length > 0) {
-    await tx.insert(schema.workoutTemplates).values(
-      d.workoutTemplates.map((t) => ({
+  // Skabeloner indsættes enkeltvis for id-map — plan_items refererer dem.
+  const workoutTemplateMap = await insertParent(
+    schema.workoutTemplates,
+    d.workoutTemplates,
+    (t) => ({
+      userId: uid,
+      title: t.title,
+      durationMin: t.durationMin ?? null,
+      body: t.body,
+      createdAt: t.createdAt ?? nowIso(),
+      updatedAt: t.updatedAt ?? nowIso(),
+    }),
+  );
+
+  // Planlægger: FK'er oversættes via maps. Peger en FK på noget der ikke
+  // findes i backup'en, bevares planen med null-FK (label er fallback).
+  const planItemMap = new Map<number, number>();
+  for (const p of d.planItems) {
+    const inserted = await tx
+      .insert(schema.planItems)
+      .values({
         userId: uid,
-        title: t.title,
-        durationMin: t.durationMin ?? null,
-        body: t.body,
-        createdAt: t.createdAt ?? nowIso(),
-        updatedAt: t.updatedAt ?? nowIso(),
-      })),
-    );
+        kind: p.kind,
+        projectId:
+          p.projectId != null ? (projectMap.get(p.projectId) ?? null) : null,
+        supplementId:
+          p.supplementId != null
+            ? (supplementMap.get(p.supplementId) ?? null)
+            : null,
+        workoutTemplateId:
+          p.workoutTemplateId != null
+            ? (workoutTemplateMap.get(p.workoutTemplateId) ?? null)
+            : null,
+        label: p.label ?? null,
+        scheduleType: p.scheduleType,
+        weekdays: p.weekdays ?? null,
+        intervalDays: p.intervalDays ?? null,
+        anchorDate: p.anchorDate ?? null,
+        timeOfDay: p.timeOfDay ?? null,
+        minutesPlanned: p.minutesPlanned ?? null,
+        kcalTarget: p.kcalTarget ?? null,
+        carbsTargetG: p.carbsTargetG ?? null,
+        proteinTargetG: p.proteinTargetG ?? null,
+        fatTargetG: p.fatTargetG ?? null,
+        fiberTargetG: p.fiberTargetG ?? null,
+        paused: p.paused ?? false,
+        sortOrder: p.sortOrder ?? 0,
+        createdAt: p.createdAt ?? nowIso(),
+        updatedAt: p.updatedAt ?? nowIso(),
+      })
+      .returning({ id: schema.planItems.id });
+    planItemMap.set(p.id, inserted[0].id);
+  }
+  if (d.planMarks.length > 0) {
+    const rows = d.planMarks
+      .map((m) => {
+        const newItemId = planItemMap.get(m.planItemId);
+        if (newItemId === undefined) return null;
+        return {
+          userId: uid,
+          planItemId: newItemId,
+          date: m.date,
+          kind: m.kind,
+          createdAt: m.createdAt ?? nowIso(),
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await tx.insert(schema.planMarks).values(rows);
   }
 
   });
@@ -859,6 +952,8 @@ export async function performImport(
       recipes: d.recipes.length,
       workouts: d.workouts.length,
       workoutTemplates: d.workoutTemplates.length,
+      planItems: d.planItems.length,
+      planMarks: d.planMarks.length,
     },
     filesWritten,
   };
