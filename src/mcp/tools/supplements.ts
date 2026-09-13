@@ -458,6 +458,38 @@ export function registerSupplementTools(server: McpServer) {
             .where(eq(schema.supplementIntakes.id, i.id));
         }
 
+        // Planer bindes via NAVN — flyt matchende planer med til target-
+        // navnet (og skalér/omdøb deres dosis-mål ved enhedsskifte).
+        const planRows = await tx
+          .select()
+          .from(schema.planItems)
+          .where(
+            and(
+              eq(schema.planItems.userId, user.id),
+              eq(schema.planItems.kind, "supplement"),
+            ),
+          );
+        for (const p of planRows) {
+          const planName = (p.label ?? "").trim().toLowerCase();
+          if (planName !== from.toLowerCase()) continue;
+          // Dosis-målet skaleres kun når planens enhed matcher source-
+          // enheden — ellers flyttes kun navnet.
+          const unitMatches =
+            ((p.doseUnit ?? "").trim() || null) === fromU;
+          await tx
+            .update(schema.planItems)
+            .set({
+              label: to,
+              doseUnit: unitMatches ? toU : p.doseUnit,
+              doseTargetX100:
+                unitMatches && p.doseTargetX100 !== null
+                  ? Math.round(p.doseTargetX100 * valueFactor)
+                  : p.doseTargetX100,
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(schema.planItems.id, p.id));
+        }
+
         // Skabelon-oprydning: hvis target-skabelon findes, slet source-
         // skabelonen; ellers omdøb source til target.
         const templates = await tx
@@ -475,17 +507,6 @@ export function registerSupplementTools(server: McpServer) {
             ((t.defaultDoseUnit ?? "").trim() || null) === toU,
         );
         if (sourceTpl && targetTpl && sourceTpl.id !== targetTpl.id) {
-          // Planer der peger på source-skabelonen ompeges til target,
-          // så de ikke bliver forældreløse ved sletningen.
-          await tx
-            .update(schema.planItems)
-            .set({ supplementId: targetTpl.id })
-            .where(
-              and(
-                eq(schema.planItems.supplementId, sourceTpl.id),
-                eq(schema.planItems.userId, user.id),
-              ),
-            );
           await tx
             .delete(schema.supplements)
             .where(eq(schema.supplements.id, sourceTpl.id));

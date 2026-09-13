@@ -2108,7 +2108,10 @@ function SupplementsBody({
   const [picking, setPicking] = useState(false);
   const [creating, setCreating] = useState(false);
   const [customizing, setCustomizing] = useState<SupplementDef | null>(null);
-  const [planFor, setPlanFor] = useState<SupplementDef | null>(null);
+  // null = lukket; "new" = opret ny plan; ellers redigér eksisterende.
+  const [suppPlanEdit, setSuppPlanEdit] = useState<
+    PlanItemData | "new" | null
+  >(null);
   const [editingSupp, setEditingSupp] = useState<SupplementDef | null>(null);
   const [pending, startTx] = useTransition();
 
@@ -2278,24 +2281,6 @@ function SupplementsBody({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setPlanFor(s);
-                    }}
-                    className={`cursor-pointer px-1.5 py-1 opacity-60 hover:bg-bg-subtle hover:opacity-100 ${
-                      plans.some(
-                        (pl) => pl.supplementId === s.id && !pl.paused,
-                      )
-                        ? "text-accent opacity-100"
-                        : "text-dim hover:text-ink"
-                    }`}
-                    title={`Planlæg ${s.name} (faste dage/interval)`}
-                    aria-label={`Planlæg ${s.name}`}
-                  >
-                    <CalendarClock className="size-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
                       removeSupplement(s);
                     }}
                     className="cursor-pointer rounded-r-full px-2 py-1 text-dim opacity-50 hover:bg-bg-subtle hover:text-danger hover:opacity-100"
@@ -2357,17 +2342,63 @@ function SupplementsBody({
         />
       )}
 
-      {planFor && (
+      {/* Planlagte tilskud — bindes via NAVN, ikke chip. Chips er kun
+          hurtig-log-genveje, så flere chips med samme navn tæller alle. */}
+      <div className="mt-3 border-t border-hair pt-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {plans.map((pl) => (
+            <button
+              key={pl.id}
+              type="button"
+              onClick={() => setSuppPlanEdit(pl)}
+              title="Redigér planen"
+              className={`inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-[8px] bg-bg-subtle px-2.5 py-1.5 text-[12px] text-mid hover:text-ink ${
+                pl.paused ? "opacity-55" : ""
+              }`}
+            >
+              <CalendarClock
+                className={`size-3 ${pl.paused ? "text-dim" : "text-accent"}`}
+              />
+              {pl.label ?? "Tilskud"}
+              {pl.doseTargetX100 !== null && (
+                <span className="text-[11px] text-light">
+                  {(pl.doseTargetX100 / 100).toString().replace(".", ",")}
+                  {pl.doseUnit ? ` ${pl.doseUnit}` : ""}
+                </span>
+              )}
+              <span className="text-[11px] text-light">
+                {pl.paused ? "på pause" : scheduleLabel(pl)}
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setSuppPlanEdit("new")}
+            className="inline-flex min-h-[40px] cursor-pointer items-center gap-1 rounded-[8px] border border-dashed border-hair-strong px-2.5 py-1.5 text-[12px] text-light hover:border-accent hover:text-accent"
+          >
+            + Planlæg tilskud
+          </button>
+        </div>
+      </div>
+
+      {suppPlanEdit !== null && (
         <PlanDialog
           label="Planlægning"
-          title={planFor.name}
-          kind="supplement"
-          fixed={{ supplementId: planFor.id }}
-          existing={
-            plans.find((pl) => pl.supplementId === planFor.id) ?? null
+          title={
+            suppPlanEdit === "new"
+              ? "Planlæg tilskud"
+              : (suppPlanEdit.label ?? "Tilskud")
           }
+          kind="supplement"
+          existing={suppPlanEdit === "new" ? null : suppPlanEdit}
+          showSupplementFields
+          nameSuggestions={[
+            ...new Set(
+              supplements.filter((s) => !s.archived).map((s) => s.name),
+            ),
+          ]}
           onChanged={() => router.refresh()}
-          onClose={() => setPlanFor(null)}
+          onClose={() => setSuppPlanEdit(null)}
         />
       )}
     </div>

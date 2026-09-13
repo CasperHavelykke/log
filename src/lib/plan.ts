@@ -23,6 +23,8 @@ export type PlanItemData = {
   anchorDate: string | null;
   timeOfDay: string | null;
   minutesPlanned: number | null;
+  doseTargetX100: number | null;
+  doseUnit: string | null;
   kcalTarget: number | null;
   carbsTargetG: number | null;
   proteinTargetG: number | null;
@@ -45,6 +47,8 @@ export function toPlanItemData(row: PlanItem): PlanItemData {
     anchorDate: row.anchorDate,
     timeOfDay: row.timeOfDay,
     minutesPlanned: row.minutesPlanned,
+    doseTargetX100: row.doseTargetX100,
+    doseUnit: row.doseUnit,
     kcalTarget: row.kcalTarget,
     carbsTargetG: row.carbsTargetG,
     proteinTargetG: row.proteinTargetG,
@@ -111,32 +115,44 @@ export function occursOn(item: ScheduleFields, dateIso: string): boolean {
   return false;
 }
 
-// Summér dagens indtag for et tilskud mod standard-dosen (×100-heltal).
-// Regler: indtag uden dosis tæller som én standard-dosis; indtag uden
-// enhed antages at være i standard-enheden; indtag i en ANDEN enhed
-// tælles ikke med (vi konverterer ikke mg↔g — hellere undertælle end lyve).
-export function sumSupplementDoseX100(
+// Summér dagens indtag for et tilskud mod planens dosis-mål (×100-heltal).
+// Tilskuds-planer matcher på NAVN (som statistik og intakes gør) — chips
+// er kun log-genveje, så alle indtag med navnet tæller, uanset hvilken
+// genvej (eller AI) der loggede dem. Regler: indtag uden dosis tæller som
+// ét fuldt mål; indtag uden enhed antages at være i målets enhed; indtag
+// i en ANDEN enhed tælles ikke (vi konverterer ikke mg↔g — hellere
+// undertælle end lyve).
+export function sumSupplementDoseByNameX100(
   intakes: {
-    supplementId: number | null;
+    name: string;
     doseAmountX100: number | null;
     doseUnit: string | null;
   }[],
-  supplementId: number,
-  defaultDoseX100: number | null,
-  defaultUnit: string | null,
+  name: string,
+  targetX100: number | null,
+  targetUnit: string | null,
 ): number {
-  const unitNorm = (defaultUnit ?? "").trim().toLowerCase();
+  const nameNorm = name.trim().toLowerCase();
+  const unitNorm = (targetUnit ?? "").trim().toLowerCase();
   let sum = 0;
   for (const i of intakes) {
-    if (i.supplementId !== supplementId) continue;
+    if (i.name.trim().toLowerCase() !== nameNorm) continue;
     if (i.doseAmountX100 === null) {
-      sum += defaultDoseX100 ?? 0;
+      sum += targetX100 ?? 0;
       continue;
     }
     const iUnit = (i.doseUnit ?? "").trim().toLowerCase();
     if (iUnit === "" || iUnit === unitNorm) sum += i.doseAmountX100;
   }
   return sum;
+}
+
+export function hasIntakeWithName(
+  intakes: { name: string }[],
+  name: string,
+): boolean {
+  const nameNorm = name.trim().toLowerCase();
+  return intakes.some((i) => i.name.trim().toLowerCase() === nameNorm);
 }
 
 export function fmtDoseX100(x100: number): string {

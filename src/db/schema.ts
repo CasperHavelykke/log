@@ -729,6 +729,10 @@ export const planItems = sqliteTable(
     projectId: integer("project_id").references(() => projects.id, {
       onDelete: "set null",
     }),
+    // LEGACY for supplement-kind: tilskuds-planer bindes nu via NAVNET
+    // (label) ligesom intakes og statistik — chips er kun log-genveje, og
+    // flere chips med samme navn tæller alle med. Kolonnen beholdes af
+    // migrations-hensyn men sættes ikke længere.
     supplementId: integer("supplement_id").references(() => supplements.id, {
       onDelete: "set null",
     }),
@@ -749,6 +753,10 @@ export const planItems = sqliteTable(
     timeOfDay: text("time_of_day"), // fritekst, fx "formiddag" eller "08:30"
     // project-kind: planlagt tid den dag.
     minutesPlanned: integer("minutes_planned"),
+    // supplement-kind: planens EGET dosis-mål (uafhængigt af chips'
+    // standard-doser). null = binært "taget i dag".
+    doseTargetX100: integer("dose_target_x100"),
+    doseUnit: text("dose_unit"),
     // nutrition-kind: mål for dagen (samme enheder som day_entries).
     kcalTarget: integer("kcal_target"),
     carbsTargetG: integer("carbs_target_g"),

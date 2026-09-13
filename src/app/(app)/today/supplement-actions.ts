@@ -83,17 +83,8 @@ export async function updateSupplement(
 
 export async function deleteSupplement(id: number) {
   const user = await requireUser();
-  // Planer for tilskuddet slettes med — en tilskuds-plan uden tilskud kan
-  // intet (ingen ét-kliks-logning, intet navn) og ville ellers stå
-  // forældreløs uden UI til at fjerne den. Historiske intakes røres ikke.
-  await db
-    .delete(schema.planItems)
-    .where(
-      and(
-        eq(schema.planItems.supplementId, id),
-        eq(schema.planItems.userId, user.id),
-      ),
-    );
+  // Planer røres ikke — de bindes via NAVNET, ikke chippen. En chip er
+  // kun en log-genvej; slettes den, lever planen (og historikken) videre.
   await db
     .delete(schema.supplements)
     .where(

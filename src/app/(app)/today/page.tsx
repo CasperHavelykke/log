@@ -22,7 +22,12 @@ import {
   listCustomValuesForDate,
 } from "@/lib/custom-parameters";
 import { TodayPage } from "./today-form";
-import { occursOn, sumSupplementDoseX100, toPlanItemData } from "@/lib/plan";
+import {
+  hasIntakeWithName,
+  occursOn,
+  sumSupplementDoseByNameX100,
+  toPlanItemData,
+} from "@/lib/plan";
 import { dayKcal } from "@/lib/kcal";
 import type { TodayPlanEntry } from "./today-plan-card";
 
@@ -168,7 +173,6 @@ export default async function Today() {
     ]);
 
   const marksByItem = new Map(planMarksRows.map((m) => [m.planItemId, m.kind]));
-  const supplementsById = new Map(supplements.map((s) => [s.id, s]));
   const projectsById = new Map(projects.map((p) => [p.id, p]));
   const templatesById = new Map(allTemplates.map((t) => [t.id, t]));
   const dayK = dayKcal({
@@ -196,27 +200,23 @@ export default async function Today() {
     )
     .map((i) => {
       let title = i.label ?? "";
-      let doseText: string | null = null;
+      const doseText: string | null = null;
       let doseProgress: TodayPlanEntry["doseProgress"] = null;
       if (i.kind === "supplement") {
-        const s =
-          i.supplementId !== null ? supplementsById.get(i.supplementId) : undefined;
-        title = s?.name ?? i.label ?? "Tilskud";
-        if (s && s.defaultDoseAmountX100 !== null) {
-          // Dosis-mål: dagens indtag summeres mod standard-dosen — krydset
-          // kommer først når målet er nået (6+9 g mod 12 g-mål = klaret).
+        // Navne-binding: alle dagens indtag med navnet tæller, uanset
+        // hvilken chip/genvej/AI der loggede dem. Målet er planens eget.
+        title = i.label ?? "Tilskud";
+        if (i.doseTargetX100 !== null) {
           doseProgress = {
-            doneX100: sumSupplementDoseX100(
+            doneX100: sumSupplementDoseByNameX100(
               todaysIntakes,
-              i.supplementId!,
-              s.defaultDoseAmountX100,
-              s.defaultDoseUnit,
+              title,
+              i.doseTargetX100,
+              i.doseUnit,
             ),
-            targetX100: s.defaultDoseAmountX100,
-            unit: s.defaultDoseUnit,
+            targetX100: i.doseTargetX100,
+            unit: i.doseUnit,
           };
-        } else if (s) {
-          doseText = null;
         }
       } else if (i.kind === "project") {
         const p = i.projectId !== null ? projectsById.get(i.projectId) : undefined;
@@ -245,16 +245,14 @@ export default async function Today() {
       let state: TodayPlanEntry["state"] =
         mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
       if (state === "open") {
-        if (i.kind === "supplement" && i.supplementId !== null) {
-          // Med dosis-mål: klaret først når summen når standard-dosen.
-          // Uden standard-dosis: binært — ét koblet indtag tæller.
+        if (i.kind === "supplement") {
+          // Med dosis-mål: klaret først når summen når målet.
+          // Uden mål: binært — ét indtag med navnet tæller.
           if (doseProgress !== null) {
             if (doseProgress.doneX100 >= doseProgress.targetX100) {
               state = "done";
             }
-          } else if (
-            todaysIntakes.some((x) => x.supplementId === i.supplementId)
-          ) {
+          } else if (hasIntakeWithName(todaysIntakes, title)) {
             state = "done";
           }
         } else if (
@@ -277,7 +275,7 @@ export default async function Today() {
         title,
         timeOfDay: i.timeOfDay,
         state,
-        supplementId: i.supplementId,
+        supplementName: i.kind === "supplement" ? title : null,
         doseText,
         doseProgress,
         workoutTemplateId: i.workoutTemplateId,

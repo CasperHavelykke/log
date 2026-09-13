@@ -27,6 +27,14 @@ const planItemSchema = z
     anchorDate: z.string().regex(DATE_RE).nullable().default(null),
     timeOfDay: z.string().max(50).nullable().default(null),
     minutesPlanned: z.number().int().min(5).max(1440).nullable().default(null),
+    doseTargetX100: z
+      .number()
+      .int()
+      .min(0)
+      .max(10_000_000)
+      .nullable()
+      .default(null),
+    doseUnit: z.string().max(20).nullable().default(null),
     kcalTarget: z.number().int().min(0).max(10_000).nullable().default(null),
     carbsTargetG: z.number().int().min(0).max(2000).nullable().default(null),
     proteinTargetG: z.number().int().min(0).max(1000).nullable().default(null),
@@ -39,6 +47,10 @@ const planItemSchema = z
     }
     if (v.scheduleType === "interval" && !v.intervalDays) {
       ctx.addIssue({ code: "custom", message: "Angiv interval i dage" });
+    }
+    // Tilskuds-planer bindes via NAVNET (label) — chips er kun genveje.
+    if (v.kind === "supplement" && !v.label?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Angiv tilskuddets navn" });
     }
   });
 
@@ -68,7 +80,8 @@ export async function upsertPlanItem(input: PlanItemInput) {
   const values = {
     kind: d.kind,
     projectId: d.projectId,
-    supplementId: d.supplementId,
+    // supplementId sættes ikke længere — tilskud bindes via navnet (label).
+    supplementId: null,
     workoutTemplateId: d.workoutTemplateId,
     label: d.label?.trim() || null,
     scheduleType: d.scheduleType,
@@ -77,6 +90,8 @@ export async function upsertPlanItem(input: PlanItemInput) {
     anchorDate,
     timeOfDay: d.timeOfDay?.trim() || null,
     minutesPlanned: d.kind === "project" ? d.minutesPlanned : null,
+    doseTargetX100: d.kind === "supplement" ? d.doseTargetX100 : null,
+    doseUnit: d.kind === "supplement" ? d.doseUnit?.trim() || null : null,
     kcalTarget: d.kind === "nutrition" ? d.kcalTarget : null,
     carbsTargetG: d.kind === "nutrition" ? d.carbsTargetG : null,
     proteinTargetG: d.kind === "nutrition" ? d.proteinTargetG : null,

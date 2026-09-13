@@ -299,6 +299,8 @@ const planItemRow = z.object({
   anchorDate: z.string().nullable().optional(),
   timeOfDay: z.string().nullable().optional(),
   minutesPlanned: z.number().int().nullable().optional(),
+  doseTargetX100: z.number().int().nullable().optional(),
+  doseUnit: z.string().nullable().optional(),
   kcalTarget: z.number().int().nullable().optional(),
   carbsTargetG: z.number().int().nullable().optional(),
   proteinTargetG: z.number().int().nullable().optional(),
@@ -846,6 +848,12 @@ export async function performImport(
   // findes i backup'en, bevares planen med null-FK (label er fallback).
   const planItemMap = new Map<number, number>();
   for (const p of d.planItems) {
+    // Tilskuds-planer bindes via NAVN (label). Gamle backups (før 0036)
+    // har FK i stedet — udled navn + dosis-mål fra backup'ens supplements.
+    const legacySupp =
+      p.kind === "supplement" && p.supplementId != null && !p.label
+        ? d.supplements.find((s) => s.id === p.supplementId)
+        : undefined;
     const inserted = await tx
       .insert(schema.planItems)
       .values({
@@ -853,15 +861,15 @@ export async function performImport(
         kind: p.kind,
         projectId:
           p.projectId != null ? (projectMap.get(p.projectId) ?? null) : null,
-        supplementId:
-          p.supplementId != null
-            ? (supplementMap.get(p.supplementId) ?? null)
-            : null,
+        supplementId: null,
         workoutTemplateId:
           p.workoutTemplateId != null
             ? (workoutTemplateMap.get(p.workoutTemplateId) ?? null)
             : null,
-        label: p.label ?? null,
+        label: p.label ?? legacySupp?.name ?? null,
+        doseTargetX100:
+          p.doseTargetX100 ?? legacySupp?.defaultDoseAmountX100 ?? null,
+        doseUnit: p.doseUnit ?? legacySupp?.defaultDoseUnit ?? null,
         scheduleType: p.scheduleType,
         weekdays: p.weekdays ?? null,
         intervalDays: p.intervalDays ?? null,

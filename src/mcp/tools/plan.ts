@@ -5,9 +5,10 @@ import { db, schema } from "../../db";
 import { getActiveUser } from "../active-user";
 import { errorContent, jsonContent } from "../format";
 import {
+  hasIntakeWithName,
   occursOn,
   scheduleLabel,
-  sumSupplementDoseX100,
+  sumSupplementDoseByNameX100,
 } from "../../lib/plan";
 
 // Planlæggeren: tilbagevendende planer for projekter, kosttilskud, træning,
@@ -28,14 +29,13 @@ function shapeItem(
     templates: Map<number, string>;
   },
 ) {
+  // Tilskud bindes via NAVNET (label) — se sumSupplementDoseByNameX100.
   const target =
     row.kind === "project" && row.projectId !== null
       ? (names.projects.get(row.projectId) ?? null)
-      : row.kind === "supplement" && row.supplementId !== null
-        ? (names.supplements.get(row.supplementId) ?? null)
-        : row.kind === "training" && row.workoutTemplateId !== null
-          ? (names.templates.get(row.workoutTemplateId) ?? null)
-          : null;
+      : row.kind === "training" && row.workoutTemplateId !== null
+        ? (names.templates.get(row.workoutTemplateId) ?? null)
+        : null;
   return {
     id: row.id,
     kind: row.kind,
@@ -51,6 +51,8 @@ function shapeItem(
     schedule: scheduleLabel(row),
     timeOfDay: row.timeOfDay,
     minutesPlanned: row.minutesPlanned,
+    doseTarget: row.doseTargetX100 === null ? null : row.doseTargetX100 / 100,
+    doseUnit: row.doseUnit,
     kcalTarget: row.kcalTarget,
     carbsTargetG: row.carbsTargetG,
     proteinTargetG: row.proteinTargetG,
@@ -91,7 +93,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Hent dagens plan",
       description:
-        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskud med standard-dosis er done når dagens summerede indtag når dosen (doseDone/doseTarget viser fremdrift — fx 6 af 12 g); uden standard-dosis tæller ét logget intake. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte.",
+        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte.",
       inputSchema: {
         date: z
           .string()
@@ -103,16 +105,8 @@ export function registerPlanTools(server: McpServer) {
     async ({ date }) => {
       const user = await getActiveUser();
       const d = date ?? todayIso();
-      const [
-        items,
-        marks,
-        intakes,
-        workouts,
-        entryRows,
-        timeRows,
-        names,
-        supplementRows,
-      ] = await Promise.all([
+      const [items, marks, intakes, workouts, entryRows, timeRows, names] =
+        await Promise.all([
           db
             .select()
             .from(schema.planItems)
@@ -164,14 +158,9 @@ export function registerPlanTools(server: McpServer) {
               ),
             ),
           loadNames(user.id),
-          db
-            .select()
-            .from(schema.supplements)
-            .where(eq(schema.supplements.userId, user.id)),
         ]);
       const entry = entryRows[0];
       const markByItem = new Map(marks.map((m) => [m.planItemId, m.kind]));
-      const supplementById = new Map(supplementRows.map((s) => [s.id, s]));
 
       const due = items
         .filter((i) => occursOn(i, d))
@@ -185,19 +174,17 @@ export function registerPlanTools(server: McpServer) {
                     .reduce((sum, t) => sum + t.hoursX10, 0) * 6,
                 )
               : null;
-          // Dosis-mål: dagens indtag summeres mod tilskuddets standard-dosis.
-          const supp =
-            i.kind === "supplement" && i.supplementId !== null
-              ? supplementById.get(i.supplementId)
-              : undefined;
-          const doseTarget = supp?.defaultDoseAmountX100 ?? null;
+          // Dosis-mål: dagens indtag med planens NAVN summeres mod planens
+          // eget mål — chips er kun log-genveje.
+          const suppName = i.kind === "supplement" ? (i.label ?? "") : "";
+          const doseTarget = i.kind === "supplement" ? i.doseTargetX100 : null;
           const doseDone =
-            supp && doseTarget !== null
-              ? sumSupplementDoseX100(
+            doseTarget !== null
+              ? sumSupplementDoseByNameX100(
                   intakes,
-                  supp.id,
+                  suppName,
                   doseTarget,
-                  supp.defaultDoseUnit,
+                  i.doseUnit,
                 )
               : null;
 
@@ -205,12 +192,10 @@ export function registerPlanTools(server: McpServer) {
           let status =
             mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
           if (status === "open") {
-            if (i.kind === "supplement" && i.supplementId !== null) {
+            if (i.kind === "supplement") {
               if (doseTarget !== null) {
                 if ((doseDone ?? 0) >= doseTarget) status = "done";
-              } else if (
-                intakes.some((x) => x.supplementId === i.supplementId)
-              ) {
+              } else if (hasIntakeWithName(intakes, suppName)) {
                 status = "done";
               }
             } else if (
@@ -231,8 +216,6 @@ export function registerPlanTools(server: McpServer) {
             status,
             minutesActual,
             doseDone: doseDone === null ? null : doseDone / 100,
-            doseTarget: doseTarget === null ? null : doseTarget / 100,
-            doseUnit: supp?.defaultDoseUnit ?? null,
           };
         });
       return jsonContent({ date: d, count: due.length, items: due });
@@ -268,7 +251,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Opret/opdatér plan",
       description:
-        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver supplementId — ét klik på /today logger så indtaget), 'training' (evt. workoutTemplateId eller label), 'nutrition' (kcal/makro-mål for dagen), 'meal' (label påkrævet). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke) eller 'monthly' (anchorDates dag-i-måneden). anchorDate udeladt = i dag.",
+        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver label = tilskuddets NAVN — planer bindes via navnet, alle indtag med navnet tæller; sæt evt. doseTarget+doseUnit som dagens mål), 'training' (evt. workoutTemplateId eller label), 'nutrition' (kcal/makro-mål for dagen), 'meal' (label påkrævet). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke) eller 'monthly' (anchorDates dag-i-måneden). anchorDate udeladt = i dag.",
       inputSchema: {
         id: z.number().int().optional(),
         kind: z.enum(schema.PLAN_KINDS),
@@ -292,6 +275,21 @@ export function registerPlanTools(server: McpServer) {
           .default(null)
           .describe("Fritekst, fx 'formiddag' eller '08:30'."),
         minutesPlanned: z.number().int().min(5).max(1440).nullable().default(null),
+        doseTarget: z
+          .number()
+          .min(0)
+          .max(100_000)
+          .nullable()
+          .default(null)
+          .describe(
+            "supplement: dagens dosis-mål som decimaltal (fx 12 for 12 g). null = binært 'taget i dag'.",
+          ),
+        doseUnit: z
+          .string()
+          .max(20)
+          .nullable()
+          .default(null)
+          .describe("supplement: enhed for dosis-målet, fx 'g' eller 'mg'."),
         kcalTarget: z.number().int().min(0).max(10_000).nullable().default(null),
         carbsTargetG: z.number().int().min(0).max(2000).nullable().default(null),
         proteinTargetG: z.number().int().min(0).max(1000).nullable().default(null),
@@ -308,11 +306,17 @@ export function registerPlanTools(server: McpServer) {
       if (input.scheduleType === "interval" && !input.intervalDays) {
         return errorContent("scheduleType 'interval' kræver intervalDays");
       }
+      if (input.kind === "supplement" && !input.label?.trim()) {
+        return errorContent(
+          "kind 'supplement' kræver label (tilskuddets navn — planer bindes via navnet)",
+        );
+      }
       const now = new Date().toISOString();
       const values = {
         kind: input.kind,
         projectId: input.projectId,
-        supplementId: input.supplementId,
+        // Tilskud bindes via navnet — supplementId sættes ikke længere.
+        supplementId: null,
         workoutTemplateId: input.workoutTemplateId,
         label: input.label?.trim() || null,
         scheduleType: input.scheduleType,
@@ -325,6 +329,14 @@ export function registerPlanTools(server: McpServer) {
             : (input.anchorDate ?? todayIso()),
         timeOfDay: input.timeOfDay?.trim() || null,
         minutesPlanned: input.kind === "project" ? input.minutesPlanned : null,
+        doseTargetX100:
+          input.kind === "supplement" && input.doseTarget !== null
+            ? Math.round(input.doseTarget * 100)
+            : null,
+        doseUnit:
+          input.kind === "supplement"
+            ? input.doseUnit?.trim() || null
+            : null,
         kcalTarget: input.kind === "nutrition" ? input.kcalTarget : null,
         carbsTargetG: input.kind === "nutrition" ? input.carbsTargetG : null,
         proteinTargetG:

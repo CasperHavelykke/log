@@ -32,6 +32,8 @@ export function PlanDialog({
   templates,
   showMinutes = false,
   showLabel = false,
+  showSupplementFields = false,
+  nameSuggestions = [],
   showNutritionTargets = false,
   onChanged,
   onClose,
@@ -41,13 +43,15 @@ export function PlanDialog({
   kind: PlanKind;
   fixed?: {
     projectId?: number;
-    supplementId?: number;
   };
   existing: PlanItemData | null;
   // training: vælg evt. skabelon som planen peger på.
   templates?: { id: number; title: string }[];
   showMinutes?: boolean;
   showLabel?: boolean;
+  // supplement: navn (bindingen) + planens eget dosis-mål.
+  showSupplementFields?: boolean;
+  nameSuggestions?: string[];
   showNutritionTargets?: boolean;
   onChanged: () => void;
   onClose: () => void;
@@ -74,6 +78,12 @@ export function PlanDialog({
     existing?.minutesPlanned ?? null,
   );
   const [itemLabel, setItemLabel] = useState(existing?.label ?? "");
+  const [doseTargetInput, setDoseTargetInput] = useState(
+    existing?.doseTargetX100 == null
+      ? ""
+      : (existing.doseTargetX100 / 100).toString().replace(".", ","),
+  );
+  const [doseUnit, setDoseUnit] = useState(existing?.doseUnit ?? "");
   const [templateId, setTemplateId] = useState<number | null>(
     existing?.workoutTemplateId ?? null,
   );
@@ -110,11 +120,25 @@ export function PlanDialog({
       setError(kind === "meal" ? "Giv måltidet et navn" : "Giv planen et navn");
       return;
     }
+    if (showSupplementFields && !itemLabel.trim()) {
+      setError("Angiv tilskuddets navn");
+      return;
+    }
+    // Dosis-mål: decimal med komma → ×100-heltal.
+    let doseTargetX100: number | null = null;
+    if (showSupplementFields && doseTargetInput.trim() !== "") {
+      const n = Number(doseTargetInput.trim().replace(",", "."));
+      if (!Number.isFinite(n) || n < 0) {
+        setError("Ugyldigt dosis-mål");
+        return;
+      }
+      doseTargetX100 = Math.round(n * 100);
+    }
     const input: PlanItemInput = {
       id: existing?.id,
       kind,
       projectId: fixed?.projectId ?? null,
-      supplementId: fixed?.supplementId ?? null,
+      supplementId: null,
       workoutTemplateId: templateId,
       label: itemLabel.trim() || null,
       scheduleType,
@@ -126,6 +150,8 @@ export function PlanDialog({
       anchorDate: scheduleType === "weekdays" ? null : anchorDate,
       timeOfDay: timeOfDay.trim() || null,
       minutesPlanned: minutes,
+      doseTargetX100,
+      doseUnit: doseUnit.trim() || null,
       kcalTarget: kcal,
       carbsTargetG: carbs,
       proteinTargetG: protein,
@@ -205,6 +231,58 @@ export function PlanDialog({
               }
               className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
             />
+          </div>
+        )}
+
+        {showSupplementFields && (
+          <div className="mb-4 space-y-3">
+            <div>
+              <FieldLabel>Tilskud (navn)</FieldLabel>
+              <input
+                type="text"
+                value={itemLabel}
+                onChange={(e) => setItemLabel(e.target.value)}
+                placeholder="fx 'Glycin'"
+                list="plan-supplement-names"
+                className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+              />
+              <datalist id="plan-supplement-names">
+                {nameSuggestions.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+              <p className="mt-1 text-[11px] italic text-light">
+                Alle dagens indtag med dette navn tæller — uanset hvilken
+                genvej (eller AI) der loggede dem.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FieldLabel>Dosis-mål (valgfrit)</FieldLabel>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={doseTargetInput}
+                  onChange={(e) => setDoseTargetInput(e.target.value)}
+                  placeholder="fx 12"
+                  className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+                />
+              </div>
+              <div>
+                <FieldLabel>Enhed</FieldLabel>
+                <input
+                  type="text"
+                  value={doseUnit}
+                  onChange={(e) => setDoseUnit(e.target.value)}
+                  placeholder="mg / g / μg"
+                  className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] italic text-light">
+              Med mål krydses planen først af, når dagens sum når dosen —
+              uden mål tæller ét indtag.
+            </p>
           </div>
         )}
 

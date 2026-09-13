@@ -30,7 +30,8 @@ export type TodayPlanEntry = {
   title: string;
   timeOfDay: string | null;
   state: "open" | "done" | "skipped";
-  supplementId: number | null;
+  // Navne-binding: tilskud logges og matches på navn, ikke chip-id.
+  supplementName: string | null;
   doseText: string | null;
   // Dosis-mål: dagens summerede indtag mod tilskuddets standard-dosis.
   doseProgress: {
@@ -99,18 +100,23 @@ export function TodayPlanCard({
   }
 
   function onPrimary(e: TodayPlanEntry) {
-    if (e.kind === "supplement" && e.supplementId !== null) {
-      // Delvist taget? Log kun RESTEN op til dosis-målet — ellers standard-
-      // dosen (6 af 12 g taget → klik logger 6 g, ikke 12 oveni).
-      const remaining =
-        e.doseProgress !== null && e.doseProgress.doneX100 > 0
-          ? e.doseProgress.targetX100 - e.doseProgress.doneX100
+    if (e.kind === "supplement" && e.supplementName !== null) {
+      // Logges på NAVN med planens mål-dosis — eller kun RESTEN op til
+      // målet ved delvist indtag (6 af 12 g taget → klik logger 6 g).
+      const dose =
+        e.doseProgress !== null
+          ? e.doseProgress.doneX100 > 0
+            ? e.doseProgress.targetX100 - e.doseProgress.doneX100
+            : e.doseProgress.targetX100
           : null;
       run(e.id, () =>
         logSupplementIntake({
-          supplementId: e.supplementId!,
-          ...(remaining !== null && remaining > 0
-            ? { doseAmountX100: remaining }
+          name: e.supplementName!,
+          ...(dose !== null && dose > 0
+            ? {
+                doseAmountX100: dose,
+                doseUnit: e.doseProgress!.unit,
+              }
             : {}),
         }),
       );
@@ -187,7 +193,7 @@ export function TodayPlanCard({
                     e.kind === "supplement"
                       ? e.doseProgress !== null && e.doseProgress.doneX100 > 0
                         ? `Log resten (${fmtDoseX100(e.doseProgress.targetX100 - e.doseProgress.doneX100)}${e.doseProgress.unit ? ` ${e.doseProgress.unit}` : ""})`
-                        : "Log indtag med standard-dosis"
+                        : "Log indtag med planens dosis"
                       : e.kind === "training"
                         ? e.workoutTemplateId !== null
                           ? "Start session fra skabelon"

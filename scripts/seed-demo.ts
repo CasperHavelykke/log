@@ -307,7 +307,9 @@ async function main() {
     {
       userId: uid,
       kind: "supplement",
-      supplementId: suppRows[0].id, // D-vitamin
+      label: suppRows[0].name, // D-vitamin — planer bindes via navn
+      doseTargetX100: suppRows[0].defaultDoseAmountX100,
+      doseUnit: suppRows[0].defaultDoseUnit,
       scheduleType: "interval",
       intervalDays: 1,
       anchorDate: isoDaysAgo(30),
@@ -317,7 +319,9 @@ async function main() {
     {
       userId: uid,
       kind: "supplement",
-      supplementId: suppRows[1].id, // Magnesium
+      label: suppRows[1].name, // Magnesium
+      doseTargetX100: suppRows[1].defaultDoseAmountX100,
+      doseUnit: suppRows[1].defaultDoseUnit,
       scheduleType: "interval",
       intervalDays: 2,
       anchorDate: isoDaysAgo(30),
