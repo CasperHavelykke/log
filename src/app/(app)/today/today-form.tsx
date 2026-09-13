@@ -16,6 +16,7 @@ import {
   deleteSupplement,
   deleteSupplementIntake,
   logSupplementIntake,
+  updateSupplement,
 } from "./supplement-actions";
 import { deleteFast, endFast, startFast, updateFast } from "./fast-actions";
 import {
@@ -2108,6 +2109,7 @@ function SupplementsBody({
   const [creating, setCreating] = useState(false);
   const [customizing, setCustomizing] = useState<SupplementDef | null>(null);
   const [planFor, setPlanFor] = useState<SupplementDef | null>(null);
+  const [editingSupp, setEditingSupp] = useState<SupplementDef | null>(null);
   const [pending, startTx] = useTransition();
 
   function logWithValues(
@@ -2263,6 +2265,19 @@ function SupplementsBody({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setEditingSupp(s);
+                      setPicking(false);
+                    }}
+                    className="cursor-pointer px-1.5 py-1 text-dim opacity-60 hover:bg-bg-subtle hover:text-ink hover:opacity-100"
+                    title={`Redigér ${s.name} (navn, standard-dosis, tidspunkt)`}
+                    aria-label={`Redigér ${s.name}`}
+                  >
+                    <Pencil className="size-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setPlanFor(s);
                     }}
                     className={`cursor-pointer px-1.5 py-1 opacity-60 hover:bg-bg-subtle hover:opacity-100 ${
@@ -2328,6 +2343,20 @@ function SupplementsBody({
         />
       )}
 
+      {editingSupp && (
+        <EditSupplementForm
+          supplement={editingSupp}
+          onCancel={() => setEditingSupp(null)}
+          onSaved={(updated) => {
+            setSupplements((prev) =>
+              prev.map((s) => (s.id === updated.id ? updated : s)),
+            );
+            setEditingSupp(null);
+          }}
+          onError={onError}
+        />
+      )}
+
       {planFor && (
         <PlanDialog
           label="Planlægning"
@@ -2341,6 +2370,149 @@ function SupplementsBody({
           onClose={() => setPlanFor(null)}
         />
       )}
+    </div>
+  );
+}
+
+// Redigér et biblioteks-tilskud (navn, standard-dosis, tidspunkt).
+// Standard-dosen er også dosis-MÅLET for en evt. plan på tilskuddet.
+function EditSupplementForm({
+  supplement,
+  onCancel,
+  onSaved,
+  onError,
+}: {
+  supplement: SupplementDef;
+  onCancel: () => void;
+  onSaved: (updated: SupplementDef) => void;
+  onError: (msg: string) => void;
+}) {
+  const [name, setName] = useState(supplement.name);
+  const [doseInput, setDoseInput] = useState(
+    supplement.defaultDoseAmountX100 === null
+      ? ""
+      : (supplement.defaultDoseAmountX100 / 100).toString().replace(".", ","),
+  );
+  const [unit, setUnit] = useState(supplement.defaultDoseUnit ?? "");
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay | "">(
+    supplement.defaultTimeOfDay ?? "",
+  );
+  const [pending, startTx] = useTransition();
+
+  function submit() {
+    if (!name.trim()) {
+      onError("Navn mangler.");
+      return;
+    }
+    const doseX100 = parseDoseX100(doseInput);
+    startTx(async () => {
+      const res = await updateSupplement({
+        id: supplement.id,
+        name: name.trim(),
+        defaultDoseAmountX100: doseX100,
+        defaultDoseUnit: unit.trim() || null,
+        defaultTimeOfDay: timeOfDay || null,
+      });
+      if (!res.ok) {
+        onError(res.error);
+        return;
+      }
+      onSaved({
+        ...supplement,
+        name: name.trim(),
+        defaultDoseAmountX100: doseX100,
+        defaultDoseUnit: unit.trim() || null,
+        defaultTimeOfDay: timeOfDay || null,
+      });
+    });
+  }
+
+  return (
+    <div className="rounded-[10px] border border-[var(--accent-soft-strong)] bg-bg-elevated p-3.5">
+      <div className="mb-2.5 flex items-baseline justify-between">
+        <span className="font-serif text-[14px] italic text-accent">
+          Redigér {supplement.name}
+        </span>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="cursor-pointer text-[11px] text-light hover:text-ink"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="space-y-2">
+        <div>
+          <label className="mb-1 block text-[12px] text-mid">Navn</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="!rounded-[8px] !border-hair !bg-bg-subtle !py-1.5 text-[13px]"
+          />
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="mb-1 block text-[12px] text-mid">
+              Standard-dosis
+            </label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={doseInput}
+              onChange={(e) => setDoseInput(e.target.value)}
+              placeholder="12"
+              className="!w-20 !rounded-[8px] !border-hair !bg-bg-subtle !py-1.5 text-[13px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[12px] text-mid">Enhed</label>
+            <input
+              type="text"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="mg / g / μg"
+              className="!w-24 !rounded-[8px] !border-hair !bg-bg-subtle !py-1.5 text-[13px]"
+            />
+          </div>
+          <div className="min-w-[140px] flex-1">
+            <label className="mb-1 block text-[12px] text-mid">Tidspunkt</label>
+            <select
+              value={timeOfDay}
+              onChange={(e) => setTimeOfDay(e.target.value as TimeOfDay | "")}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !py-1.5 text-[13px]"
+            >
+              <option value="">— (intet)</option>
+              <option value="morning">Morgen</option>
+              <option value="midday">Middag</option>
+              <option value="evening">Aften</option>
+              <option value="night">Nat</option>
+            </select>
+          </div>
+        </div>
+        <p className="text-[11px] italic text-light">
+          Standard-dosen er også dosis-målet for en evt. plan på tilskuddet.
+          Tidligere loggede indtag ændres ikke.
+        </p>
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={submit}
+            disabled={pending}
+            className="cursor-pointer rounded-[8px] bg-accent px-3.5 py-1.5 text-[12px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+          >
+            {pending ? "Gemmer…" : "Gem"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="cursor-pointer rounded-[8px] px-3 py-1.5 text-[12px] text-mid hover:text-ink disabled:opacity-50"
+          >
+            Annullér
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
