@@ -6,10 +6,12 @@ import { getActiveUser } from "../active-user";
 import { errorContent, jsonContent } from "../format";
 import {
   hasIntakeWithName,
+  nutritionPlanDone,
   occursOn,
   scheduleLabel,
   sumSupplementDoseByNameX100,
 } from "../../lib/plan";
+import { dayKcal } from "../../lib/kcal";
 
 // Planlæggeren: tilbagevendende planer for projekter, kosttilskud, træning,
 // ernærings-mål og måltider. Vises som "Dagens plan" på /today.
@@ -54,10 +56,15 @@ function shapeItem(
     doseTarget: row.doseTargetX100 === null ? null : row.doseTargetX100 / 100,
     doseUnit: row.doseUnit,
     kcalTarget: row.kcalTarget,
+    kcalMax: row.kcalMax,
     carbsTargetG: row.carbsTargetG,
+    carbsMaxG: row.carbsMaxG,
     proteinTargetG: row.proteinTargetG,
+    proteinMaxG: row.proteinMaxG,
     fatTargetG: row.fatTargetG,
+    fatMaxG: row.fatMaxG,
     fiberTargetG: row.fiberTargetG,
+    fiberMaxG: row.fiberMaxG,
     paused: row.paused,
   };
 }
@@ -93,7 +100,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Hent dagens plan",
       description:
-        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte.",
+        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/open. Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte. Ernærings-mål er INTERVALLER per felt (kcalTarget=minimum, kcalMax=loft osv.) — done når alle satte grænser er overholdt af dagens loggede værdier.",
       inputSchema: {
         date: z
           .string()
@@ -209,6 +216,43 @@ export function registerPlanTools(server: McpServer) {
               (minutesActual ?? 0) >= i.minutesPlanned
             ) {
               status = "done";
+            } else if (i.kind === "nutrition") {
+              // Interval-mål: done når alle satte grænser er overholdt —
+              // samme regel som /today (se nutritionPlanDone).
+              const dayK = dayKcal({
+                carbsG: entry?.carbsG ?? null,
+                proteinG: entry?.proteinG ?? null,
+                fatG: entry?.fatG ?? null,
+                fiberG: entry?.fiberG ?? null,
+                alcoholUnits: entry?.alcoholUnits ?? null,
+              });
+              if (
+                nutritionPlanDone([
+                  { actual: dayK.totalKcal, min: i.kcalTarget, max: i.kcalMax },
+                  {
+                    actual: entry?.carbsG ?? null,
+                    min: i.carbsTargetG,
+                    max: i.carbsMaxG,
+                  },
+                  {
+                    actual: entry?.proteinG ?? null,
+                    min: i.proteinTargetG,
+                    max: i.proteinMaxG,
+                  },
+                  {
+                    actual: entry?.fatG ?? null,
+                    min: i.fatTargetG,
+                    max: i.fatMaxG,
+                  },
+                  {
+                    actual: entry?.fiberG ?? null,
+                    min: i.fiberTargetG,
+                    max: i.fiberMaxG,
+                  },
+                ])
+              ) {
+                status = "done";
+              }
             }
           }
           return {
@@ -251,7 +295,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Opret/opdatér plan",
       description:
-        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver label = tilskuddets NAVN — planer bindes via navnet, alle indtag med navnet tæller; sæt evt. doseTarget+doseUnit som dagens mål), 'training' (evt. workoutTemplateId eller label), 'nutrition' (kcal/makro-mål for dagen), 'meal' (label påkrævet). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke) eller 'monthly' (anchorDates dag-i-måneden). anchorDate udeladt = i dag.",
+        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver label = tilskuddets NAVN — planer bindes via navnet, alle indtag med navnet tæller; sæt evt. doseTarget+doseUnit som dagens mål), 'training' (evt. workoutTemplateId eller label), 'nutrition' (interval-mål for dagen: *Target = minimum, *Max = loft — kun minimum = 'mindst X', kun loft = 'højst X', begge = interval, fx kcalTarget 2000 + kcalMax 2100), 'meal' (label påkrævet). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke) eller 'monthly' (anchorDates dag-i-måneden). anchorDate udeladt = i dag.",
       inputSchema: {
         id: z.number().int().optional(),
         kind: z.enum(schema.PLAN_KINDS),
@@ -290,11 +334,30 @@ export function registerPlanTools(server: McpServer) {
           .nullable()
           .default(null)
           .describe("supplement: enhed for dosis-målet, fx 'g' eller 'mg'."),
-        kcalTarget: z.number().int().min(0).max(10_000).nullable().default(null),
+        kcalTarget: z
+          .number()
+          .int()
+          .min(0)
+          .max(10_000)
+          .nullable()
+          .default(null)
+          .describe("nutrition: minimum kcal ('mindst')."),
+        kcalMax: z
+          .number()
+          .int()
+          .min(0)
+          .max(10_000)
+          .nullable()
+          .default(null)
+          .describe("nutrition: maksimum kcal ('højst')."),
         carbsTargetG: z.number().int().min(0).max(2000).nullable().default(null),
+        carbsMaxG: z.number().int().min(0).max(2000).nullable().default(null),
         proteinTargetG: z.number().int().min(0).max(1000).nullable().default(null),
+        proteinMaxG: z.number().int().min(0).max(1000).nullable().default(null),
         fatTargetG: z.number().int().min(0).max(1000).nullable().default(null),
+        fatMaxG: z.number().int().min(0).max(1000).nullable().default(null),
         fiberTargetG: z.number().int().min(0).max(200).nullable().default(null),
+        fiberMaxG: z.number().int().min(0).max(200).nullable().default(null),
         paused: z.boolean().default(false),
       },
     },
@@ -310,6 +373,20 @@ export function registerPlanTools(server: McpServer) {
         return errorContent(
           "kind 'supplement' kræver label (tilskuddets navn — planer bindes via navnet)",
         );
+      }
+      const rangePairs: [number | null, number | null][] = [
+        [input.kcalTarget, input.kcalMax],
+        [input.carbsTargetG, input.carbsMaxG],
+        [input.proteinTargetG, input.proteinMaxG],
+        [input.fatTargetG, input.fatMaxG],
+        [input.fiberTargetG, input.fiberMaxG],
+      ];
+      if (
+        rangePairs.some(
+          ([min, max]) => min !== null && max !== null && max < min,
+        )
+      ) {
+        return errorContent("Maksimum (*Max) skal være mindst lig minimum");
       }
       const now = new Date().toISOString();
       const values = {
@@ -338,11 +415,16 @@ export function registerPlanTools(server: McpServer) {
             ? input.doseUnit?.trim() || null
             : null,
         kcalTarget: input.kind === "nutrition" ? input.kcalTarget : null,
+        kcalMax: input.kind === "nutrition" ? input.kcalMax : null,
         carbsTargetG: input.kind === "nutrition" ? input.carbsTargetG : null,
+        carbsMaxG: input.kind === "nutrition" ? input.carbsMaxG : null,
         proteinTargetG:
           input.kind === "nutrition" ? input.proteinTargetG : null,
+        proteinMaxG: input.kind === "nutrition" ? input.proteinMaxG : null,
         fatTargetG: input.kind === "nutrition" ? input.fatTargetG : null,
+        fatMaxG: input.kind === "nutrition" ? input.fatMaxG : null,
         fiberTargetG: input.kind === "nutrition" ? input.fiberTargetG : null,
+        fiberMaxG: input.kind === "nutrition" ? input.fiberMaxG : null,
         paused: input.paused,
         updatedAt: now,
       };

@@ -35,13 +35,32 @@ const planItemSchema = z
       .nullable()
       .default(null),
     doseUnit: z.string().max(20).nullable().default(null),
+    // Ernærings-mål som intervaller: *Target = minimum, *Max = loft.
     kcalTarget: z.number().int().min(0).max(10_000).nullable().default(null),
+    kcalMax: z.number().int().min(0).max(10_000).nullable().default(null),
     carbsTargetG: z.number().int().min(0).max(2000).nullable().default(null),
+    carbsMaxG: z.number().int().min(0).max(2000).nullable().default(null),
     proteinTargetG: z.number().int().min(0).max(1000).nullable().default(null),
+    proteinMaxG: z.number().int().min(0).max(1000).nullable().default(null),
     fatTargetG: z.number().int().min(0).max(1000).nullable().default(null),
+    fatMaxG: z.number().int().min(0).max(1000).nullable().default(null),
     fiberTargetG: z.number().int().min(0).max(200).nullable().default(null),
+    fiberMaxG: z.number().int().min(0).max(200).nullable().default(null),
   })
   .superRefine((v, ctx) => {
+    const pairs: [number | null, number | null][] = [
+      [v.kcalTarget, v.kcalMax],
+      [v.carbsTargetG, v.carbsMaxG],
+      [v.proteinTargetG, v.proteinMaxG],
+      [v.fatTargetG, v.fatMaxG],
+      [v.fiberTargetG, v.fiberMaxG],
+    ];
+    if (pairs.some(([min, max]) => min !== null && max !== null && max < min)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Maksimum skal være mindst lig minimum",
+      });
+    }
     if (v.scheduleType === "weekdays" && !v.weekdays) {
       ctx.addIssue({ code: "custom", message: "Vælg mindst én ugedag" });
     }
@@ -93,10 +112,15 @@ export async function upsertPlanItem(input: PlanItemInput) {
     doseTargetX100: d.kind === "supplement" ? d.doseTargetX100 : null,
     doseUnit: d.kind === "supplement" ? d.doseUnit?.trim() || null : null,
     kcalTarget: d.kind === "nutrition" ? d.kcalTarget : null,
+    kcalMax: d.kind === "nutrition" ? d.kcalMax : null,
     carbsTargetG: d.kind === "nutrition" ? d.carbsTargetG : null,
+    carbsMaxG: d.kind === "nutrition" ? d.carbsMaxG : null,
     proteinTargetG: d.kind === "nutrition" ? d.proteinTargetG : null,
+    proteinMaxG: d.kind === "nutrition" ? d.proteinMaxG : null,
     fatTargetG: d.kind === "nutrition" ? d.fatTargetG : null,
+    fatMaxG: d.kind === "nutrition" ? d.fatMaxG : null,
     fiberTargetG: d.kind === "nutrition" ? d.fiberTargetG : null,
+    fiberMaxG: d.kind === "nutrition" ? d.fiberMaxG : null,
     updatedAt: now,
   };
 

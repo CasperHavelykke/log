@@ -20,8 +20,10 @@ import {
   unmarkPlanItem,
 } from "./plan-actions";
 import { logSupplementIntake } from "./supplement-actions";
-import { fmtDoseX100 } from "@/lib/plan";
+import { fmtDoseX100, nutritionRangeSatisfied } from "@/lib/plan";
 import type { PlanKind } from "@/db/schema";
+
+export type NutritionRange = { min: number | null; max: number | null };
 
 // Én post på Dagens plan — beregnet server-side i today/page.tsx.
 export type TodayPlanEntry = {
@@ -42,12 +44,13 @@ export type TodayPlanEntry = {
   workoutTemplateId: number | null;
   minutesPlanned: number | null;
   minutesActual: number | null;
+  // Ernærings-mål som intervaller: min = "mindst", max = "højst".
   targets: {
-    kcal: number | null;
-    carbs: number | null;
-    protein: number | null;
-    fat: number | null;
-    fiber: number | null;
+    kcal: NutritionRange;
+    carbs: NutritionRange;
+    protein: NutritionRange;
+    fat: NutritionRange;
+    fiber: NutritionRange;
   } | null;
   actuals: {
     kcal: number | null;
@@ -65,6 +68,81 @@ const KIND_ICON: Record<PlanKind, typeof Pill> = {
   nutrition: Apple,
   meal: UtensilsCrossed,
 };
+
+// Interval-bjælker per makro: målzonen (min–maks) er et bånd på en tynd
+// bjælke, dagens værdi en prik — så man med ét blik ser om man er under,
+// i eller over zonen. Farve: grå = under minimum endnu, grøn = inden for,
+// rav = over maksimum.
+function NutritionBars({
+  targets,
+  actuals,
+}: {
+  targets: NonNullable<TodayPlanEntry["targets"]>;
+  actuals: TodayPlanEntry["actuals"];
+}) {
+  const fields: { key: keyof typeof targets; label: string }[] = [
+    { key: "kcal", label: "Kcal" },
+    { key: "protein", label: "Protein" },
+    { key: "carbs", label: "Kulhydrat" },
+    { key: "fat", label: "Fedt" },
+    { key: "fiber", label: "Fibre" },
+  ];
+  const rows = fields.flatMap(({ key, label }) => {
+    const { min, max } = targets[key];
+    if (min === null && max === null) return [];
+    const actual = actuals?.[key] ?? null;
+    const ok = nutritionRangeSatisfied(actual, min, max);
+    const over = max !== null && actual !== null && actual > max;
+    // Skala: 0 → lidt forbi det største af zone og værdi, så prikken
+    // aldrig klistrer i kanten.
+    const scaleEnd =
+      Math.max(min ?? 0, max ?? 0, actual ?? 0, 1) * 1.15;
+    const pct = (v: number) => Math.min(100, Math.max(0, (v / scaleEnd) * 100));
+    return [
+      {
+        key,
+        label,
+        rangeText:
+          min !== null && max !== null
+            ? `${min}–${max}`
+            : min !== null
+              ? `≥${min}`
+              : `≤${max}`,
+        actual,
+        zoneLeft: pct(min ?? 0),
+        zoneWidth: pct(max ?? scaleEnd) - pct(min ?? 0),
+        dotLeft: pct(actual ?? 0),
+        textClass: over ? "text-warning" : ok ? "text-success" : "text-mid",
+        dotClass: over ? "bg-warning" : ok ? "bg-success" : "bg-dim",
+      },
+    ];
+  });
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-1.5 grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+      {rows.map((r) => (
+        <div key={r.key} className={r.key === "kcal" ? "sm:col-span-2" : ""}>
+          <div className="flex items-baseline justify-between gap-2 text-[11px]">
+            <span className="text-light">{r.label}</span>
+            <span className={`tabular-nums ${r.textClass}`}>
+              {r.actual ?? 0} / {r.rangeText}
+            </span>
+          </div>
+          <div className="relative mt-1 h-1.5 rounded-full bg-bg">
+            <div
+              className="absolute inset-y-0 rounded-full bg-hair-strong"
+              style={{ left: `${r.zoneLeft}%`, width: `${r.zoneWidth}%` }}
+            />
+            <div
+              className={`absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${r.dotClass}`}
+              style={{ left: `${r.dotLeft}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function fmtMinutes(min: number): string {
   const h = Math.floor(min / 60);
@@ -163,7 +241,9 @@ export function TodayPlanCard({
           return (
             <li
               key={e.id}
-              className={`flex items-center gap-2.5 rounded-[8px] px-2.5 py-2 ${
+              className={`flex gap-2.5 rounded-[8px] px-2.5 py-2 ${
+                e.kind === "nutrition" ? "items-start" : "items-center"
+              } ${
                 e.state === "skipped"
                   ? "opacity-45"
                   : e.state === "done"
@@ -171,14 +251,15 @@ export function TodayPlanCard({
                     : "bg-bg-subtle"
               }`}
             >
-              {/* Status/handling */}
-              {isInfo ? (
-                <span className="inline-flex size-9 shrink-0 items-center justify-center text-light sm:size-7">
-                  <Icon className="size-4" />
-                </span>
-              ) : e.state === "done" ? (
+              {/* Status/handling — også ernæring viser kryds når alle mål
+                  er inden for grænserne (auto-beregnet server-side). */}
+              {e.state === "done" ? (
                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--success-soft)] text-success sm:size-7">
                   <Check className="size-4" strokeWidth={2.5} />
+                </span>
+              ) : isInfo ? (
+                <span className="inline-flex size-9 shrink-0 items-center justify-center text-light sm:size-7">
+                  <Icon className="size-4" />
                 </span>
               ) : autoChecked ? (
                 <span className="inline-flex size-9 shrink-0 items-center justify-center text-dim sm:size-7">
@@ -241,33 +322,13 @@ export function TodayPlanCard({
                       {fmtMinutes(e.minutesPlanned)}
                     </span>
                   )}
-                  {e.kind === "nutrition" && e.targets && (
-                    <span>
-                      {[
-                        e.targets.kcal !== null
-                          ? `${e.actuals?.kcal ?? 0}/${e.targets.kcal} kcal`
-                          : null,
-                        e.targets.protein !== null
-                          ? `${e.actuals?.protein ?? 0}/${e.targets.protein}P`
-                          : null,
-                        e.targets.carbs !== null
-                          ? `${e.actuals?.carbs ?? 0}/${e.targets.carbs}K`
-                          : null,
-                        e.targets.fat !== null
-                          ? `${e.actuals?.fat ?? 0}/${e.targets.fat}F`
-                          : null,
-                        e.targets.fiber !== null
-                          ? `${e.actuals?.fiber ?? 0}/${e.targets.fiber} fibre`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  )}
                 </div>
+                {e.kind === "nutrition" && e.targets && (
+                  <NutritionBars targets={e.targets} actuals={e.actuals} />
+                )}
               </div>
 
-              {/* Skip / fortryd */}
+              {/* Skip / fortryd — ernæring har ingen handlinger */}
               {e.state === "skipped" ? (
                 <button
                   type="button"

@@ -87,17 +87,26 @@ export function PlanDialog({
   const [templateId, setTemplateId] = useState<number | null>(
     existing?.workoutTemplateId ?? null,
   );
-  const [kcal, setKcal] = useState<number | null>(existing?.kcalTarget ?? null);
-  const [carbs, setCarbs] = useState<number | null>(
-    existing?.carbsTargetG ?? null,
-  );
-  const [protein, setProtein] = useState<number | null>(
-    existing?.proteinTargetG ?? null,
-  );
-  const [fat, setFat] = useState<number | null>(existing?.fatTargetG ?? null);
-  const [fiber, setFiber] = useState<number | null>(
-    existing?.fiberTargetG ?? null,
-  );
+  // Ernærings-mål som intervaller: min = "mindst", max = "højst", begge =
+  // interval. Felter uden grænser tæller ikke med i auto-afkrydsningen.
+  const [targets, setTargets] = useState<
+    Record<NutritionField, { min: number | null; max: number | null }>
+  >(() => ({
+    kcal: { min: existing?.kcalTarget ?? null, max: existing?.kcalMax ?? null },
+    carbs: {
+      min: existing?.carbsTargetG ?? null,
+      max: existing?.carbsMaxG ?? null,
+    },
+    protein: {
+      min: existing?.proteinTargetG ?? null,
+      max: existing?.proteinMaxG ?? null,
+    },
+    fat: { min: existing?.fatTargetG ?? null, max: existing?.fatMaxG ?? null },
+    fiber: {
+      min: existing?.fiberTargetG ?? null,
+      max: existing?.fiberMaxG ?? null,
+    },
+  }));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -134,6 +143,15 @@ export function PlanDialog({
       }
       doseTargetX100 = Math.round(n * 100);
     }
+    if (
+      showNutritionTargets &&
+      Object.values(targets).some(
+        (t) => t.min !== null && t.max !== null && t.max < t.min,
+      )
+    ) {
+      setError("'Højst' skal være mindst lig 'mindst'");
+      return;
+    }
     const input: PlanItemInput = {
       id: existing?.id,
       kind,
@@ -152,11 +170,16 @@ export function PlanDialog({
       minutesPlanned: minutes,
       doseTargetX100,
       doseUnit: doseUnit.trim() || null,
-      kcalTarget: kcal,
-      carbsTargetG: carbs,
-      proteinTargetG: protein,
-      fatTargetG: fat,
-      fiberTargetG: fiber,
+      kcalTarget: targets.kcal.min,
+      kcalMax: targets.kcal.max,
+      carbsTargetG: targets.carbs.min,
+      carbsMaxG: targets.carbs.max,
+      proteinTargetG: targets.protein.min,
+      proteinMaxG: targets.protein.max,
+      fatTargetG: targets.fat.min,
+      fatMaxG: targets.fat.max,
+      fiberTargetG: targets.fiber.min,
+      fiberMaxG: targets.fiber.max,
     };
     start(async () => {
       const res = await upsertPlanItem(input);
@@ -450,13 +473,18 @@ export function PlanDialog({
         {showNutritionTargets && (
           <div className="mt-4">
             <FieldLabel>Mål for dagen</FieldLabel>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <TargetInput label="Kcal" value={kcal} max={10_000} onChange={setKcal} />
-              <TargetInput label="Kulhydrat (g)" value={carbs} max={2000} onChange={setCarbs} />
-              <TargetInput label="+ Fibre (g)" value={fiber} max={200} onChange={setFiber} />
-              <TargetInput label="Protein (g)" value={protein} max={1000} onChange={setProtein} />
-              <TargetInput label="Fedt (g)" value={fat} max={1000} onChange={setFat} />
+            <div className="grid grid-cols-2 gap-3">
+              <RangeInput field="kcal" label="Kcal" cap={10_000} targets={targets} setTargets={setTargets} />
+              <RangeInput field="carbs" label="Kulhydrat (g)" cap={2000} targets={targets} setTargets={setTargets} />
+              <RangeInput field="fiber" label="+ Fibre (g)" cap={200} targets={targets} setTargets={setTargets} />
+              <RangeInput field="protein" label="Protein (g)" cap={1000} targets={targets} setTargets={setTargets} />
+              <RangeInput field="fat" label="Fedt (g)" cap={1000} targets={targets} setTargets={setTargets} />
             </div>
+            <p className="mt-2 text-[11px] italic text-light">
+              Kun &apos;mindst&apos; = gulv, kun &apos;højst&apos; = loft,
+              begge = interval. Krydses af når alle udfyldte mål er
+              overholdt — uanset tidspunkt på dagen.
+            </p>
           </div>
         )}
 
@@ -527,31 +555,59 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TargetInput({
+type NutritionField = "kcal" | "carbs" | "protein" | "fat" | "fiber";
+type NutritionTargets = Record<
+  NutritionField,
+  { min: number | null; max: number | null }
+>;
+
+// Ét interval-felt: to inputs (mindst/højst) — begge valgfrie.
+function RangeInput({
+  field,
   label,
-  value,
-  max,
-  onChange,
+  cap,
+  targets,
+  setTargets,
 }: {
+  field: NutritionField;
   label: string;
-  value: number | null;
-  max: number;
-  onChange: (n: number | null) => void;
+  cap: number;
+  targets: NutritionTargets;
+  setTargets: React.Dispatch<React.SetStateAction<NutritionTargets>>;
 }) {
+  const t = targets[field];
+  function set(bound: "min" | "max", raw: string) {
+    const digits = raw.replace(/\D/g, "");
+    const n = digits === "" ? null : Math.min(cap, Number(digits));
+    setTargets((prev) => ({
+      ...prev,
+      [field]: { ...prev[field], [bound]: n },
+    }));
+  }
   return (
     <div>
       <FieldLabel>{label}</FieldLabel>
-      <input
-        type="text"
-        inputMode="numeric"
-        value={value === null ? "" : String(value)}
-        onChange={(e) => {
-          const t = e.target.value.replace(/\D/g, "");
-          onChange(t === "" ? null : Math.min(max, Number(t)));
-        }}
-        placeholder="—"
-        className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
-      />
+      <div className="flex items-center gap-1.5">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={t.min === null ? "" : String(t.min)}
+          onChange={(e) => set("min", e.target.value)}
+          placeholder="mindst"
+          aria-label={`${label} — mindst`}
+          className="!min-w-0 !rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+        />
+        <span className="shrink-0 text-[12px] text-light">–</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={t.max === null ? "" : String(t.max)}
+          onChange={(e) => set("max", e.target.value)}
+          placeholder="højst"
+          aria-label={`${label} — højst`}
+          className="!min-w-0 !rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+        />
+      </div>
     </div>
   );
 }

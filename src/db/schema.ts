@@ -758,11 +758,19 @@ export const planItems = sqliteTable(
     doseTargetX100: integer("dose_target_x100"),
     doseUnit: text("dose_unit"),
     // nutrition-kind: mål for dagen (samme enheder som day_entries).
+    // Hvert felt er et interval: *Target = minimum, *Max = loft — begge
+    // valgfrie. Kun min = "mindst X" (gulv), kun max = "højst X" (loft),
+    // begge = interval. Auto-kryds når alle satte grænser er overholdt.
     kcalTarget: integer("kcal_target"),
+    kcalMax: integer("kcal_max"),
     carbsTargetG: integer("carbs_target_g"),
+    carbsMaxG: integer("carbs_max_g"),
     proteinTargetG: integer("protein_target_g"),
+    proteinMaxG: integer("protein_max_g"),
     fatTargetG: integer("fat_target_g"),
+    fatMaxG: integer("fat_max_g"),
     fiberTargetG: integer("fiber_target_g"),
+    fiberMaxG: integer("fiber_max_g"),
     paused: integer("paused", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at")

@@ -260,6 +260,13 @@
       "when": 1789294303372,
       "tag": "0036_careful_lady_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1789315988234,
+      "tag": "0037_nutrition_ranges",
+      "breakpoints": true
     }
   ]
 }

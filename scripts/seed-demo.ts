@@ -361,7 +361,9 @@ async function main() {
       scheduleType: "interval",
       intervalDays: 1,
       anchorDate: isoDaysAgo(30),
-      kcalTarget: 2200,
+      // Interval-mål: kcal 2000–2400, protein mindst 150, fibre mindst 30.
+      kcalTarget: 2000,
+      kcalMax: 2400,
       proteinTargetG: 150,
       fiberTargetG: 30,
       sortOrder: 5,

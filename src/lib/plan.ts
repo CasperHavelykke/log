@@ -26,10 +26,15 @@ export type PlanItemData = {
   doseTargetX100: number | null;
   doseUnit: string | null;
   kcalTarget: number | null;
+  kcalMax: number | null;
   carbsTargetG: number | null;
+  carbsMaxG: number | null;
   proteinTargetG: number | null;
+  proteinMaxG: number | null;
   fatTargetG: number | null;
+  fatMaxG: number | null;
   fiberTargetG: number | null;
+  fiberMaxG: number | null;
   paused: boolean;
 };
 
@@ -50,12 +55,48 @@ export function toPlanItemData(row: PlanItem): PlanItemData {
     doseTargetX100: row.doseTargetX100,
     doseUnit: row.doseUnit,
     kcalTarget: row.kcalTarget,
+    kcalMax: row.kcalMax,
     carbsTargetG: row.carbsTargetG,
+    carbsMaxG: row.carbsMaxG,
     proteinTargetG: row.proteinTargetG,
+    proteinMaxG: row.proteinMaxG,
     fatTargetG: row.fatTargetG,
+    fatMaxG: row.fatMaxG,
     fiberTargetG: row.fiberTargetG,
+    fiberMaxG: row.fiberMaxG,
     paused: row.paused,
   };
+}
+
+// Ernærings-mål er intervaller: min ("mindst"), max ("højst") eller begge —
+// felter uden grænser tæller ikke med. null = feltet er ubundet; false =
+// uden for grænserne (intet logget tæller som ikke opfyldt); true = inden for.
+export function nutritionRangeSatisfied(
+  actual: number | null,
+  min: number | null,
+  max: number | null,
+): boolean | null {
+  if (min === null && max === null) return null;
+  if (actual === null) return false;
+  if (min !== null && actual < min) return false;
+  if (max !== null && actual > max) return false;
+  return true;
+}
+
+// Auto-kryds for en ernærings-plan: ALLE felter med grænser skal være inden
+// for dem (mindst ét felt skal have grænser — en tom plan krydses aldrig).
+// Tidspunkt på dagen er ligegyldigt: nogle faster og slutter dagen tidligt.
+export function nutritionPlanDone(
+  fields: { actual: number | null; min: number | null; max: number | null }[],
+): boolean {
+  let anyBound = false;
+  for (const f of fields) {
+    const s = nutritionRangeSatisfied(f.actual, f.min, f.max);
+    if (s === null) continue;
+    anyBound = true;
+    if (!s) return false;
+  }
+  return anyBound;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

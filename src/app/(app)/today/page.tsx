@@ -24,6 +24,7 @@ import {
 import { TodayPage } from "./today-form";
 import {
   hasIntakeWithName,
+  nutritionPlanDone,
   occursOn,
   sumSupplementDoseByNameX100,
   toPlanItemData,
@@ -241,6 +242,28 @@ export default async function Today() {
             )
           : null;
 
+      // Ernærings-mål er intervaller (min/max per felt) — deles med kortet.
+      const nutritionTargets: TodayPlanEntry["targets"] =
+        i.kind === "nutrition"
+          ? {
+              kcal: { min: i.kcalTarget, max: i.kcalMax },
+              carbs: { min: i.carbsTargetG, max: i.carbsMaxG },
+              protein: { min: i.proteinTargetG, max: i.proteinMaxG },
+              fat: { min: i.fatTargetG, max: i.fatMaxG },
+              fiber: { min: i.fiberTargetG, max: i.fiberMaxG },
+            }
+          : null;
+      const nutritionActuals: TodayPlanEntry["actuals"] =
+        i.kind === "nutrition"
+          ? {
+              kcal: dayK.totalKcal,
+              carbs: entry?.carbsG ?? null,
+              protein: entry?.proteinG ?? null,
+              fat: entry?.fatG ?? null,
+              fiber: entry?.fiberG ?? null,
+            }
+          : null;
+
       const mark = marksByItem.get(i.id);
       let state: TodayPlanEntry["state"] =
         mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
@@ -266,6 +289,23 @@ export default async function Today() {
           (minutesActual ?? 0) >= i.minutesPlanned
         ) {
           state = "done";
+        } else if (
+          i.kind === "nutrition" &&
+          nutritionTargets !== null &&
+          nutritionActuals !== null &&
+          // Auto-kryds når alle satte grænser er overholdt — tidspunkt på
+          // dagen er ligegyldigt (nogle faster og slutter dagen tidligt).
+          nutritionPlanDone(
+            (
+              ["kcal", "carbs", "protein", "fat", "fiber"] as const
+            ).map((k) => ({
+              actual: nutritionActuals[k],
+              min: nutritionTargets[k].min,
+              max: nutritionTargets[k].max,
+            })),
+          )
+        ) {
+          state = "done";
         }
       }
 
@@ -281,26 +321,8 @@ export default async function Today() {
         workoutTemplateId: i.workoutTemplateId,
         minutesPlanned: i.minutesPlanned,
         minutesActual,
-        targets:
-          i.kind === "nutrition"
-            ? {
-                kcal: i.kcalTarget,
-                carbs: i.carbsTargetG,
-                protein: i.proteinTargetG,
-                fat: i.fatTargetG,
-                fiber: i.fiberTargetG,
-              }
-            : null,
-        actuals:
-          i.kind === "nutrition"
-            ? {
-                kcal: dayK.totalKcal,
-                carbs: entry?.carbsG ?? null,
-                protein: entry?.proteinG ?? null,
-                fat: entry?.fatG ?? null,
-                fiber: entry?.fiberG ?? null,
-              }
-            : null,
+        targets: nutritionTargets,
+        actuals: nutritionActuals,
       };
     });
 
