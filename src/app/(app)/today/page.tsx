@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
 import { db, schema } from "@/db";
 import {
@@ -13,7 +13,7 @@ import {
   getTimeEntriesInRange,
   getEffectiveWeekGoal,
 } from "@/lib/queries";
-import { mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
+import { addDaysIso, mondayOf, todayIsoDate, toIsoDate } from "@/lib/date";
 import { listDocuments } from "../documents/actions";
 import { listTrackersWithPhotoStats } from "../health/trackere/actions";
 import { getActiveJobSearchPeriod } from "../jobs/period-actions";
@@ -141,6 +141,10 @@ export default async function Today() {
     }));
 
   // --- Dagens plan ----------------------------------------------------------
+  // Marks hentes også for i går: en 'postpone' i går betyder at posten
+  // vises i dag som tilflyttet forekomst (ugedags-/månedsplaner — interval
+  // forekommer naturligt via det rykkede anker).
+  const prevDate = addDaysIso(date, -1);
   const [planItemsRows, planMarksRows, workoutsToday, allTemplates] =
     await Promise.all([
       db
@@ -153,7 +157,7 @@ export default async function Today() {
         .where(
           and(
             eq(schema.planMarks.userId, user.id),
-            eq(schema.planMarks.date, date),
+            inArray(schema.planMarks.date, [prevDate, date]),
           ),
         ),
       (user.trainingEnabled ?? false)
@@ -173,7 +177,14 @@ export default async function Today() {
         .where(eq(schema.workoutTemplates.userId, user.id)),
     ]);
 
-  const marksByItem = new Map(planMarksRows.map((m) => [m.planItemId, m.kind]));
+  const marksByItem = new Map(
+    planMarksRows.filter((m) => m.date === date).map((m) => [m.planItemId, m.kind]),
+  );
+  const postponedYesterday = new Set(
+    planMarksRows
+      .filter((m) => m.date === prevDate && m.kind === "postpone")
+      .map((m) => m.planItemId),
+  );
   const projectsById = new Map(projects.map((p) => [p.id, p]));
   const templatesById = new Map(allTemplates.map((t) => [t.id, t]));
   const dayK = dayKcal({
@@ -192,7 +203,14 @@ export default async function Today() {
     nutrition: 4,
   };
   const planEntries: TodayPlanEntry[] = planItemsRows
-    .filter((i) => occursOn(i, date))
+    .filter(
+      (i) =>
+        occursOn(i, date) ||
+        // Udsat i dag: vis nedtonet "udskudt til i morgen".
+        marksByItem.get(i.id) === "postpone" ||
+        // Udsat i går: tilflyttet forekomst i dag.
+        (!i.paused && postponedYesterday.has(i.id)),
+    )
     .sort(
       (a, b) =>
         (kindOrder[a.kind] ?? 9) - (kindOrder[b.kind] ?? 9) ||
@@ -266,7 +284,13 @@ export default async function Today() {
 
       const mark = marksByItem.get(i.id);
       let state: TodayPlanEntry["state"] =
-        mark === "skip" ? "skipped" : mark === "done" ? "done" : "open";
+        mark === "skip"
+          ? "skipped"
+          : mark === "postpone"
+            ? "postponed"
+            : mark === "done"
+              ? "done"
+              : "open";
       if (state === "open") {
         if (i.kind === "supplement") {
           // Med dosis-mål: klaret først når summen når målet.

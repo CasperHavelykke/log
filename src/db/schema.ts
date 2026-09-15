@@ -783,8 +783,11 @@ export const planItems = sqliteTable(
   (t) => [index("plan_items_user").on(t.userId)],
 );
 
-// Per-dag markeringer: 'done' (manuel afkrydsning, fx måltider) og 'skip'
-// ("ikke i dag" — fjerner posten fra dagens kort uden at røre rytmen).
+// Per-dag markeringer: 'done' (manuel afkrydsning, fx måltider), 'skip'
+// ("ikke i dag" — fjerner posten fra dagens kort uden at røre rytmen) og
+// 'postpone' ("udsæt til i morgen" — posten vises i morgen i stedet; for
+// interval-planer rykkes ankeret samtidig, så rytmen fortsætter derfra,
+// mens ugedags-/månedsplaner blot får et engangs-ryk).
 export const planMarks = sqliteTable(
   "plan_marks",
   {

@@ -9,6 +9,12 @@ export function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+export function addDaysIso(isoDate: string, delta: number): string {
+  const d = new Date(`${isoDate}T00:00:00`);
+  d.setDate(d.getDate() + delta);
+  return toIsoDate(d);
+}
+
 export function mondayOf(date: Date): string {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const day = d.getDay();

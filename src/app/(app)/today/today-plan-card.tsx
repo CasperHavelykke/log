@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Apple,
   Check,
+  ChevronsRight,
   CircleDashed,
   Dumbbell,
   FolderKanban,
@@ -16,7 +17,9 @@ import {
 import {
   markPlanItem,
   markTrainedToday,
+  postponePlanItem,
   startPlannedWorkout,
+  undoPostponePlanItem,
   unmarkPlanItem,
 } from "./plan-actions";
 import { logSupplementIntake } from "./supplement-actions";
@@ -31,7 +34,7 @@ export type TodayPlanEntry = {
   kind: PlanKind;
   title: string;
   timeOfDay: string | null;
-  state: "open" | "done" | "skipped";
+  state: "open" | "done" | "skipped" | "postponed";
   // Navne-binding: tilskud logges og matches på navn, ikke chip-id.
   supplementName: string | null;
   doseText: string | null;
@@ -244,7 +247,7 @@ export function TodayPlanCard({
               className={`flex gap-2.5 rounded-[8px] px-2.5 py-2 ${
                 e.kind === "nutrition" ? "items-start" : "items-center"
               } ${
-                e.state === "skipped"
+                e.state === "skipped" || e.state === "postponed"
                   ? "opacity-45"
                   : e.state === "done"
                     ? "bg-bg-subtle/60"
@@ -269,7 +272,11 @@ export function TodayPlanCard({
                 <button
                   type="button"
                   onClick={() => onPrimary(e)}
-                  disabled={pending || e.state === "skipped"}
+                  disabled={
+                    pending ||
+                    e.state === "skipped" ||
+                    e.state === "postponed"
+                  }
                   title={
                     e.kind === "supplement"
                       ? e.doseProgress !== null && e.doseProgress.doneX100 > 0
@@ -306,6 +313,9 @@ export function TodayPlanCard({
                   )}
                 </div>
                 <div className="text-[11px] text-light">
+                  {e.state === "postponed" && (
+                    <span className="mr-1.5 italic">udskudt til i morgen</span>
+                  )}
                   {e.timeOfDay && <span>{e.timeOfDay}</span>}
                   {e.kind === "supplement" && e.doseProgress && (
                     <span>
@@ -328,13 +338,23 @@ export function TodayPlanCard({
                 )}
               </div>
 
-              {/* Skip / fortryd — ernæring har ingen handlinger */}
-              {e.state === "skipped" ? (
+              {/* Udsæt / skip / fortryd — ernæring har ingen handlinger */}
+              {e.state === "skipped" || e.state === "postponed" ? (
                 <button
                   type="button"
-                  onClick={() => run(e.id, () => unmarkPlanItem(e.id, date))}
+                  onClick={() =>
+                    run(e.id, () =>
+                      e.state === "postponed"
+                        ? undoPostponePlanItem(e.id, date)
+                        : unmarkPlanItem(e.id, date),
+                    )
+                  }
                   disabled={pending}
-                  title="Fortryd 'ikke i dag'"
+                  title={
+                    e.state === "postponed"
+                      ? "Fortryd udsættelsen"
+                      : "Fortryd 'ikke i dag'"
+                  }
                   className="inline-flex min-h-[36px] shrink-0 cursor-pointer items-center gap-1 rounded-[6px] px-2 text-[11px] text-dim hover:text-ink disabled:opacity-50"
                 >
                   <Undo2 className="size-3.5" />
@@ -343,15 +363,26 @@ export function TodayPlanCard({
               ) : (
                 e.state === "open" &&
                 !isInfo && (
-                  <button
-                    type="button"
-                    onClick={() => run(e.id, () => markPlanItem(e.id, date, "skip"))}
-                    disabled={pending}
-                    title="Ikke i dag (rører ikke rytmen)"
-                    className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[6px] text-dim hover:text-mid sm:size-7"
-                  >
-                    <X className="size-3.5" />
-                  </button>
+                  <div className="flex shrink-0 items-center">
+                    <button
+                      type="button"
+                      onClick={() => run(e.id, () => postponePlanItem(e.id, date))}
+                      disabled={pending}
+                      title="Udsæt til i morgen (interval-rytme fortsætter derfra)"
+                      className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[6px] text-dim hover:text-mid sm:size-7"
+                    >
+                      <ChevronsRight className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => run(e.id, () => markPlanItem(e.id, date, "skip"))}
+                      disabled={pending}
+                      title="Ikke i dag (rører ikke rytmen)"
+                      className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[6px] text-dim hover:text-mid sm:size-7"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
                 )
               )}
             </li>

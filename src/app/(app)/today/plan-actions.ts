@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
-import { todayIsoDate } from "@/lib/date";
+import { addDaysIso, todayIsoDate } from "@/lib/date";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -207,6 +207,93 @@ export async function markPlanItem(
     date,
     kind,
   });
+  revalidatePath("/today");
+  return { ok: true as const };
+}
+
+// Udsæt til i morgen: 'postpone'-mark på dagen flytter forekomsten til
+// dagen efter. For interval-planer rykkes ankeret samtidig, så rytmen
+// fortsætter fra den nye dag ("hver 3. dag" tæller fra i morgen);
+// ugedags- og månedsplaner får kun et engangs-ryk — deres rytme ligger
+// fast på ugedage/dag-i-måneden.
+export async function postponePlanItem(planItemId: number, date: string) {
+  const user = await requireUser();
+  if (!DATE_RE.test(date)) return { ok: false as const, error: "Ugyldig dato" };
+  const rows = await db
+    .select()
+    .from(schema.planItems)
+    .where(
+      and(
+        eq(schema.planItems.id, planItemId),
+        eq(schema.planItems.userId, user.id),
+      ),
+    )
+    .limit(1);
+  const item = rows[0];
+  if (!item) return { ok: false as const, error: "Planen findes ikke" };
+
+  await db
+    .delete(schema.planMarks)
+    .where(
+      and(
+        eq(schema.planMarks.planItemId, planItemId),
+        eq(schema.planMarks.date, date),
+      ),
+    );
+  await db.insert(schema.planMarks).values({
+    userId: user.id,
+    planItemId,
+    date,
+    kind: "postpone",
+  });
+  if (item.scheduleType === "interval") {
+    await db
+      .update(schema.planItems)
+      .set({
+        anchorDate: addDaysIso(date, 1),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.planItems.id, planItemId));
+  }
+  revalidatePath("/today");
+  return { ok: true as const };
+}
+
+// Fortryd en udsættelse: fjern marken og rul ankeret tilbage for
+// interval-planer (anker = dagen selv er rytme-ækvivalent med det gamle
+// anker, da dagen var en forekomst).
+export async function undoPostponePlanItem(planItemId: number, date: string) {
+  const user = await requireUser();
+  if (!DATE_RE.test(date)) return { ok: false as const, error: "Ugyldig dato" };
+  const rows = await db
+    .select()
+    .from(schema.planItems)
+    .where(
+      and(
+        eq(schema.planItems.id, planItemId),
+        eq(schema.planItems.userId, user.id),
+      ),
+    )
+    .limit(1);
+  const item = rows[0];
+  if (!item) return { ok: false as const, error: "Planen findes ikke" };
+
+  const deleted = await db
+    .delete(schema.planMarks)
+    .where(
+      and(
+        eq(schema.planMarks.planItemId, planItemId),
+        eq(schema.planMarks.date, date),
+        eq(schema.planMarks.kind, "postpone"),
+      ),
+    )
+    .returning();
+  if (deleted.length > 0 && item.scheduleType === "interval") {
+    await db
+      .update(schema.planItems)
+      .set({ anchorDate: date, updatedAt: new Date().toISOString() })
+      .where(eq(schema.planItems.id, planItemId));
+  }
   revalidatePath("/today");
   return { ok: true as const };
 }
