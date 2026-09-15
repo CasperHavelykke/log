@@ -281,6 +281,85 @@ export function registerSupplementTools(server: McpServer) {
   );
 
   server.registerTool(
+    "update_supplement_intake",
+    {
+      title: "Ret et tilskuds-indtag",
+      description:
+        "Retter et allerede logget indtag (fx en tastefejl: '12 mg' i stedet for '12 g', eller forkert dato). Find id'et med list_supplement_intakes. Kun medsendte felter ændres; null rydder feltet. Plan-afkrydsningen på /today følger automatisk med, da den beregnes af dagens indtag.",
+      inputSchema: {
+        id: z.number().int().describe("Indtagets id (fra list_supplement_intakes)."),
+        date: z
+          .string()
+          .regex(dateRegex)
+          .optional()
+          .describe("Flyt indtaget til en anden dato (YYYY-MM-DD)."),
+        doseAmount: z
+          .number()
+          .min(0)
+          .nullable()
+          .optional()
+          .describe("Ny dosis som decimaltal; null = ingen dosis."),
+        doseUnit: z.string().max(20).nullable().optional(),
+        timeOfDay: timeOfDayEnum.nullable().optional(),
+        note: z.string().max(2_000).nullable().optional(),
+      },
+    },
+    async ({ id, date, doseAmount, doseUnit, timeOfDay, note }) => {
+      const user = await getActiveUser();
+      const fields: Partial<typeof schema.supplementIntakes.$inferInsert> = {};
+      if (date !== undefined) fields.date = date;
+      if (doseAmount !== undefined) {
+        fields.doseAmountX100 =
+          doseAmount === null ? null : Math.round(doseAmount * 100);
+      }
+      if (doseUnit !== undefined) fields.doseUnit = doseUnit;
+      if (timeOfDay !== undefined) fields.timeOfDay = timeOfDay;
+      if (note !== undefined) fields.note = note;
+      if (Object.keys(fields).length === 0) {
+        return errorContent("Angiv mindst ét felt at rette.");
+      }
+      const updated = await db
+        .update(schema.supplementIntakes)
+        .set(fields)
+        .where(
+          and(
+            eq(schema.supplementIntakes.id, id),
+            eq(schema.supplementIntakes.userId, user.id),
+          ),
+        )
+        .returning();
+      if (!updated[0]) return errorContent("Indtaget findes ikke.");
+      return jsonContent(shapeIntake(updated[0]));
+    },
+  );
+
+  server.registerTool(
+    "delete_supplement_intake",
+    {
+      title: "Slet et tilskuds-indtag",
+      description:
+        "Sletter ét logget indtag permanent (fx et dobbelt-logget eller fejlagtigt indtag). Find id'et med list_supplement_intakes. Bekræft med brugeren først. Rører ikke biblioteket eller planerne — plan-afkrydsningen på /today følger automatisk med.",
+      inputSchema: {
+        id: z.number().int().describe("Indtagets id (fra list_supplement_intakes)."),
+      },
+    },
+    async ({ id }) => {
+      const user = await getActiveUser();
+      const deleted = await db
+        .delete(schema.supplementIntakes)
+        .where(
+          and(
+            eq(schema.supplementIntakes.id, id),
+            eq(schema.supplementIntakes.userId, user.id),
+          ),
+        )
+        .returning();
+      if (!deleted[0]) return errorContent("Indtaget findes ikke.");
+      return jsonContent({ ok: true, deleted: shapeIntake(deleted[0]) });
+    },
+  );
+
+  server.registerTool(
     "supplement_summary",
     {
       title: "Tilskuds-oversigt for sidste N dage",

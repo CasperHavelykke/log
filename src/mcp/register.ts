@@ -17,7 +17,7 @@ import { registerPlanTools } from "./tools/plan";
 
 export const MCP_SERVER_INFO = {
   name: "dagbog",
-  version: "0.11.0",
+  version: "0.12.0",
 } as const;
 
 export function registerAllTools(server: McpServer): void {
