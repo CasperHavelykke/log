@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { Nav } from "@/components/nav";
 import { MobileNav } from "@/components/mobile-nav";
+import { IdleBlur } from "@/components/idle-blur";
 import { isDemoMode } from "@/lib/demo";
 import { requireUser } from "@/lib/session";
 import { listJobSearchPeriods } from "./jobs/period-actions";
@@ -72,6 +73,7 @@ export default async function AppLayout({
       {drinkSession && (
         <FloatingCounterBanner totalUnits={drinkSession.totalUnits} />
       )}
+      <IdleBlur />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Briefcase, Check, Clock, Dumbbell, LogOut, Monitor, Moon, Plus, Sun, Trash2 } from "lucide-react";
+import { AlertTriangle, Briefcase, Check, Clock, Dumbbell, EyeOff, LogOut, Monitor, Moon, Plus, Sun, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import {
   createOAuthClient,
@@ -26,6 +26,11 @@ import {
   getAccountSummary,
   type AccountSummary,
 } from "./delete-account-actions";
+import {
+  IDLE_BLUR_EVENT,
+  IDLE_BLUR_KEY,
+  readIdleBlurMinutes,
+} from "@/components/idle-blur";
 
 type OAuthClientRow = {
   id: number;
@@ -285,6 +290,7 @@ function FeaturesCard({
           enabled={garminEnabled}
           onToggle={toggleGarmin}
         />
+        <IdleBlurSetting />
       </div>
 
       <p className="mt-3 text-[11px] italic text-dim">
@@ -292,6 +298,69 @@ function FeaturesCard({
         varemærker tilhørende Garmin Ltd. eller dets datterselskaber.
       </p>
     </Card>
+  );
+}
+
+// Privatlivs-slør efter inaktivitet — gemmes PER ENHED (localStorage),
+// så telefon og desktop kan have hver sin indstilling. IdleBlur-
+// komponenten i app-layoutet lytter på ændringen via window-event.
+const IDLE_BLUR_OPTIONS: { label: string; minutes: number | null }[] = [
+  { label: "Fra", minutes: null },
+  { label: "1 min", minutes: 1 },
+  { label: "5 min", minutes: 5 },
+  { label: "15 min", minutes: 15 },
+];
+
+function IdleBlurSetting() {
+  const [minutes, setMinutes] = useState<number | null>(null);
+
+  useEffect(() => {
+    setMinutes(readIdleBlurMinutes());
+  }, []);
+
+  function apply(n: number | null) {
+    setMinutes(n);
+    try {
+      if (n === null) localStorage.removeItem(IDLE_BLUR_KEY);
+      else localStorage.setItem(IDLE_BLUR_KEY, String(n));
+    } catch {
+      // localStorage kan være blokeret (privat vindue) — sløret er
+      // så bare slået fra.
+    }
+    window.dispatchEvent(new Event(IDLE_BLUR_EVENT));
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-[10px] bg-bg-subtle px-3 py-3 sm:px-4">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-[var(--accent-bg)] text-accent">
+        <EyeOff className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-medium text-ink">
+          Slør skærmen efter inaktivitet
+        </div>
+        <div className="text-[12px] text-mid">
+          Lægger et slør over appen når du ikke har rørt noget — klik
+          fjerner det. Gemmes kun på denne enhed.
+        </div>
+      </div>
+      <div className="inline-flex shrink-0 gap-0.5 rounded-[8px] bg-bg p-0.5">
+        {IDLE_BLUR_OPTIONS.map((o) => (
+          <button
+            key={o.label}
+            type="button"
+            onClick={() => apply(o.minutes)}
+            className={`min-h-[40px] cursor-pointer rounded-[6px] px-2.5 text-[12px] transition sm:min-h-0 sm:py-1.5 ${
+              minutes === o.minutes
+                ? "bg-accent font-medium text-white"
+                : "text-mid hover:text-ink"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
