@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import { todayIsoDate } from "@/lib/date";
+import { getEffectiveWeekGoal } from "@/lib/queries";
 
 const dayEntrySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -139,16 +140,28 @@ export async function setWeekGoal(input: z.infer<typeof weekGoalSchema>) {
     )
     .limit(1);
 
+  // Uge uden egen række viser ARVEDE talmål fra sidste uge — redigering
+  // af ét felt må ikke smide de andre væk. Ikke-redigerede felter seedes
+  // derfor fra det arvede, så det man ser på skærmen er det der gemmes.
+  // Tekst arver aldrig (som i getEffectiveWeekGoal).
+  const inherited = existing[0]
+    ? null
+    : await getEffectiveWeekGoal(user.id, weekStart);
+
   const merged = {
     text: text !== undefined ? text : existing[0]?.text ?? "",
     applicationsTarget:
       applicationsTarget !== undefined
         ? applicationsTarget
-        : existing[0]?.applicationsTarget ?? null,
+        : existing[0]?.applicationsTarget ??
+          inherited?.applicationsTarget ??
+          null,
     focusHoursTargetX10:
       focusHoursTargetX10 !== undefined
         ? focusHoursTargetX10
-        : existing[0]?.focusHoursTargetX10 ?? null,
+        : existing[0]?.focusHoursTargetX10 ??
+          inherited?.focusHoursTargetX10 ??
+          null,
   };
 
   const allEmpty =

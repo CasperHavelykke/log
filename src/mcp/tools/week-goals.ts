@@ -4,6 +4,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db, schema } from "../../db";
 import { getActiveUser } from "../active-user";
 import { jsonContent } from "../format";
+import { getEffectiveWeekGoal } from "../../lib/queries";
 
 function mondayOf(isoDate: string): string {
   const [y, m, d] = isoDate.split("-").map(Number);
@@ -69,7 +70,7 @@ export function registerWeekGoalTools(server: McpServer) {
     {
       title: "Sæt eller opdater ugemål",
       description:
-        "Skriver/opdaterer ugens mål. Felter du ikke angiver, bevares. Send tom streng eller null for at rydde et felt. Hvis alle tre felter er tomme, slettes målet.",
+        "Skriver/opdaterer ugens mål. Felter du ikke angiver, bevares — også talmål der er arvet fra sidste uge (de gemmes med, så de ikke forsvinder). Send tom streng eller null for at rydde et felt. Hvis alle tre felter er tomme, slettes målet.",
       inputSchema: {
         date: z
           .string()
@@ -112,15 +113,23 @@ export function registerWeekGoalTools(server: McpServer) {
         )
         .limit(1);
       const cur = existing[0];
+      // Uge uden egen række viser arvede talmål — ikke-angivne felter
+      // seedes fra det arvede, så en delvis opdatering ikke smider dem
+      // væk (samme regel som setWeekGoal i appen).
+      const inherited = cur
+        ? null
+        : await getEffectiveWeekGoal(user.id, weekStart);
 
       const nextText = text === undefined ? (cur?.text ?? "") : text;
       const nextApps =
         applicationsTarget === undefined
-          ? (cur?.applicationsTarget ?? null)
+          ? (cur?.applicationsTarget ?? inherited?.applicationsTarget ?? null)
           : applicationsTarget;
       const nextHoursX10 =
         focusHoursTarget === undefined
-          ? (cur?.focusHoursTargetX10 ?? null)
+          ? (cur?.focusHoursTargetX10 ??
+            inherited?.focusHoursTargetX10 ??
+            null)
           : focusHoursTarget === null
             ? null
             : Math.round(focusHoursTarget * 10);
