@@ -1,110 +1,137 @@
 # Loggen
 
-Personlig dashboard til daglige aktiviteter, projekter, jobansøgninger og
-helbred. Selvhostet på `loggen.app` — egen Ubuntu-server, egen SQLite-fil, egne
-disk-filer. Ingen tredjepart med teknisk adgang til data.
+A personal life dashboard — daily logging, health metrics, nutrition, training,
+job search tracking, recipes and planning — fully self-hosted on my own
+hardware, with an AI assistant wired in through MCP.
 
-> ## ⚠️ Repoet ligger på `F:\ikke-synkroniseret\`
->
-> Mappen ligger med vilje uden for cloud-sync. Lokalt arbejde er fint;
-> push sker til den private GitHub-remote der bruges som deploy-kanal til
-> hjem-serveren. Tilføj **aldrig** offentlige remotes eller fork repoet —
-> alt indhold er personligt.
+**Live demo:** [demo.loggen.app](https://demo.loggen.app) — fictional data,
+resets nightly. The UI is in Danish (it's a personal app for a Danish user);
+the code and this README are in English where it matters.
 
-## Stack
+> **Note on reuse:** This repository is public as a portfolio piece. There is
+> deliberately no open source license — all rights reserved. You're welcome to
+> read the code; please don't redeploy it.
 
-- Next.js 16 (App Router) + React 19 + TypeScript
-- SQLite via libSQL-driver, Drizzle ORM
-- Tailwind v4, Lucide-ikoner, DM Sans + EB Garamond
-- Auth.js m. magic-link (Resend)
-- OAuth 2.0 for MCP-clients
-- Recharts (statistik), Sharp (icon-gen), fflate (ZIP-backup)
-- Selvhostet på Ubuntu 26.04 + Caddy + Let's Encrypt + systemd
+## Why it exists
 
-## Sider
+Loggen stores health data, job applications and daily notes — the most
+personal data I have. The project started on Vercel + Turso and was then
+deliberately migrated to a single small machine in my apartment: one Ubuntu
+server, one SQLite file, files on local disk, TLS via Caddy. No third party
+has technical access to the data. That constraint shaped most of the
+architecture below.
 
-`/` dashboard, `/today` (I dag), `/jobs`, `/projects` (Projekter),
-`/health` (Helbred), `/statistik`, `/journal`, `/documents`,
-`/indstillinger`.
+## What it does
 
-## Lokal udvikling
+- **Daily log** (`/today`) — mood, energy, sleep, weight, macros (with
+  fiber handled per EU labelling rules), supplements, fasting, alcohol,
+  free-form notes. Everything autosaves; only changed fields are written, and
+  the form adopts server-side changes on focus so an AI writing via MCP and a
+  stale browser tab can't overwrite each other.
+- **Planner** — recurring plan items (projects, supplements, training,
+  nutrition targets, meals) with weekday sets, fixed-rhythm intervals
+  ("every N days") and monthly schedules. Occurrences are computed at read
+  time, never materialised. Nutrition targets are *ranges* (min/max per
+  macro) with automatic completion when the day lands inside every bound.
+- **Health** (`/health`) — calendar view over every metric, Garmin sleep
+  import (CSV), photo tracking, custom user-defined parameters.
+- **Training** — free-text workout sessions with a lenient parser
+  (exercises, sets×reps @ weight), templates, and per-exercise progression
+  charts (estimated 1RM via the Epley formula).
+- **Job search** (`/jobs`) — applications with status timeline, documents,
+  weekly goals that inherit from previous weeks, automatic "no response"
+  flagging after two months.
+- **Recipes** — with per-portion macros, portion scaling, and read-only
+  share links (CSPRNG tokens, revocable, `noindex`).
+- **Statistics** (`/statistik`) — charts and calendar heatmaps across every
+  tracked metric.
+- **Backup** — full ZIP export (database + files) and transactional import
+  with referential integrity validated before anything is deleted.
+- Installable as a PWA; mobile-first UI (40px tap targets, decimal-comma
+  inputs).
 
-Dev-serveren virker, men kør den med memory-cap (PowerShell):
+## The AI integration
 
-```powershell
-$env:NODE_OPTIONS="--max-old-space-size=4096"
+The app exposes an MCP server at `/api/mcp` with **63 tools** across daily
+entries, planning, supplements, workouts, recipes, job applications,
+documents and statistics — so an AI assistant (Claude, ChatGPT) can log
+"12 g glycine" or answer "what's on my plan today?" in natural language.
+
+Auth for MCP clients is a **self-written OAuth 2.0 authorization server**:
+
+- Authorization-code flow with **mandatory PKCE (S256 only)**
+- Client secrets stored as bcrypt hashes; tokens stored as SHA-256 hashes
+- Atomic single-use auth codes (`DELETE … RETURNING`)
+- Rate-limited token endpoint with uniform errors (no client enumeration)
+- Issuer metadata pinned to an `APP_ORIGIN` env — never derived from
+  forwarded headers
+
+Each MCP request gets its own server instance inside `AsyncLocalStorage`;
+the user is resolved per tool call, so no state is shared between requests.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    B[Browser / PWA] --> C[Caddy · TLS]
+    A[AI clients via MCP + OAuth 2.0] --> C
+    C --> N["Next.js 16 · systemd<br/>(app + demo instance)"]
+    N --> D[(SQLite · Drizzle)]
+    N --> F[/"photos & documents<br/>on local disk"/]
+```
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router, server actions), React 19, TypeScript |
+| Data | SQLite via libSQL, Drizzle ORM, hand-reviewed migrations |
+| Auth | Auth.js magic-link (Resend) for the browser; own OAuth 2.0 server for MCP |
+| Styling | Tailwind CSS v4 (CSS-variable theme, light/dark), Lucide icons |
+| Hosting | Ubuntu on a Lenovo ThinkCentre M920q, Caddy + Let's Encrypt, systemd, LUKS full-disk encryption, dynamic DNS via a systemd timer |
+
+Engineering choices worth a look:
+
+- **Every server action re-authenticates.** Each exported action calls
+  `requireUser()` and every query is scoped with `eq(table.userId, user.id)` —
+  treated as public HTTP endpoints, because that's what they are.
+- **Integer arithmetic for decimals.** Weights, hours and doses are stored
+  as ×10/×100 integers end to end; no floating point drift in health data.
+- **Partial writes everywhere it matters.** Day entries, week goals and day
+  goals use "only send what changed" semantics so concurrent writers (the
+  app, the AI, a second device) never clobber each other.
+- **Defense in depth on file paths.** Backup imports validate blob paths
+  against a strict schema, *and* the file layer independently asserts
+  containment under the data root.
+- The codebase has been through an external security review; every finding
+  is fixed or consciously accepted, in both cases traceable in the commit
+  history (`security:`-prefixed commits).
+
+## Running it locally
+
+```bash
+git clone https://github.com/CasperHavelykke/log.git
+cd log
+npm install
+cp .env.local.example .env.local   # fill in the secrets (see comments)
+npm run db:migrate                 # creates data/app.db
 npm run dev
 ```
 
-**Setup-note:** Repoet ligger på en ekstern USB-SSD, hvilket tidligere fik
-`next dev` til at hænge PC'en (I/O-storm + Defender-scanning). Det er løst
-med to NTFS-junctions — `.next` → `C:\dev-cache\log-next`, og dennes
-`node_modules` tilbage til projektets — plus Defender-exclusions for begge
-mapper. Hvis junctions mangler (fx på en ny maskine), genskab dem:
+Requires Node 20+. Login uses magic links via Resend — with Resend's sandbox
+sender you can only mail your own account, which is fine for local use.
 
-```powershell
-mklink /J F:\ikke-synkroniseret\log\.next C:\dev-cache\log-next
-mklink /J C:\dev-cache\node_modules F:\ikke-synkroniseret\log\node_modules
-```
+## Deployment
 
-(node_modules-junctionen skal ligge i `C:\dev-cache\` — inde i `log-next\`
-bliver den slettet når `next build` rydder mappen.)
+One small script (`scripts/deploy.sh`): pull, install, build, migrate both
+databases (production + demo), restart both systemd services. The demo
+instance runs from the same build with its own database and data directory,
+and reseeds nightly.
 
-Hurtig verifikation uden dev-server:
+## Status
 
-```bash
-npx tsc --noEmit         # type-check
-npm run build            # produktions-build
-```
+Actively developed and used daily — the commit history *is* the changelog.
+Next on the list: a test suite + CI gate (the OAuth flow and the
+import/export round-trip first), and a strict CSP.
 
-Database-schema-ændringer:
+---
 
-```bash
-npm run db:generate      # genererer migration ud fra schema.ts
-npm run db:migrate       # anvender migrationen
-```
-
-## Deploy
-
-Repoet pushes til den private GitHub-remote (`origin/main`). På serveren:
-
-```bash
-cd ~/log && git pull && npm install && npm run build && sudo systemctl restart log
-```
-
-Service-navnet er `log.service` (systemd). Caddy står foran med TLS.
-
-## Datalagring
-
-Alt under `data/`:
-
-- `data/app.db` — SQLite-databasen
-- `data/photos/` — foto-filer (tracker-billeder)
-- `data/documents/` — uploadede CV/ansøgninger/job-opslag
-
-**Backup**: Hent en ZIP via `/indstillinger → Eksportér data`. Den
-indeholder hele DB'en + alle filer + en `README.txt`. Læg en kopi et
-andet sted (eksternt drev, krypteret cloud) — dataen findes kun ét sted nu.
-
-Import samme sted: ZIP eller JSON erstatter al nuværende data.
-
-## MCP — AI-adgang
-
-Appen eksponerer en MCP-server på `/api/mcp` med OAuth 2.0. Forbind Claude
-(eller anden MCP-klient) via Custom Connector:
-
-1. Indtast `https://loggen.app/api/mcp` som server-URL.
-2. Opret en OAuth-client via `/indstillinger → Custom Connector` →
-   indtast Client ID + Secret i Claude.
-3. Godkend adgang via magic-link-login.
-
-AI får så ~25 værktøjer (læsning + skrivning på dage, projekter, jobs,
-fotos, dokumenter, kosttilskud, ugemål osv.).
-
-## Sikkerhed
-
-Enkelt-brugers app — ingen registrering. Auth via Auth.js magic-link
-(Resend transport). Sessions er DB-baserede så de kan revokes. UFW + SSH
-key-auth + LUKS+LVM på serveren. Datatrafikken går gennem TLS (Let's
-Encrypt). Dataen er **ikke** end-to-end-krypteret — server-administrator
-(dig selv) har teknisk DB-adgang.
+Built by **Casper Havelykke** — [loggen.app](https://loggen.app)
