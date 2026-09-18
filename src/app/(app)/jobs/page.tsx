@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import {
@@ -22,9 +22,15 @@ type PeriodOption = {
 
 export const metadata = { title: "Job | Log" };
 
+// Auto-markér "intet svar" efter 2 måneder — danske firmaer svarer
+// realistisk først efter 4-8 uger, så en kortere frist stemplede aktive
+// ansøgninger for tidligt. Fristen regnes fra AFSENDELSESDATOEN (sentAt);
+// kun ansøgninger uden en falder tilbage til sidste redigering.
 async function flagStaleSentApplications(userId: number) {
-  const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const cutoffMs = Date.now() - 60 * 24 * 60 * 60 * 1000;
   const cutoffIso = new Date(cutoffMs).toISOString();
+  // sentAt er en ren dato (YYYY-MM-DD) — sammenlign i samme format.
+  const cutoffDate = cutoffIso.slice(0, 10);
   const now = new Date().toISOString();
   const today = (() => {
     const d = new Date();
@@ -38,7 +44,16 @@ async function flagStaleSentApplications(userId: number) {
       and(
         eq(schema.jobApplications.userId, userId),
         eq(schema.jobApplications.status, "sent"),
-        lt(schema.jobApplications.updatedAt, cutoffIso),
+        or(
+          and(
+            isNotNull(schema.jobApplications.sentAt),
+            lt(schema.jobApplications.sentAt, cutoffDate),
+          ),
+          and(
+            isNull(schema.jobApplications.sentAt),
+            lt(schema.jobApplications.updatedAt, cutoffIso),
+          ),
+        ),
       ),
     );
 
@@ -52,7 +67,7 @@ async function flagStaleSentApplications(userId: number) {
       applicationId: app.id,
       status: "no_response",
       occurredAt: today,
-      note: "Auto: intet svar efter 1 uge",
+      note: "Auto: intet svar efter 2 måneder",
     });
   }
 }
