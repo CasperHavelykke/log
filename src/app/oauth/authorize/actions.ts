@@ -16,8 +16,10 @@ const inputSchema = z.object({
   redirectUri: z.string().url(),
   state: z.string().optional(),
   scope: z.string().optional(),
-  codeChallenge: z.string().optional(),
-  codeChallengeMethod: z.enum(SUPPORTED_CHALLENGE_METHODS).optional(),
+  // PKCE S256 er obligatorisk — re-valideres her, så manipulerede
+  // formfelter ikke kan omgå kravet fra authorize-siden.
+  codeChallenge: z.string().min(1),
+  codeChallengeMethod: z.enum(SUPPORTED_CHALLENGE_METHODS),
   decision: z.enum(["allow", "deny"]),
 });
 
@@ -57,8 +59,8 @@ export async function authorizeAction(formData: FormData) {
     userId: user.id,
     redirectUri: data.redirectUri,
     scope: data.scope ?? SCOPE,
-    codeChallenge: data.codeChallenge ?? null,
-    codeChallengeMethod: data.codeChallengeMethod ?? null,
+    codeChallenge: data.codeChallenge,
+    codeChallengeMethod: data.codeChallengeMethod,
   });
 
   target.searchParams.set("code", code);

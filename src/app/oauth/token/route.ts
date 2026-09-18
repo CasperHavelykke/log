@@ -169,24 +169,24 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  if (authCode.codeChallenge) {
-    if (!codeVerifier) {
-      return errorResponse(
-        "invalid_grant",
-        "code_verifier er påkrævet (PKCE)",
-      );
-    }
-    const pkceOk = verifyPkce(
-      codeVerifier,
-      authCode.codeChallenge,
-      authCode.codeChallengeMethod,
+  // PKCE er obligatorisk — en kode uden challenge (kan kun være en
+  // legacy-kode fra før kravet) afvises også.
+  if (!authCode.codeChallenge) {
+    return errorResponse("invalid_grant", "Auth code mangler PKCE-challenge");
+  }
+  if (!codeVerifier) {
+    return errorResponse("invalid_grant", "code_verifier er påkrævet (PKCE)");
+  }
+  const pkceOk = verifyPkce(
+    codeVerifier,
+    authCode.codeChallenge,
+    authCode.codeChallengeMethod,
+  );
+  if (!pkceOk) {
+    return errorResponse(
+      "invalid_grant",
+      "code_verifier matcher ikke code_challenge",
     );
-    if (!pkceOk) {
-      return errorResponse(
-        "invalid_grant",
-        "code_verifier matcher ikke code_challenge",
-      );
-    }
   }
 
   const { token, expiresIn } = await issueAccessToken({

@@ -14,10 +14,11 @@ export function proxy(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
   if (!token) return NextResponse.next();
 
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "ukendt";
+  // Nøglet på EMAIL alene: grænsen skal beskytte kontoen mod gæt på
+  // koden, og en angriber kan frit rotere IP'er — ip i nøglen ville
+  // gøre grænsen omgåelig og dermed meningsløs.
   const verdict = rateLimit(
-    `verify:${ip}:${email.toLowerCase()}`,
+    `verify:${email.toLowerCase()}`,
     MAX_ATTEMPTS,
     WINDOW_MS,
   );

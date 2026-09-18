@@ -11,7 +11,10 @@ export const TOKEN_TYPE = "Bearer";
 export const SCOPE = "mcp";
 export const SUPPORTED_RESPONSE_TYPES = ["code"] as const;
 export const SUPPORTED_GRANT_TYPES = ["authorization_code"] as const;
-export const SUPPORTED_CHALLENGE_METHODS = ["S256", "plain"] as const;
+// KUN S256: 'plain' giver ingen beskyttelse hvis challengen lækker, og
+// MCP-specifikationen kræver S256. PKCE er obligatorisk (håndhævet i
+// authorize-siden/-action og token-endpointet).
+export const SUPPORTED_CHALLENGE_METHODS = ["S256"] as const;
 
 export function randomToken(bytes = 32): string {
   return randomBytes(bytes).toString("base64url");
@@ -41,9 +44,7 @@ export function verifyPkce(
     const computed = sha256(codeVerifier);
     return constantTimeStringEquals(computed, challenge);
   }
-  if (method === "plain" || method === null) {
-    return constantTimeStringEquals(codeVerifier, challenge);
-  }
+  // 'plain' og manglende metode afvises — S256 er obligatorisk.
   return false;
 }
 
@@ -148,16 +149,14 @@ export async function issueAuthCode(params: {
 }
 
 export async function consumeAuthCode(code: string) {
+  // Atomisk engangsforbrug: DELETE..RETURNING i stedet for select-så-
+  // delete, så to samtidige indløsninger aldrig begge kan få koden.
   const rows = await db
-    .select()
-    .from(schema.oauthAuthCodes)
+    .delete(schema.oauthAuthCodes)
     .where(eq(schema.oauthAuthCodes.code, code))
-    .limit(1);
+    .returning();
   const row = rows[0];
   if (!row) return null;
-  await db
-    .delete(schema.oauthAuthCodes)
-    .where(eq(schema.oauthAuthCodes.code, code));
   if (row.expiresAt.getTime() < Date.now()) return null;
   return row;
 }

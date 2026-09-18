@@ -49,16 +49,18 @@ export default async function AuthorizePage({
       />
     );
   }
+  // PKCE med S256 er obligatorisk — en klient uden challenge (eller med
+  // 'plain') afvises før login, med en klar fejl.
   if (
-    codeChallengeMethod &&
+    !codeChallenge ||
     !(SUPPORTED_CHALLENGE_METHODS as readonly string[]).includes(
-      codeChallengeMethod,
+      codeChallengeMethod ?? "",
     )
   ) {
     return (
       <ErrorPage
-        title="Ikke understøttet code_challenge_method"
-        detail={`code_challenge_method='${codeChallengeMethod}' understøttes ikke. Forventer S256 eller plain.`}
+        title="PKCE påkrævet"
+        detail="Forespørgslen skal have code_challenge og code_challenge_method='S256'."
       />
     );
   }
