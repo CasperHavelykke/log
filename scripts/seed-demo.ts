@@ -87,6 +87,7 @@ async function main() {
       fasteEnabled: true,
       garminSleepEnabled: true,
       trainingEnabled: true,
+      goalsEnabled: true,
     })
     .returning();
   const uid = user.id;
@@ -378,6 +379,69 @@ async function main() {
       sortOrder: 6,
     },
   ]);
+
+  // --- Årsmål ---------------------------------------------------------------
+  // En optælling der er lidt bagud, et niveau på kurs og en milepæl.
+  const goalRows = await db
+    .insert(schema.goals)
+    .values([
+      {
+        userId: uid,
+        title: "50 løbeture",
+        groupLabel: "Det jeg selv bestemmer",
+        kind: "count",
+        targetValue: 50,
+        unit: "ture",
+        startDate: isoDaysAgo(80),
+        deadline: isoDaysAgo(-285),
+        sortOrder: 0,
+      },
+      {
+        userId: uid,
+        title: "500 følgere på løbebloggen",
+        groupLabel: "Det verden bestemmer",
+        kind: "level",
+        targetValue: 500,
+        unit: "følgere",
+        startDate: isoDaysAgo(80),
+        deadline: isoDaysAgo(-285),
+        sortOrder: 1,
+      },
+      {
+        userId: uid,
+        title: "Gennemføre et halvmaraton",
+        groupLabel: "Det jeg selv bestemmer",
+        kind: "milestone",
+        startDate: isoDaysAgo(80),
+        deadline: isoDaysAgo(-200),
+        sortOrder: 2,
+      },
+    ])
+    .returning();
+  const goalEntrySeed: Array<typeof schema.goalEntries.$inferInsert> = [];
+  // Løbeture: ca. 2 om ugen i 11 uger — lidt under kursen.
+  for (let i = 0; i < 22; i++) {
+    goalEntrySeed.push({
+      userId: uid,
+      goalId: goalRows[0].id,
+      date: isoDaysAgo(78 - i * 3 - (i % 2)),
+      value: 1,
+    });
+  }
+  // Følgertal målt månedligt.
+  for (const [ago, value] of [
+    [75, 40],
+    [45, 68],
+    [15, 105],
+  ] as const) {
+    goalEntrySeed.push({
+      userId: uid,
+      goalId: goalRows[1].id,
+      date: isoDaysAgo(ago),
+      value,
+    });
+  }
+  await db.insert(schema.goalEntries).values(goalEntrySeed);
 
   // --- 92 dages dagsdata ----------------------------------------------------
   // Fortælling: vægt falder langsomt 84,5 → 81, træning man/ons/fre + lør,

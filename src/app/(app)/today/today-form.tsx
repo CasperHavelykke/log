@@ -56,6 +56,8 @@ import { ElasticTimerBar } from "@/components/elastic-timer-bar";
 import { WeekStrip } from "./week-strip";
 import { DayIntention } from "./day-intention";
 import { TodayPlanCard, type TodayPlanEntry } from "./today-plan-card";
+import { YearGoalsCard } from "./year-goals-card";
+import type { GoalView } from "@/lib/goals";
 import { PlanDialog, type PlanItemData } from "@/components/plan-dialog";
 import { scheduleLabel } from "@/lib/plan";
 import { StartCounterTrigger } from "../drink-counter/start-trigger";
@@ -299,6 +301,7 @@ export function TodayPage(props: {
   weekHoursX10: number;
   initialWeekGoal: WeekGoalState;
   planEntries: TodayPlanEntry[];
+  yearGoals: GoalView[] | null;
   supplementPlans: PlanItemData[];
   nutritionPlans: PlanItemData[];
   initialDayGoals: DayGoalsState;
@@ -498,6 +501,7 @@ export function TodayPage(props: {
         date={props.date}
         initialNote={dayGoals.goalNote ?? ""}
       />
+      {props.yearGoals !== null && <YearGoalsCard goals={props.yearGoals} />}
 
       <div
         className={`mb-4 grid grid-cols-1 gap-4 ${

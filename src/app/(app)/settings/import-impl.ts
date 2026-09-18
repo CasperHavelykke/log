@@ -338,6 +338,31 @@ const planMarkRow = z.object({
   createdAt: z.string().optional(),
 });
 
+const goalRow = z.object({
+  id: z.number().int(),
+  title: z.string(),
+  groupLabel: z.string().nullable().optional(),
+  kind: z.enum(schema.GOAL_KINDS),
+  targetValue: z.number().int().nullable().optional(),
+  unit: z.string().nullable().optional(),
+  startDate: z.string(),
+  deadline: z.string(),
+  note: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+const goalEntryRow = z.object({
+  id: z.number().int(),
+  goalId: z.number().int(),
+  date: z.string(),
+  value: z.number().int(),
+  note: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+});
+
 export const backupSchema = z.object({
   format: z.literal("log-backup"),
   version: z.number(),
@@ -368,6 +393,8 @@ export const backupSchema = z.object({
     workoutTemplates: z.array(workoutTemplateRow).optional().default([]),
     planItems: z.array(planItemRow).optional().default([]),
     planMarks: z.array(planMarkRow).optional().default([]),
+    goals: z.array(goalRow).optional().default([]),
+    goalEntries: z.array(goalEntryRow).optional().default([]),
   }),
 });
 
@@ -462,6 +489,8 @@ export async function performImport(
   await tx.delete(schema.workouts).where(eq(schema.workouts.userId, uid));
   await tx.delete(schema.planMarks).where(eq(schema.planMarks.userId, uid));
   await tx.delete(schema.planItems).where(eq(schema.planItems.userId, uid));
+  await tx.delete(schema.goalEntries).where(eq(schema.goalEntries.userId, uid));
+  await tx.delete(schema.goals).where(eq(schema.goals.userId, uid));
   await tx
     .delete(schema.workoutTemplates)
     .where(eq(schema.workoutTemplates.userId, uid));
@@ -927,6 +956,47 @@ export async function performImport(
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
     if (rows.length > 0) await tx.insert(schema.planMarks).values(rows);
+  }
+
+  // Årsmål: entries mappes via nyt goal-id.
+  const goalMap = new Map<number, number>();
+  for (const g of d.goals) {
+    const inserted = await tx
+      .insert(schema.goals)
+      .values({
+        userId: uid,
+        title: g.title,
+        groupLabel: g.groupLabel ?? null,
+        kind: g.kind,
+        targetValue: g.targetValue ?? null,
+        unit: g.unit ?? null,
+        startDate: g.startDate,
+        deadline: g.deadline,
+        note: g.note ?? null,
+        completedAt: g.completedAt ?? null,
+        sortOrder: g.sortOrder ?? 0,
+        createdAt: g.createdAt ?? nowIso(),
+        updatedAt: g.updatedAt ?? nowIso(),
+      })
+      .returning({ id: schema.goals.id });
+    goalMap.set(g.id, inserted[0].id);
+  }
+  if (d.goalEntries.length > 0) {
+    const rows = d.goalEntries
+      .map((e) => {
+        const newGoalId = goalMap.get(e.goalId);
+        if (newGoalId === undefined) return null;
+        return {
+          userId: uid,
+          goalId: newGoalId,
+          date: e.date,
+          value: e.value,
+          note: e.note ?? null,
+          createdAt: e.createdAt ?? nowIso(),
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await tx.insert(schema.goalEntries).values(rows);
   }
 
   });

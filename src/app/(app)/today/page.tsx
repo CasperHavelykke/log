@@ -30,6 +30,7 @@ import {
   toPlanItemData,
 } from "@/lib/plan";
 import { dayKcal } from "@/lib/kcal";
+import { toGoalView, type GoalView } from "@/lib/goals";
 import type { TodayPlanEntry } from "./today-plan-card";
 
 export const metadata = { title: "Log" };
@@ -139,6 +140,27 @@ export default async function Today() {
       hoursX10: t.hoursX10,
       notes: t.notes ?? "",
     }));
+
+  // --- Årsmål (opt-in) ------------------------------------------------------
+  let yearGoals: GoalView[] | null = null;
+  if (user.goalsEnabled ?? false) {
+    const [goalRows, entryRows2] = await Promise.all([
+      db.select().from(schema.goals).where(eq(schema.goals.userId, user.id)),
+      db
+        .select()
+        .from(schema.goalEntries)
+        .where(eq(schema.goalEntries.userId, user.id)),
+    ]);
+    const entriesByGoal = new Map<number, typeof entryRows2>();
+    for (const e of entryRows2) {
+      const list = entriesByGoal.get(e.goalId) ?? [];
+      list.push(e);
+      entriesByGoal.set(e.goalId, list);
+    }
+    yearGoals = goalRows
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      .map((g) => toGoalView(g, entriesByGoal.get(g.id) ?? [], date));
+  }
 
   // --- Dagens plan ----------------------------------------------------------
   // Marks hentes også for i går: en 'postpone' i går betyder at posten
@@ -367,6 +389,7 @@ export default async function Today() {
         goalNote: await resolveGoalNote(user.id, date, entry?.goalNote),
       }}
       planEntries={planEntries}
+      yearGoals={yearGoals}
       supplementPlans={planItemsRows
         .filter((i) => i.kind === "supplement")
         .map(toPlanItemData)}

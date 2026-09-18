@@ -26,6 +26,10 @@ export const users = sqliteTable("users", {
   trainingEnabled: integer("training_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Årsmål (langtidsmål m. kurs-beregning) — opt-in som træning/Garmin.
+  goalsEnabled: integer("goals_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   // Hemmeligt token til offentlig deling af hele opskriftssamlingen
   // (/samling/{token}). null = deling slået fra.
   recipesShareToken: text("recipes_share_token"),
@@ -811,6 +815,69 @@ export type PlanItem = typeof planItems.$inferSelect;
 export type NewPlanItem = typeof planItems.$inferInsert;
 export type PlanMark = typeof planMarks.$inferSelect;
 export type NewPlanMark = typeof planMarks.$inferInsert;
+
+// --- Årsmål -----------------------------------------------------------------
+// Langtidsmål med kurs-beregning: 'count' (optælling — fremskridt logges
+// som deltaer, fx +1 maleri), 'level' (niveau — man måler en tilstand af
+// og til, fx følgertal; nyeste måling gælder) og 'milestone' (sket/ikke
+// sket inden deadline). Kursen beregnes lineært fra startDate → deadline.
+export const GOAL_KINDS = ["count", "level", "milestone"] as const;
+export type GoalKind = (typeof GOAL_KINDS)[number];
+
+export const goals = sqliteTable(
+  "goals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    // Fri gruppering, fx "Det du selv bestemmer" / "Det markedet bestemmer".
+    groupLabel: text("group_label"),
+    kind: text("kind").notNull(), // GoalKind
+    targetValue: integer("target_value"), // null for milestone
+    unit: text("unit"), // fx "malerier", "opslag", "kr"
+    startDate: text("start_date").notNull(), // ISO YYYY-MM-DD
+    deadline: text("deadline").notNull(), // ISO YYYY-MM-DD
+    note: text("note"),
+    completedAt: text("completed_at"), // milestone: sat når krydset af
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("goals_user").on(t.userId)],
+);
+
+// Daterede fremskridt: 'count' summeres, 'level' tager nyeste måling.
+// Historikken gør fremskridt fortrydbart og kan senere tegnes på /statistik.
+export const goalEntries = sqliteTable(
+  "goal_entries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    goalId: integer("goal_id")
+      .notNull()
+      .references(() => goals.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // ISO YYYY-MM-DD
+    value: integer("value").notNull(), // delta (count) eller måling (level)
+    note: text("note"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("goal_entries_goal").on(t.goalId)],
+);
+
+export type Goal = typeof goals.$inferSelect;
+export type NewGoal = typeof goals.$inferInsert;
+export type GoalEntry = typeof goalEntries.$inferSelect;
+export type NewGoalEntry = typeof goalEntries.$inferInsert;
 
 export const PHOTO_CATEGORIES = ["skin_spot", "body_progress", "other"] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
