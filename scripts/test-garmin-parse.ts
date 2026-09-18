@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { parseGarminSleepCsv } from "../src/lib/garmin-sleep";
 
-const csv = readFileSync("C:/Users/cadlh/Downloads/Søvn.csv", "utf8");
+// Brug: npx tsx scripts/test-garmin-parse.ts <sti-til-Søvn.csv>
+const path = process.argv[2];
+if (!path) {
+  console.error("Angiv stien til en Garmin-søvn-CSV som argument.");
+  process.exit(1);
+}
+const csv = readFileSync(path, "utf8");
 const parsed = parseGarminSleepCsv(csv);
 console.log(JSON.stringify(parsed, null, 2));

@@ -48,3 +48,6 @@ next-env.d.ts
 # design mockups — kept locally, not deployed
 /mockups
 
+
+# Claude Code lokale permissions — maskinspecifik, aldrig i repo
+.claude/settings.local.json

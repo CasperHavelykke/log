@@ -6,7 +6,7 @@
  *   $env:DATABASE_URL = "libsql://..."
  *   $env:DATABASE_AUTH_TOKEN = "..."
  *   $env:BACKFILL_USER_ID = "1"
- *   $env:BACKFILL_EMAIL = "cadlh@hotmail.com"
+ *   $env:BACKFILL_EMAIL = "bruger@example.com"
  *   npx tsx scripts/backfill-user-email.ts
  */
 import { createClient } from "@libsql/client";
