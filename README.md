@@ -101,9 +101,6 @@ Engineering choices worth a look:
 - **Defense in depth on file paths.** Backup imports validate blob paths
   against a strict schema, *and* the file layer independently asserts
   containment under the data root.
-- The codebase has been through an external security review; every finding
-  is fixed or consciously accepted, in both cases traceable in the commit
-  history (`security:`-prefixed commits).
 
 ## Running it locally
 
