@@ -19,7 +19,7 @@ import {
   Loader2,
   Trash2,
 } from "lucide-react";
-import { saveDayEntry } from "../today/actions";
+import { getDaySnapshot, saveDayEntry } from "../today/actions";
 import { dayKcal, kcalMetaText } from "@/lib/kcal";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
 import Link from "next/link";
@@ -554,6 +554,50 @@ function CalendarPane({
 
 // --- DAY EDITOR PANEL ------------------------------------------------------
 
+// Fladt sammenlignings-billede af editorens felter, som saveDayEntry ser
+// dem. Autosaven differ mod serverens udgangspunkt og sender KUN ændrede
+// felter (PARTIAL-semantik i ../today/actions) — så et panel der har
+// stået åbent aldrig overskriver værdier det ikke selv har rørt (fx
+// makroer logget af AI via MCP imens). Faste- og notat-felter som
+// panelet ikke redigerer, sendes slet ikke.
+function entryInput(e: Omit<Entry, "date"> | undefined) {
+  return {
+    mood: e?.mood ?? null,
+    energy: e?.energy ?? null,
+    sleepHoursX10: e?.sleepHoursX10 ?? null,
+    sleepQuality: e?.sleepQuality ?? null,
+    alcoholUnits: e?.alcoholUnits ?? null,
+    didExercise: e?.didExercise ?? false,
+    exerciseIntensity:
+      (e?.didExercise ?? false) ? (e?.exerciseIntensity ?? null) : null,
+    weightX10: e?.weightX10 ?? null,
+    waistX10: e?.waistX10 ?? null,
+    carbsG: e?.carbsG ?? null,
+    proteinG: e?.proteinG ?? null,
+    fatG: e?.fatG ?? null,
+    fiberG: e?.fiberG ?? null,
+    healthNotes: (e?.healthNotes ?? "").trim() || null,
+  };
+}
+type HealthInput = ReturnType<typeof entryInput>;
+
+const HEALTH_INPUT_KEYS = [
+  "mood",
+  "energy",
+  "sleepHoursX10",
+  "sleepQuality",
+  "alcoholUnits",
+  "didExercise",
+  "exerciseIntensity",
+  "weightX10",
+  "waistX10",
+  "carbsG",
+  "proteinG",
+  "fatG",
+  "fiberG",
+  "healthNotes",
+] as const;
+
 function DayEditorPanel({
   date,
   entry,
@@ -630,9 +674,12 @@ function DayEditorPanel({
   const isFirstRender = useRef(true);
   const errorMsg = useRef<string | null>(null);
 
-  function buildPayload() {
+  // Serverens udgangspunkt — det autosaven differ mod. Opdateres når et
+  // gem lykkes, og når fokus-genopfriskningen adopterer server-værdier.
+  const baselineRef = useRef<HealthInput>(entryInput(entry));
+
+  function currentInput(): HealthInput {
     return {
-      date,
       mood,
       energy,
       sleepHoursX10: parseHours(sleepInput),
@@ -640,9 +687,6 @@ function DayEditorPanel({
       alcoholUnits,
       didExercise,
       exerciseIntensity: didExercise ? exerciseIntensity : null,
-      didFast: entry?.didFast ?? false,
-      fastHoursX10: entry?.fastHoursX10 ?? null,
-      fastBreakTime: entry?.fastBreakTime ?? null,
       weightX10: parseDecX10(weightInput, 500),
       waistX10: parseDecX10(waistInput, 300),
       carbsG,
@@ -650,14 +694,14 @@ function DayEditorPanel({
       fatG,
       fiberG,
       healthNotes: healthNotes.trim() || null,
-      workNotes: entry?.workNotes || null,
-      dayNotes: entry?.dayNotes || null,
-      wentWell: entry?.wentWell || null,
-      nextStep: entry?.nextStep || null,
     };
   }
+  const currentRef = useRef<HealthInput>(entryInput(entry));
+  useEffect(() => {
+    currentRef.current = currentInput();
+  });
 
-  // Auto-save: debounced effect that fires whenever any input changes
+  // Auto-save: debounced, sender kun felter der afviger fra baseline.
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -666,9 +710,25 @@ function DayEditorPanel({
     setSaveState("saving");
     const handle = setTimeout(() => {
       startSave(async () => {
-        const payload = buildPayload();
-        const res = await saveDayEntry(payload);
+        const current = currentInput();
+        const base = baselineRef.current;
+        const changed: Partial<HealthInput> = {};
+        for (const k of HEALTH_INPUT_KEYS) {
+          if (current[k] !== base[k]) {
+            Object.assign(changed, { [k]: current[k] });
+          }
+        }
+        if ("didExercise" in changed || "exerciseIntensity" in changed) {
+          changed.didExercise = current.didExercise;
+          changed.exerciseIntensity = current.exerciseIntensity;
+        }
+        if (Object.keys(changed).length === 0) {
+          setSaveState("idle");
+          return;
+        }
+        const res = await saveDayEntry({ date, ...changed });
         if (res.ok) {
+          baselineRef.current = { ...base, ...changed };
           setSaveState("saved");
           setSavedAt(new Date());
           errorMsg.current = null;
@@ -676,7 +736,7 @@ function DayEditorPanel({
             date,
             mood,
             energy,
-            sleepHoursX10: payload.sleepHoursX10,
+            sleepHoursX10: current.sleepHoursX10,
             sleepQuality,
             alcoholUnits,
             didExercise,
@@ -684,8 +744,8 @@ function DayEditorPanel({
             didFast: entry?.didFast ?? false,
             fastHoursX10: entry?.fastHoursX10 ?? null,
             fastBreakTime: entry?.fastBreakTime ?? null,
-            weightX10: payload.weightX10,
-            waistX10: payload.waistX10,
+            weightX10: current.weightX10,
+            waistX10: current.waistX10,
             carbsG,
             proteinG,
             fatG,
@@ -709,6 +769,78 @@ function DayEditorPanel({
     exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, fiberG,
     healthNotes,
   ]);
+
+  // Genopfrisk ved tilbagevenden til fanen: felter brugeren IKKE selv har
+  // ændret, opdateres til serverens aktuelle værdier (fx AI-loggede
+  // makroer). Egne uskrevne ændringer røres aldrig; træningsgruppen
+  // adopteres kun samlet. Mine parametre genindlæses også.
+  const refreshBusyRef = useRef(false);
+  const lastRefreshRef = useRef(0);
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState !== "visible") return;
+      const nowMs = Date.now();
+      if (refreshBusyRef.current || nowMs - lastRefreshRef.current < 10_000) {
+        return;
+      }
+      refreshBusyRef.current = true;
+      lastRefreshRef.current = nowMs;
+      void (async () => {
+        try {
+          const snap = await getDaySnapshot(date);
+          if (!snap.ok) return;
+          const s = snap.day;
+          const serverIn = entryInput(s);
+          const base = baselineRef.current;
+          const cur = currentRef.current;
+          const exerciseDirty =
+            cur.didExercise !== base.didExercise ||
+            cur.exerciseIntensity !== base.exerciseIntensity;
+          const nextBase: HealthInput = { ...base };
+          for (const k of HEALTH_INPUT_KEYS) {
+            const dirty =
+              k === "didExercise" || k === "exerciseIntensity"
+                ? exerciseDirty
+                : cur[k] !== base[k];
+            if (dirty) continue;
+            Object.assign(nextBase, { [k]: serverIn[k] });
+            switch (k) {
+              case "mood": setMood(s.mood); break;
+              case "energy": setEnergy(s.energy); break;
+              case "sleepHoursX10": setSleepInput(fmtHours(s.sleepHoursX10)); break;
+              case "sleepQuality": setSleepQuality(s.sleepQuality); break;
+              case "alcoholUnits": setAlcoholUnits(s.alcoholUnits); break;
+              case "didExercise": setDidExercise(s.didExercise); break;
+              case "exerciseIntensity": setExerciseIntensity(s.exerciseIntensity); break;
+              case "weightX10": setWeightInput(fmtHours(s.weightX10)); break;
+              case "waistX10": setWaistInput(fmtHours(s.waistX10)); break;
+              case "carbsG": setCarbsG(s.carbsG); break;
+              case "proteinG": setProteinG(s.proteinG); break;
+              case "fatG": setFatG(s.fatG); break;
+              case "fiberG": setFiberG(s.fiberG); break;
+              case "healthNotes": setHealthNotes(s.healthNotes); break;
+            }
+          }
+          baselineRef.current = nextBase;
+          // Forældre-cachen (kalenderens prikker) får serverens friske
+          // billede — egne uskrevne ændringer gemmes og meldes ind af
+          // autosaven umiddelbart efter.
+          onSaved({ date, ...s });
+          const vals = await listCustomValuesForDate(date);
+          setCustomValues(vals);
+        } finally {
+          refreshBusyRef.current = false;
+        }
+      })();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
 
   const hasGarminScore =
     garminSleepEnabled && sleep?.score !== null && sleep?.score !== undefined;
