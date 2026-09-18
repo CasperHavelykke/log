@@ -23,6 +23,8 @@ async function serve(
     "Content-Type": mimeType,
     "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(filename)}"`,
     "Cache-Control": "private, max-age=3600",
+    // Browseren må aldrig gætte sig til en anden (farligere) type.
+    "X-Content-Type-Options": "nosniff",
   };
   if (contentLength !== undefined) {
     headers["Content-Length"] = String(contentLength);
@@ -90,8 +92,10 @@ export async function GET(req: Request, { params }: { params: Params }) {
       .limit(1);
     const row = rows[0];
     if (!row) return new Response("Not found", { status: 404 });
-    const inline =
-      row.mimeType === "application/pdf" || row.mimeType.startsWith("text/");
+    // KUN PDF vises inline. text/html inline ville være stored XSS på
+    // appens eget origin (uploadede jobopslag er ikke betroet indhold) —
+    // alt tekstligt hentes derfor som download.
+    const inline = row.mimeType === "application/pdf";
     return serve(row.blobUrl, row.mimeType, row.filename, inline);
   } else if (type === "recipe") {
     const rows = await db

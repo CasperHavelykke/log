@@ -25,6 +25,6 @@ export function GET(req: Request) {
     scopes_supported: [SCOPE],
   };
   return Response.json(metadata, {
-    headers: { "Cache-Control": "public, max-age=3600" },
+    headers: { "Cache-Control": "no-store" },
   });
 }

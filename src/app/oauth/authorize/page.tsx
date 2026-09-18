@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { isDemoMode } from "@/lib/demo";
 import { getCurrentUser } from "@/lib/session";
 import {
@@ -66,10 +65,10 @@ export default async function AuthorizePage({
 
   const user = await getCurrentUser();
   if (!user) {
-    const h = await headers();
-    const proto = h.get("x-forwarded-proto") ?? "https";
-    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
-    const currentUrl = `${proto}://${host}/oauth/authorize?${new URLSearchParams(
+    // RELATIV sti — login-sidens return_to-sanitisering accepterer kun
+    // stier der starter med '/' (en absolut URL blev afvist, og brugeren
+    // landede på dashboardet i stedet for samtykke-skærmen).
+    const currentUrl = `/oauth/authorize?${new URLSearchParams(
       Object.entries(params).flatMap(([k, v]) => {
         if (v === undefined) return [];
         return Array.isArray(v) ? v.map((vv) => [k, vv]) : [[k, v]];

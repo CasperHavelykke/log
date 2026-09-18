@@ -12,6 +12,6 @@ export function GET(req: Request) {
     bearer_methods_supported: ["header"],
   };
   return Response.json(metadata, {
-    headers: { "Cache-Control": "public, max-age=3600" },
+    headers: { "Cache-Control": "no-store" },
   });
 }

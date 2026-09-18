@@ -162,7 +162,13 @@ export async function consumeAuthCode(code: string) {
   return row;
 }
 
+// Issuer-sandheden er APP_ORIGIN-env'en (fx https://loggen.app) — sat i
+// produktion. X-Forwarded-* er klient-kontrollerbare headers og må ALDRIG
+// definere issuer/endpoints i OAuth-metadata (host-header injection);
+// fallback'en findes kun så lokal udvikling virker uden env.
 export function baseUrl(req: Request): string {
+  const configured = process.env.APP_ORIGIN;
+  if (configured) return configured.replace(/\/+$/, "");
   const forwardedHost = req.headers.get("x-forwarded-host");
   const forwardedProto = req.headers.get("x-forwarded-proto");
   if (forwardedHost) {

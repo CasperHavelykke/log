@@ -7,6 +7,13 @@ import {
   verifyClientSecret,
   verifyPkce,
 } from "@/lib/oauth";
+import { rateLimit } from "@/lib/rate-limit";
+
+// Dummy-hash (bcrypt cost 12, af en ikke-hemmelig streng): ukendte
+// client_id'er koster samme bcrypt-arbejde som kendte, så de ikke kan
+// enumereres via svartid.
+const DUMMY_SECRET_HASH =
+  "$2b$12$PUHU0Fa6in43LSZE/GOV6.hMNfnCYnZIn8JlrvGKxiket1V2N559y";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +61,29 @@ function parseBasicAuth(header: string | null): [string, string] | null {
 export async function POST(req: Request): Promise<Response> {
   const { isDemoMode } = await import("@/lib/demo");
   if (isDemoMode()) return new Response("Not found", { status: 404 });
+
+  // bcrypt (cost 12) koster ~0,3s CPU per forsøg — uden grænse er
+  // endpointet et DoS-håndtag på en lille hjemmeserver.
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "ukendt";
+  const rl = rateLimit(`oauth-token:${ip}`, 10, 60_000);
+  if (!rl.ok) {
+    return new Response(
+      JSON.stringify({
+        error: "invalid_request",
+        error_description: "For mange forsøg — prøv igen om lidt",
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(rl.retryAfterSec),
+          "Cache-Control": "no-store",
+        },
+      },
+    );
+  }
+
   let body: URLSearchParams;
   try {
     const contentType = req.headers.get("content-type") ?? "";
@@ -104,13 +134,19 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
+  // Ens svar (tekst OG timing) for ukendt client og forkert secret —
+  // ellers kan client_id'er enumereres.
   const client = await findClientByClientId(clientId);
-  if (!client) {
-    return errorResponse("invalid_client", "Ukendt client_id", 401);
-  }
-  const secretOk = await verifyClientSecret(clientSecret, client.clientSecretHash);
-  if (!secretOk) {
-    return errorResponse("invalid_client", "Forkert client_secret", 401);
+  const secretOk = await verifyClientSecret(
+    clientSecret,
+    client?.clientSecretHash ?? DUMMY_SECRET_HASH,
+  );
+  if (!client || !secretOk) {
+    return errorResponse(
+      "invalid_client",
+      "Ugyldig client_id eller client_secret",
+      401,
+    );
   }
 
   const authCode = await consumeAuthCode(code);

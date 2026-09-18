@@ -196,14 +196,27 @@ const trackerRow = z.object({
   createdAt: z.string().optional(),
 });
 
+// Blob-stier fra backup'en skal ligne appens egne uploads — relative,
+// under et kendt præfiks og uden '.'/'..'-segmenter. Ellers ville en
+// fjendtlig backup.json kunne læse/slette vilkårlige filer via
+// /api/files (path traversal). blobAbsolutePath har desuden et
+// containment-tjek som anden forsvarslinje.
+const blobPath = z
+  .string()
+  .max(500)
+  .regex(/^(photos|documents|recipes)(\/[A-Za-z0-9._-]+)+$/)
+  .refine((p) => p.split("/").every((seg) => seg !== "." && seg !== ".."), {
+    message: "Ugyldig blob-sti",
+  });
+
 const photoRow = z.object({
   id: z.number().int(),
   trackerId: z.number().int().nullable().optional(),
   category: z.string(),
   bodyArea: z.string().nullable().optional(),
   caption: z.string().nullable().optional(),
-  blobUrl: z.string(),
-  blobPathname: z.string(),
+  blobUrl: blobPath,
+  blobPathname: blobPath,
   mimeType: z.string(),
   sizeBytes: z.number().int(),
   takenAt: z.string(),
@@ -215,8 +228,8 @@ const documentRow = z.object({
   kind: z.string(),
   title: z.string(),
   filename: z.string(),
-  blobUrl: z.string(),
-  blobPathname: z.string(),
+  blobUrl: blobPath,
+  blobPathname: blobPath,
   mimeType: z.string(),
   sizeBytes: z.number().int(),
   extractedText: z.string().nullable().optional(),
@@ -260,7 +273,7 @@ const recipeRow = z.object({
   proteinG: z.number().int().nullable().optional(),
   fatG: z.number().int().nullable().optional(),
   fiberG: z.number().int().nullable().optional(),
-  imagePathname: z.string().nullable().optional(),
+  imagePathname: blobPath.nullable().optional(),
   imageMime: z.string().nullable().optional(),
   shareToken: z.string().nullable().optional(),
   createdAt: z.string().optional(),

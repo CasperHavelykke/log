@@ -2,7 +2,7 @@ import "server-only";
 
 import { mkdir, writeFile, unlink, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
 
@@ -33,8 +33,16 @@ export type UploadedBlob = {
 // data-demo/ så demo-uploads aldrig blandes med rigtige filer).
 const BLOB_ROOT = resolve(process.cwd(), process.env.DATA_DIR ?? "data");
 
+// Dybdeforsvar mod path traversal: stien SKAL lande under BLOB_ROOT,
+// uanset hvor relativePath kommer fra (DB-rækker kan stamme fra en
+// importeret backup — se import-impl's blobPath-validering, som er
+// første forsvarslinje).
 function blobAbsolutePath(relativePath: string): string {
-  return join(BLOB_ROOT, relativePath);
+  const abs = resolve(BLOB_ROOT, relativePath);
+  if (abs !== BLOB_ROOT && !abs.startsWith(BLOB_ROOT + sep)) {
+    throw new Error("Ugyldig blob-sti (uden for data-roden)");
+  }
+  return abs;
 }
 
 export async function uploadBlob(params: {
@@ -87,8 +95,8 @@ export async function getBlobStream(pathname: string): Promise<{
   stream: ReadableStream<Uint8Array> | null;
   contentLength?: number;
 }> {
-  const absolutePath = blobAbsolutePath(pathname);
   try {
+    const absolutePath = blobAbsolutePath(pathname);
     const stats = await stat(absolutePath);
     const nodeStream = createReadStream(absolutePath);
     const webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
