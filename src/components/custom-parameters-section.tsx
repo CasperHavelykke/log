@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import {
   setCustomParameterValue,
@@ -46,6 +46,32 @@ export function CustomParametersSection({
   const [values, setValues] = useState<Map<number, ValueState>>(initialMap);
   const [saving, setSaving] = useState<Set<number>>(new Set());
   const [savedAt, setSavedAt] = useState<Map<number, number>>(new Map());
+
+  // Friske server-rækker (fx efter fokus-genopfriskningens
+  // router.refresh, hvor AI kan have logget værdier imens): adoptér dem
+  // for parametre der ikke har et gem i flight. Hvert enkelt-gem skriver
+  // straks til serveren, så lokal og server er ellers i takt.
+  useEffect(() => {
+    setValues((prev) => {
+      const next = new Map(prev);
+      const seen = new Set<number>();
+      for (const v of initialValues) {
+        seen.add(v.parameterId);
+        if (saving.has(v.parameterId)) continue;
+        next.set(v.parameterId, {
+          valueBool: v.valueBool,
+          valueInt: v.valueInt,
+          valueReal: v.valueReal,
+          valueText: v.valueText,
+        });
+      }
+      for (const id of next.keys()) {
+        if (!seen.has(id) && !saving.has(id)) next.delete(id);
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValues]);
 
   function getValue(paramId: number): ValueState {
     return values.get(paramId) ?? emptyValue;
@@ -302,12 +328,27 @@ function NumberInput({
   const [text, setText] = useState(
     value === null ? "" : String(value).replace(".", ","),
   );
+  const [focused, setFocused] = useState(false);
+  // Ekstern værdiændring (server-adoption): synk tekst-visningen — men
+  // aldrig midt i egen indtastning (feltet har fokus).
+  useEffect(() => {
+    if (focused) return;
+    const t = text.trim().replace(",", ".");
+    const parsed = t === "" ? null : Number(t);
+    const norm = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+    if (norm !== value) {
+      setText(value === null ? "" : String(value).replace(".", ","));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, focused]);
   return (
     <div className="relative w-full sm:w-[110px]">
       <input
         type="text"
         inputMode="decimal"
         value={text}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(e) => {
           const raw = e.target.value;
           setText(raw);
@@ -342,11 +383,22 @@ function TextInput({
   onChange: (v: string | null) => void;
 }) {
   const [text, setText] = useState(value ?? "");
+  const [focused, setFocused] = useState(false);
+  // Ekstern værdiændring: synk visningen — aldrig mens man selv skriver.
+  useEffect(() => {
+    if (focused) return;
+    if ((value ?? "") !== text) setText(value ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, focused]);
   return (
     <textarea
       value={text}
       onChange={(e) => setText(e.target.value)}
-      onBlur={() => onChange(text.trim() === "" ? null : text)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        onChange(text.trim() === "" ? null : text);
+      }}
       rows={2}
       placeholder="…"
       className="!text-[13px]"

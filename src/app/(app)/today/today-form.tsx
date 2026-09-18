@@ -6,6 +6,7 @@ import {
   createJobApplication,
   createProject,
   deleteJobApplication,
+  getDaySnapshot,
   saveDayEntry,
   setFocusProject,
   updateJobApplicationStatus,
@@ -206,6 +207,73 @@ function parseHours(s: string): number | null {
   return Math.round(n * 10);
 }
 
+function x10Display(x10: number | null): string {
+  return x10 === null ? "" : (x10 / 10).toString().replace(".", ",");
+}
+
+function parseDecimalX10(s: string): number | null {
+  const t = s.trim().replace(",", ".");
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? Math.round(n * 10) : null;
+}
+
+// Fladt billede af dag-felterne som saveDayEntry ser dem. Bruges til at
+// afgøre hvilke felter der reelt er ændret siden serverens udgangspunkt —
+// kun de ændrede sendes (PARTIAL-semantik i actions.ts), så en formular
+// der har stået åben aldrig overskriver værdier den ikke selv har rørt
+// (fx makroer logget af AI via MCP imens).
+function toDayInput(day: DayState, sleepHoursX10: number | null) {
+  return {
+    mood: day.mood,
+    energy: day.energy,
+    sleepHoursX10,
+    sleepQuality: day.sleepQuality,
+    alcoholUnits: day.alcoholUnits,
+    didExercise: day.didExercise,
+    exerciseIntensity: day.didExercise ? day.exerciseIntensity : null,
+    didFast: day.didFast,
+    fastHoursX10: day.didFast ? day.fastHoursX10 : null,
+    fastBreakTime: day.didFast ? day.fastBreakTime : null,
+    weightX10: day.weightX10,
+    waistX10: day.waistX10,
+    carbsG: day.carbsG,
+    proteinG: day.proteinG,
+    fatG: day.fatG,
+    fiberG: day.fiberG,
+    workNotes: day.workNotes || null,
+    healthNotes: day.healthNotes || null,
+    dayNotes: day.dayNotes || null,
+    wentWell: day.wentWell || null,
+    nextStep: day.nextStep || null,
+  };
+}
+type DayInput = ReturnType<typeof toDayInput>;
+
+const DAY_INPUT_KEYS = [
+  "mood",
+  "energy",
+  "sleepHoursX10",
+  "sleepQuality",
+  "alcoholUnits",
+  "didExercise",
+  "exerciseIntensity",
+  "didFast",
+  "fastHoursX10",
+  "fastBreakTime",
+  "weightX10",
+  "waistX10",
+  "carbsG",
+  "proteinG",
+  "fatG",
+  "fiberG",
+  "workNotes",
+  "healthNotes",
+  "dayNotes",
+  "wentWell",
+  "nextStep",
+] as const;
+
 type GarminSleepSummary = {
   durationMin: number | null;
   score: number | null;
@@ -275,14 +343,31 @@ export function TodayPage(props: {
   const [savingDay, startSaveDay] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isFirstSaveRender = useRef(true);
+  const router = useRouter();
+
+  // Serverens udgangspunkt — det autosaven differ mod. Opdateres når et
+  // gem lykkes, og når fokus-genopfriskningen adopterer server-værdier.
+  const baselineRef = useRef<DayInput>(
+    toDayInput(props.initialDay, props.initialDay.sleepHoursX10),
+  );
+  const dayRef = useRef(day);
+  const sleepInputRef = useRef(sleepInput);
+  useEffect(() => {
+    dayRef.current = day;
+  }, [day]);
+  useEffect(() => {
+    sleepInputRef.current = sleepInput;
+  }, [sleepInput]);
 
   const todayHoursX10 = useMemo(
     () => entries.reduce((s, e) => s + e.hoursX10, 0),
     [entries],
   );
 
-  // Auto-save: 800ms debounce på alle day-felter. Samme mønster som
-  // /helbred's DayEditorPanel — Gem-knappen er væk.
+  // Auto-save: 800ms debounce. Sender KUN felter der afviger fra
+  // baseline (serverens udgangspunkt) — en forældet formular kan derfor
+  // aldrig slette værdier den ikke selv har rørt. Sammenhængende grupper
+  // (træning, faste) sendes samlet.
   useEffect(() => {
     if (isFirstSaveRender.current) {
       isFirstSaveRender.current = false;
@@ -290,39 +375,107 @@ export function TodayPage(props: {
     }
     const handle = setTimeout(() => {
       setError(null);
-      const dayInput = {
-        date: props.date,
-        mood: day.mood,
-        energy: day.energy,
-        sleepHoursX10: parseHours(sleepInput),
-        sleepQuality: day.sleepQuality,
-        alcoholUnits: day.alcoholUnits,
-        didExercise: day.didExercise,
-        exerciseIntensity: day.didExercise ? day.exerciseIntensity : null,
-        didFast: day.didFast,
-        fastHoursX10: day.didFast ? day.fastHoursX10 : null,
-        fastBreakTime: day.didFast ? day.fastBreakTime : null,
-        weightX10: day.weightX10,
-        waistX10: day.waistX10,
-        carbsG: day.carbsG,
-        proteinG: day.proteinG,
-        fatG: day.fatG,
-        fiberG: day.fiberG,
-        workNotes: day.workNotes || null,
-        healthNotes: day.healthNotes || null,
-        dayNotes: day.dayNotes || null,
-        wentWell: day.wentWell || null,
-        nextStep: day.nextStep || null,
-      };
+      const current = toDayInput(day, parseHours(sleepInput));
+      const base = baselineRef.current;
+      const changed: Partial<DayInput> = {};
+      for (const k of DAY_INPUT_KEYS) {
+        if (current[k] !== base[k]) Object.assign(changed, { [k]: current[k] });
+      }
+      if ("didExercise" in changed || "exerciseIntensity" in changed) {
+        changed.didExercise = current.didExercise;
+        changed.exerciseIntensity = current.exerciseIntensity;
+      }
+      if (
+        "didFast" in changed ||
+        "fastHoursX10" in changed ||
+        "fastBreakTime" in changed
+      ) {
+        changed.didFast = current.didFast;
+        changed.fastHoursX10 = current.fastHoursX10;
+        changed.fastBreakTime = current.fastBreakTime;
+      }
+      if (Object.keys(changed).length === 0) return;
       startSaveDay(async () => {
-        const res = await saveDayEntry(dayInput);
+        const res = await saveDayEntry({ date: props.date, ...changed });
         if (!res.ok) setError(res.error);
-        else setLastSaved(res.savedAt);
+        else {
+          baselineRef.current = { ...baselineRef.current, ...changed };
+          setLastSaved(res.savedAt);
+        }
       });
     }, 800);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day, sleepInput, props.date]);
+
+  // Genopfrisk ved tilbagevenden til fanen/PWA'en: felter brugeren IKKE
+  // selv har ændret, opdateres til serverens aktuelle værdier — så fx
+  // makroer logget af AI via MCP står i formularen når man vender
+  // tilbage, i stedet for de forældede tomme felter. Grupper adopteres
+  // kun samlet, og igangværende redigeringer røres aldrig.
+  const refreshBusyRef = useRef(false);
+  const lastRefreshRef = useRef(0);
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState !== "visible") return;
+      const nowMs = Date.now();
+      if (refreshBusyRef.current || nowMs - lastRefreshRef.current < 10_000) {
+        return;
+      }
+      refreshBusyRef.current = true;
+      lastRefreshRef.current = nowMs;
+      void (async () => {
+        try {
+          const snap = await getDaySnapshot(props.date);
+          if (!snap.ok) return;
+          const base = baselineRef.current;
+          const cur = toDayInput(
+            dayRef.current,
+            parseHours(sleepInputRef.current),
+          );
+          const serverInput = toDayInput(snap.day, snap.day.sleepHoursX10);
+          const nextDay: DayState = { ...dayRef.current };
+          const nextBase: DayInput = { ...base };
+          const exerciseDirty =
+            cur.didExercise !== base.didExercise ||
+            cur.exerciseIntensity !== base.exerciseIntensity;
+          const fastDirty =
+            cur.didFast !== base.didFast ||
+            cur.fastHoursX10 !== base.fastHoursX10 ||
+            cur.fastBreakTime !== base.fastBreakTime;
+          let adoptSleep = false;
+          for (const k of DAY_INPUT_KEYS) {
+            const dirty =
+              k === "didExercise" || k === "exerciseIntensity"
+                ? exerciseDirty
+                : k === "didFast" || k === "fastHoursX10" || k === "fastBreakTime"
+                  ? fastDirty
+                  : cur[k] !== base[k];
+            if (dirty) continue;
+            Object.assign(nextBase, { [k]: serverInput[k] });
+            Object.assign(nextDay, { [k]: snap.day[k] });
+            if (k === "sleepHoursX10") adoptSleep = true;
+          }
+          baselineRef.current = nextBase;
+          setDay(nextDay);
+          if (adoptSleep) setSleepInput(hoursDisplay(snap.day.sleepHoursX10));
+          setSupplementIntakes(snap.intakes);
+          if (snap.lastSavedAt) setLastSaved(snap.lastSavedAt);
+          // Server-beregnede props (Dagens plan m.m.) følger med.
+          router.refresh();
+        } finally {
+          refreshBusyRef.current = false;
+        }
+      })();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.date]);
 
   return (
     <div className="mx-auto max-w-[880px] px-5 py-8">
@@ -1248,6 +1401,23 @@ function HealthBody({
       ? ""
       : (day.waistX10 / 10).toString().replace(".", ","),
   );
+
+  // Ekstern ændring af day-værdien (fx fokus-genopfriskningen der henter
+  // AI-loggede tal): synk tekst-staten når den ikke længere matcher.
+  // Egen indtastning rammer aldrig denne gren — onChange holder dem i
+  // takt, og effekten kører kun når day-værdien selv skifter.
+  useEffect(() => {
+    if (parseDecimalX10(weightInput) !== day.weightX10) {
+      setWeightInput(x10Display(day.weightX10));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day.weightX10]);
+  useEffect(() => {
+    if (parseDecimalX10(waistInput) !== day.waistX10) {
+      setWaistInput(x10Display(day.waistX10));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day.waistX10]);
 
   // Alkohol-kalorier kommer fra day.alcoholUnits (bumpes af genstands-
   // tælleren, kan sættes manuelt). Fælles beregning med /helbred+/statistik.

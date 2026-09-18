@@ -16,6 +16,19 @@ export function DayIntention({
   const [, start] = useTransition();
   const isFirstRender = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Sidst kendte server-tilstand — autosaven differ mod den, og fokus-
+  // genopfriskningen (nye props efter router.refresh) adopteres kun når
+  // der ikke er egne uskrevne ændringer.
+  const baselineRef = useRef(initialNote);
+
+  useEffect(() => {
+    if (focused || note !== baselineRef.current) return;
+    if (initialNote !== note) {
+      baselineRef.current = initialNote;
+      setNote(initialNote);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialNote, focused]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -29,14 +42,13 @@ export function DayIntention({
       isFirstRender.current = false;
       return;
     }
+    if (note === baselineRef.current) return;
     const handle = setTimeout(() => {
+      const value = note;
       start(async () => {
-        await saveDayGoals({
-          date,
-          applicationsTarget: null,
-          focusHoursTargetX10: null,
-          goalNote: note,
-        });
+        // PARTIAL: kun noten sendes — dagens taldele røres ikke.
+        const res = await saveDayGoals({ date, goalNote: value });
+        if (res.ok) baselineRef.current = value;
       });
     }, 800);
     return () => clearTimeout(handle);
