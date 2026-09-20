@@ -281,6 +281,13 @@
       "when": 1789898048638,
       "tag": "0039_drink_units_x10",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1789905001043,
+      "tag": "0040_counter_mode",
+      "breakpoints": true
     }
   ]
 }

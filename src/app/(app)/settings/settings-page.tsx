@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Briefcase, Check, Clock, Dumbbell, EyeOff, LogOut, Monitor, Moon, Plus, Sun, Target, Trash2 } from "lucide-react";
+import { AlertTriangle, Beer, Briefcase, Check, Clock, Dumbbell, EyeOff, LogOut, Monitor, Moon, Plus, Sun, Target, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import {
   createOAuthClient,
@@ -17,6 +17,7 @@ import type { Theme } from "@/lib/theme";
 import { setTheme } from "./theme-actions";
 import { formatDanishDate } from "@/lib/date";
 import {
+  setCounterModeEnabled,
   setFasteEnabled,
   setGarminSleepEnabled,
   setGoalsEnabled,
@@ -66,6 +67,7 @@ export function SettingsPage({
   initialGarminSleepEnabled,
   initialTrainingEnabled,
   initialGoalsEnabled,
+  initialCounterModeEnabled,
   initialTheme,
 }: {
   username: string;
@@ -78,6 +80,7 @@ export function SettingsPage({
   initialGarminSleepEnabled: boolean;
   initialTrainingEnabled: boolean;
   initialGoalsEnabled: boolean;
+  initialCounterModeEnabled: boolean;
   initialTheme: Theme;
 }) {
   return (
@@ -109,6 +112,7 @@ export function SettingsPage({
           initialGarminSleepEnabled={initialGarminSleepEnabled}
           initialTrainingEnabled={initialTrainingEnabled}
           initialGoalsEnabled={initialGoalsEnabled}
+          initialCounterModeEnabled={initialCounterModeEnabled}
         />
         <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
         <CustomParametersCard initial={initialCustomParameters} />
@@ -229,11 +233,13 @@ function FeaturesCard({
   initialGarminSleepEnabled,
   initialTrainingEnabled,
   initialGoalsEnabled,
+  initialCounterModeEnabled,
 }: {
   initialFasteEnabled: boolean;
   initialGarminSleepEnabled: boolean;
   initialTrainingEnabled: boolean;
   initialGoalsEnabled: boolean;
+  initialCounterModeEnabled: boolean;
 }) {
   const [fasteEnabled, setFastEnabledState] = useState(initialFasteEnabled);
   const [garminEnabled, setGarminEnabledState] = useState(
@@ -243,6 +249,9 @@ function FeaturesCard({
     initialTrainingEnabled,
   );
   const [goalsEnabled, setGoalsEnabledState] = useState(initialGoalsEnabled);
+  const [counterModeEnabled, setCounterModeEnabledState] = useState(
+    initialCounterModeEnabled,
+  );
   const [, start] = useTransition();
 
   function toggleFaste() {
@@ -258,6 +267,14 @@ function FeaturesCard({
     setGoalsEnabledState(next);
     start(async () => {
       await setGoalsEnabled(next);
+    });
+  }
+
+  function toggleCounterMode() {
+    const next = !counterModeEnabled;
+    setCounterModeEnabledState(next);
+    start(async () => {
+      await setCounterModeEnabled(next);
     });
   }
 
@@ -311,6 +328,13 @@ function FeaturesCard({
           description="Erstatter manuel søvnkvalitet med Garmin-søvnscore + viser HRV, hvilepuls, SpO₂ m.m. Data hentes fra Garmin Connect i browseren (CSV-eksport) og uploades på /helbred."
           enabled={garminEnabled}
           onToggle={toggleGarmin}
+        />
+        <FeatureToggle
+          icon={<Beer className="size-4" />}
+          title="Kun genstandstæller"
+          description="Appen åbner direkte i genstandstælleren (også mellem sessioner) — til dig der kun vil bruge tælleren. Resten af appen nås stadig via 'Til appen'-knappen."
+          enabled={counterModeEnabled}
+          onToggle={toggleCounterMode}
         />
         <IdleBlurSetting />
       </div>

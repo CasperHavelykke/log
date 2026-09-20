@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `counter_mode_enabled` integer DEFAULT false NOT NULL;

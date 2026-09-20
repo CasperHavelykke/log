@@ -18,6 +18,7 @@ export default async function Settings() {
   const garminSleepEnabled = user.garminSleepEnabled ?? false;
   const trainingEnabled = user.trainingEnabled ?? false;
   const goalsEnabled = user.goalsEnabled ?? false;
+  const counterModeEnabled = user.counterModeEnabled ?? false;
   const themePreference = await getThemePreference();
   const [clients, customParameters, activePeriod, allPeriods, allApps] =
     await Promise.all([
@@ -82,6 +83,7 @@ export default async function Settings() {
       initialGarminSleepEnabled={garminSleepEnabled}
       initialTrainingEnabled={trainingEnabled}
       initialGoalsEnabled={goalsEnabled}
+      initialCounterModeEnabled={counterModeEnabled}
       initialTheme={themePreference}
     />
   );

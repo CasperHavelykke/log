@@ -302,6 +302,7 @@ export function TodayPage(props: {
   initialWeekGoal: WeekGoalState;
   planEntries: TodayPlanEntry[];
   yearGoals: GoalView[] | null;
+  counterModeEnabled: boolean;
   supplementPlans: PlanItemData[];
   nutritionPlans: PlanItemData[];
   initialDayGoals: DayGoalsState;
@@ -570,6 +571,7 @@ export function TodayPage(props: {
             customParameters={props.customParameters}
             customValues={props.customValues}
             nutritionPlans={props.nutritionPlans}
+            counterModeEnabled={props.counterModeEnabled}
           />
         </Card>
       </div>
@@ -1358,6 +1360,7 @@ function HealthBody({
   customParameters,
   customValues,
   nutritionPlans,
+  counterModeEnabled,
 }: {
   day: DayState;
   setDay: (d: DayState) => void;
@@ -1374,6 +1377,7 @@ function HealthBody({
   customParameters: CustomParamSummary[];
   customValues: CustomValueRow[];
   nutritionPlans: PlanItemData[];
+  counterModeEnabled: boolean;
 }) {
   const router = useRouter();
   // null = lukket; "nutrition"/"meal" = opret ny; ellers redigér eksisterende.
@@ -1714,9 +1718,13 @@ function HealthBody({
             placeholder="0"
           />
         </FieldRow>
-        <div className="pt-1">
-          <StartCounterTrigger />
-        </div>
+        {/* I genstandstæller-tilstand ejer tælleren selv start-flowet
+            (startskærm + svæve-knap) — knappen her ville konflikte. */}
+        {!counterModeEnabled && (
+          <div className="pt-1">
+            <StartCounterTrigger />
+          </div>
+        )}
       </FieldSection>
 
       {customParameters.length > 0 && (

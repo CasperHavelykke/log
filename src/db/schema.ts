@@ -30,6 +30,12 @@ export const users = sqliteTable("users", {
   goalsEnabled: integer("goals_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Genstandstæller-tilstand: appen åbner direkte i tælleren (også uden
+  // aktiv session) — til brugere der kun vil bruge tælleren. Resten af
+  // appen nås stadig via "Til appen"-flugtvejen.
+  counterModeEnabled: integer("counter_mode_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   // Hemmeligt token til offentlig deling af hele opskriftssamlingen
   // (/samling/{token}). null = deling slået fra.
   recipesShareToken: text("recipes_share_token"),

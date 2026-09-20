@@ -21,11 +21,17 @@ export default async function AppLayout({
   const user = await requireUser();
 
   const drinkSession = await getActiveSession();
-  if (drinkSession) {
+  const counterMode = user.counterModeEnabled ?? false;
+  // Tælleren overtager skærmen ved aktiv session — og i genstandstæller-
+  // tilstand også imellem sessioner (startskærm). "Til appen"-flugtvejen
+  // (escape-cookien) gælder begge dele.
+  if (drinkSession || counterMode) {
     const cookieStore = await cookies();
     const escaped = cookieStore.get(ESCAPE_COOKIE)?.value === "1";
     if (!escaped) {
-      return <CounterWrapper initial={drinkSession} />;
+      return (
+        <CounterWrapper initial={drinkSession} counterMode={counterMode} />
+      );
     }
   }
 
@@ -70,8 +76,10 @@ export default async function AppLayout({
         jobsPlacement={jobsPlacement}
         trainingEnabled={user.trainingEnabled ?? false}
       />
-      {drinkSession && (
-        <FloatingCounterBanner totalUnitsX10={drinkSession.totalUnitsX10} />
+      {(drinkSession || counterMode) && (
+        <FloatingCounterBanner
+          totalUnitsX10={drinkSession?.totalUnitsX10 ?? null}
+        />
       )}
       <IdleBlur />
     </div>

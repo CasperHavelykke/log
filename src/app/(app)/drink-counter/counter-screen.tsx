@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { addDrink, endSession, getActiveSession, removeDrink } from "./actions";
 import {
@@ -34,11 +35,15 @@ type Meta = { serverId: number | null; cancelled: boolean };
 
 export function CounterScreen({
   initial,
+  counterMode = false,
   onEscape,
 }: {
   initial: ActiveSessionPayload;
+  // Genstandstæller-tilstand: afslut fører til startskærmen, ikke /today.
+  counterMode?: boolean;
   onEscape: () => void;
 }) {
+  const router = useRouter();
   const metaRef = useRef(new Map<string, Meta>());
   const [logs, setLogs] = useState<LocalLog[]>(() =>
     initial.logs.map((l) => {
@@ -160,7 +165,14 @@ export function CounterScreen({
       // Flush køen så alle tryk er gemt, før sessionen lukkes.
       await queueRef.current;
       await endSession();
-      window.location.href = "/today";
+      // BLØD navigation: en hård window.location afbrød revalidate-
+      // genhentningen fra endSession, og Next's fejlskærm blinkede forbi.
+      // Layoutet re-evaluerer selv: tilstand → startskærm, ellers I dag.
+      if (counterMode) {
+        router.refresh();
+      } else {
+        router.push("/today");
+      }
     })();
   }
 

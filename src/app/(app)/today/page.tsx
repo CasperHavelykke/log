@@ -390,6 +390,7 @@ export default async function Today() {
       }}
       planEntries={planEntries}
       yearGoals={yearGoals}
+      counterModeEnabled={user.counterModeEnabled ?? false}
       supplementPlans={planItemsRows
         .filter((i) => i.kind === "supplement")
         .map(toPlanItemData)}
