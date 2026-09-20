@@ -33,6 +33,21 @@ type LocalLog = {
 
 type Meta = { serverId: number | null; cancelled: boolean };
 
+// Shot-knapperne bryder BEVIDST over to linjer (type øverst, størrelse
+// nederst) — de fulde et-linjes labels sprængte gridet på små skærme.
+const SHOT_BUTTON_TOP: Partial<Record<DrinkKind, string>> = {
+  mildt_shot_2: "Mildt shot",
+  mildt_shot_4: "Mildt shot",
+  stærkt_shot_2: "Stærkt shot",
+  stærkt_shot_4: "Stærkt shot",
+};
+const SHOT_BUTTON_BOTTOM: Partial<Record<DrinkKind, string>> = {
+  mildt_shot_2: "2 cl",
+  mildt_shot_4: "4 cl",
+  stærkt_shot_2: "2 cl",
+  stærkt_shot_4: "4 cl",
+};
+
 export function CounterScreen({
   initial,
   counterMode = false,
@@ -208,10 +223,11 @@ export function CounterScreen({
         </button>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-4">
-        <div className="mb-6 flex flex-col items-center">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 pb-4">
+        <div className="my-auto flex w-full flex-col items-center">
+        <div className="mb-4 flex flex-col items-center sm:mb-6">
           <div
-            className="font-serif text-[110px] leading-none text-accent"
+            className="font-serif text-[76px] leading-none text-accent sm:text-[110px]"
             style={{ letterSpacing: "-3px" }}
           >
             {fmtUnitsX10(totalX10)}
@@ -223,7 +239,7 @@ export function CounterScreen({
 
         {totalX10 > 0 && (
           <div
-            className="mb-6 w-full max-w-[420px] rounded-[10px] px-4 py-2.5 text-center"
+            className="mb-4 w-full max-w-[420px] rounded-[10px] px-4 py-2.5 text-center sm:mb-6"
             style={{ background: pace.softBg }}
           >
             {pace.alarm ? (
@@ -286,16 +302,21 @@ export function CounterScreen({
                 type="button"
                 onClick={() => press(kind)}
                 disabled={ending}
-                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[12px] bg-bg-elevated px-3 py-3.5 text-[13px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
+                className="flex cursor-pointer flex-wrap items-center justify-center gap-x-1 gap-y-0.5 rounded-[12px] bg-bg-elevated px-2 py-2.5 text-[13px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60 sm:py-3"
               >
-                <Plus className="size-3.5" />
-                {KIND_LABEL[kind]}
-                <span className="text-[11px] text-light">
-                  ({fmtUnitsX10(KIND_UNITS_X10[kind])})
+                {/* To nowrap-stykker i en flex-wrap: én linje når der er
+                    plads, og bryder ellers præcis før "2 cl". */}
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <Plus className="size-3.5 shrink-0" />
+                  {SHOT_BUTTON_TOP[kind] ?? KIND_LABEL[kind]}
+                </span>
+                <span className="whitespace-nowrap">
+                  {SHOT_BUTTON_BOTTOM[kind]}
                 </span>
               </button>
             ))}
           </div>
+        </div>
         </div>
       </main>
 
@@ -379,7 +400,7 @@ function BigButton({
       type="button"
       onClick={() => onPress(kind)}
       disabled={disabled}
-      className="flex cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-accent px-4 py-5 text-[17px] font-semibold text-white shadow-[0_8px_24px_rgba(110,169,242,0.35)] transition active:scale-[0.98] disabled:opacity-60"
+      className="flex cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-accent px-4 py-4 text-[16px] font-semibold text-white shadow-[0_8px_24px_rgba(110,169,242,0.35)] transition active:scale-[0.98] disabled:opacity-60 sm:py-5 sm:text-[17px]"
     >
       <Plus className="size-5" />
       {KIND_LABEL[kind]}
