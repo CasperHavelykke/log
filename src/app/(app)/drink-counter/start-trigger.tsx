@@ -54,8 +54,14 @@ export function StartCounterTrigger() {
             </div>
             <div className="mb-5 space-y-2 text-[13px] text-mid">
               <p>
-                Tæl genstande mens du er ude. Tryk på en knap for hver
-                drink — alm. drink, shot (1 g.) eller stærk shot (2 g.).
+                Tæl genstande mens du er ude. Tryk på en knap for hvert
+                indtag — øl, drink eller shots i 2/4 cl — så tælles der i
+                ærlige genstande (et lille shot er fx 0,2).
+              </p>
+              <p>
+                Tælleren viser samtidig dine <em>aktive</em> genstande —
+                indtag minus kroppens forbrænding — og siger til, når det
+                er tid til vand, pause eller hjem.
               </p>
               <p>
                 Når sessionen er aktiv, åbner appen direkte i tælleren —
