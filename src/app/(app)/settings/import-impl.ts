@@ -257,6 +257,8 @@ const drinkLogRow = z.object({
   id: z.number().int(),
   sessionId: z.number().int(),
   unitCount: z.number().int(),
+  // Tiendedele (0039+); gamle backups udleder den af unitCount.
+  unitsX10: z.number().int().optional(),
   kind: z.string(),
   occurredAt: z.string(),
 });
@@ -835,6 +837,8 @@ export async function performImport(
         return {
           sessionId: newSessionId,
           unitCount: l.unitCount,
+          // Gamle backups (før 0039) har kun hele genstande.
+          unitsX10: l.unitsX10 ?? l.unitCount * 10,
           kind: l.kind,
           occurredAt: l.occurredAt,
         };

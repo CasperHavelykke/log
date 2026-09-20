@@ -71,7 +71,7 @@ export default async function AppLayout({
         trainingEnabled={user.trainingEnabled ?? false}
       />
       {drinkSession && (
-        <FloatingCounterBanner totalUnits={drinkSession.totalUnits} />
+        <FloatingCounterBanner totalUnitsX10={drinkSession.totalUnitsX10} />
       )}
       <IdleBlur />
     </div>

@@ -317,7 +317,12 @@ export const drinkLogs = sqliteTable(
     sessionId: integer("session_id")
       .notNull()
       .references(() => drinkSessions.id, { onDelete: "cascade" }),
+    // LEGACY: hele genstande. Bevares (og skrives afrundet) af hensyn til
+    // gamle backups — sandheden er units_x10.
     unitCount: integer("unit_count").notNull(),
+    // Genstande i tiendedele (×10-mønstret): et 2 cl mildt shot = 2,
+    // en øl = 10. Backfillet fra unit_count × 10 i migration 0039.
+    unitsX10: integer("units_x10").notNull().default(0),
     kind: text("kind").notNull(),
     occurredAt: text("occurred_at").notNull(),
   },

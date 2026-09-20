@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { CounterScreen } from "./counter-screen";
-import type { ActiveSessionPayload } from "./constants";
+import { fmtUnitsX10, type ActiveSessionPayload } from "./constants";
 
 const ESCAPE_COOKIE = "drink-counter-escape";
 
@@ -23,9 +23,9 @@ export function CounterWrapper({
 }
 
 export function FloatingCounterBanner({
-  totalUnits,
+  totalUnitsX10,
 }: {
-  totalUnits: number;
+  totalUnitsX10: number;
 }) {
   const router = useRouter();
 
@@ -43,7 +43,7 @@ export function FloatingCounterBanner({
       }}
       className="fixed right-4 z-[60] inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-[13px] font-medium text-white shadow-[0_8px_24px_rgba(110,169,242,0.4)] transition active:scale-95 md:!bottom-6"
     >
-      <span className="font-semibold">{totalUnits}</span>
+      <span className="font-semibold">{fmtUnitsX10(totalUnitsX10)}</span>
       <span>genstande · tilbage til tæller →</span>
     </button>
   );

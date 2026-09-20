@@ -6,7 +6,7 @@ import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
 import { todayIsoDate } from "@/lib/date";
 import {
-  KIND_UNITS,
+  KIND_UNITS_X10,
   type ActiveSessionPayload,
   type DrinkKind,
 } from "./constants";
@@ -32,16 +32,16 @@ export async function getActiveSession(): Promise<ActiveSessionPayload | null> {
     .where(eq(schema.drinkLogs.sessionId, session.id))
     .orderBy(asc(schema.drinkLogs.occurredAt));
 
-  const totalUnits = logs.reduce((sum, l) => sum + l.unitCount, 0);
+  const totalUnitsX10 = logs.reduce((sum, l) => sum + l.unitsX10, 0);
 
   return {
     id: session.id,
     sessionDate: session.sessionDate,
     startedAt: session.startedAt,
-    totalUnits,
+    totalUnitsX10,
     logs: logs.map((l) => ({
       id: l.id,
-      unitCount: l.unitCount,
+      unitsX10: l.unitsX10,
       kind: l.kind as DrinkKind,
       occurredAt: l.occurredAt,
     })),
@@ -83,8 +83,8 @@ export async function addDrink(input: { kind: DrinkKind }) {
   if (!session) {
     return { ok: false as const, error: "Ingen aktiv session" };
   }
-  const units = KIND_UNITS[input.kind];
-  if (!units) {
+  const unitsX10 = KIND_UNITS_X10[input.kind];
+  if (!unitsX10) {
     return { ok: false as const, error: "Ukendt drink-type" };
   }
   const now = new Date().toISOString();
@@ -92,12 +92,22 @@ export async function addDrink(input: { kind: DrinkKind }) {
     .insert(schema.drinkLogs)
     .values({
       sessionId: session.id,
-      unitCount: units,
+      // Legacy-kolonnen holdes afrundet ajour af hensyn til gamle backups.
+      unitCount: Math.round(unitsX10 / 10),
+      unitsX10,
       kind: input.kind,
       occurredAt: now,
     })
     .returning();
-  await bumpAlcoholUnits(user.id, session.sessionDate, units);
+  // Dagens alkohol-heltal bumpes DRIFT-FRIT: forskellen mellem afrundet
+  // total før og efter — så seks 0,2-shots bliver til 1 genstand på dagen,
+  // ikke 0 (afrundede deltaer ville tabe alle småbidder).
+  await bumpAlcoholUnits(
+    user.id,
+    session.sessionDate,
+    Math.round((session.totalUnitsX10 + unitsX10) / 10) -
+      Math.round(session.totalUnitsX10 / 10),
+  );
   revalidatePath("/", "layout");
   // Klienten skal bruge det RIGTIGE id — fabrikerede optimistiske id'er
   // gjorde fortryd stille brudt (ramte en ikke-eksisterende række).
@@ -120,7 +130,12 @@ export async function removeDrink(input: { logId: number }) {
     return { ok: false as const, error: "Indtag findes ikke" };
   }
   await db.delete(schema.drinkLogs).where(eq(schema.drinkLogs.id, log.id));
-  await bumpAlcoholUnits(user.id, session.sessionDate, -log.unitCount);
+  await bumpAlcoholUnits(
+    user.id,
+    session.sessionDate,
+    Math.round((session.totalUnitsX10 - log.unitsX10) / 10) -
+      Math.round(session.totalUnitsX10 / 10),
+  );
   revalidatePath("/", "layout");
   return { ok: true as const };
 }

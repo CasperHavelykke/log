@@ -1,15 +1,33 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { addDrink, endSession, getActiveSession, removeDrink } from "./actions";
-import type { ActiveSessionPayload, DrinkKind } from "./constants";
+import {
+  ACTIVE_KINDS,
+  KIND_LABEL,
+  KIND_UNITS_X10,
+  fmtUnitsX10,
+  type ActiveSessionPayload,
+  type DrinkKind,
+} from "./constants";
 
-const KIND_LABEL: Record<DrinkKind, string> = {
-  genstand: "Genstand",
-  shot: "Shot",
-  stærk_shot: "Stærk shot",
+// Optimistisk UI med baggrundskø: hvert tryk opdaterer tallet ØJEBLIKKELIGT
+// og lægger server-skrivningen i en seriel kø — knapperne låses aldrig, og
+// hvert indtag er alligevel gemt på serveren sekunder senere (i modsætning
+// til "gem alt ved afslut", hvor en død telefon koster hele aftenen).
+// Fortryd virker også på tryk der endnu ikke er nået frem: de markeres
+// cancelled og slettes så snart serveren har givet dem et id.
+
+type LocalLog = {
+  clientId: string;
+  serverId: number | null;
+  unitsX10: number;
+  kind: DrinkKind;
+  occurredAt: string;
 };
+
+type Meta = { serverId: number | null; cancelled: boolean };
 
 export function CounterScreen({
   initial,
@@ -18,8 +36,22 @@ export function CounterScreen({
   initial: ActiveSessionPayload;
   onEscape: () => void;
 }) {
-  const [session, setSession] = useState<ActiveSessionPayload>(initial);
-  const [pending, startTx] = useTransition();
+  const metaRef = useRef(new Map<string, Meta>());
+  const [logs, setLogs] = useState<LocalLog[]>(() =>
+    initial.logs.map((l) => {
+      const clientId = `srv-${l.id}`;
+      metaRef.current.set(clientId, { serverId: l.id, cancelled: false });
+      return {
+        clientId,
+        serverId: l.id,
+        unitsX10: l.unitsX10,
+        kind: l.kind,
+        occurredAt: l.occurredAt,
+      };
+    }),
+  );
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const [inFlight, setInFlight] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [ending, setEnding] = useState(false);
 
@@ -28,67 +60,109 @@ export function CounterScreen({
     return () => clearInterval(t);
   }, []);
 
+  function enqueue(task: () => Promise<void>) {
+    setInFlight((n) => n + 1);
+    queueRef.current = queueRef.current
+      .then(task)
+      .catch(() => {
+        // Netværksfejl: hent serverens sandhed frem for at gætte.
+        return resync();
+      })
+      .finally(() => setInFlight((n) => n - 1));
+  }
+
+  async function resync() {
+    const fresh = await getActiveSession();
+    if (!fresh) return;
+    metaRef.current = new Map();
+    setLogs(
+      fresh.logs.map((l) => {
+        const clientId = `srv-${l.id}`;
+        metaRef.current.set(clientId, { serverId: l.id, cancelled: false });
+        return {
+          clientId,
+          serverId: l.id,
+          unitsX10: l.unitsX10,
+          kind: l.kind,
+          occurredAt: l.occurredAt,
+        };
+      }),
+    );
+  }
+
   function press(kind: DrinkKind) {
-    startTx(async () => {
+    const clientId = crypto.randomUUID();
+    metaRef.current.set(clientId, { serverId: null, cancelled: false });
+    setLogs((prev) => [
+      ...prev,
+      {
+        clientId,
+        serverId: null,
+        unitsX10: KIND_UNITS_X10[kind],
+        kind,
+        occurredAt: new Date().toISOString(),
+      },
+    ]);
+    enqueue(async () => {
       const res = await addDrink({ kind });
-      if (!res.ok) return;
-      // Brug serverens række direkte — fabrikerede id'er gjorde fortryd
-      // stille brudt (removeDrink ramte en ikke-eksisterende række).
-      setSession((s) => ({
-        ...s,
-        totalUnits: s.totalUnits + res.log.unitCount,
-        logs: [
-          ...s.logs,
-          {
-            id: res.log.id,
-            unitCount: res.log.unitCount,
-            kind: res.log.kind as DrinkKind,
-            occurredAt: res.log.occurredAt,
-          },
-        ],
-      }));
+      const meta = metaRef.current.get(clientId);
+      if (!res.ok) {
+        await resync();
+        return;
+      }
+      if (!meta) return;
+      meta.serverId = res.log.id;
+      if (meta.cancelled) {
+        // Fortrudt mens tilføjelsen var undervejs.
+        await removeDrink({ logId: res.log.id });
+        return;
+      }
+      setLogs((prev) =>
+        prev.map((l) =>
+          l.clientId === clientId
+            ? { ...l, serverId: res.log.id, occurredAt: res.log.occurredAt }
+            : l,
+        ),
+      );
     });
   }
 
-  function undo(logId: number) {
-    startTx(async () => {
-      const res = await removeDrink({ logId });
-      if (!res.ok) {
-        // Klient og server er ude af sync — hent sandheden frem for at
-        // sluge fejlen stille.
-        const fresh = await getActiveSession();
-        if (fresh) setSession(fresh);
-        return;
-      }
-      setSession((s) => {
-        const log = s.logs.find((l) => l.id === logId);
-        return {
-          ...s,
-          totalUnits: s.totalUnits - (log?.unitCount ?? 0),
-          logs: s.logs.filter((l) => l.id !== logId),
-        };
-      });
+  function undo(clientId: string) {
+    const meta = metaRef.current.get(clientId);
+    setLogs((prev) => prev.filter((l) => l.clientId !== clientId));
+    if (!meta) return;
+    if (meta.serverId === null) {
+      meta.cancelled = true;
+      return;
+    }
+    const serverId = meta.serverId;
+    enqueue(async () => {
+      const res = await removeDrink({ logId: serverId });
+      if (!res.ok) await resync();
     });
   }
 
   function confirmEnd() {
+    const totalX10 = logs.reduce((s, l) => s + l.unitsX10, 0);
     if (
       !confirm(
-        `Afslut session? Du har talt ${session.totalUnits} genstande. ` +
+        `Afslut session? Du har talt ${fmtUnitsX10(totalX10)} genstande. ` +
           "Tællingen lægges på din alkohol-log for dagen.",
       )
     ) {
       return;
     }
     setEnding(true);
-    startTx(async () => {
+    void (async () => {
+      // Flush køen så alle tryk er gemt, før sessionen lukkes.
+      await queueRef.current;
       await endSession();
-      // Layout vil re-evaluere og vise normal app.
       window.location.href = "/today";
-    });
+    })();
   }
 
-  const elapsed = formatElapsed(now - new Date(session.startedAt).getTime());
+  const totalX10 = logs.reduce((s, l) => s + l.unitsX10, 0);
+  const elapsed = formatElapsed(now - new Date(initial.startedAt).getTime());
 
   return (
     <div
@@ -111,50 +185,47 @@ export function CounterScreen({
         </button>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-6">
-        <div className="mb-8 flex flex-col items-center">
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-4">
+        <div className="mb-6 flex flex-col items-center">
           <div
-            className="font-serif text-[140px] leading-none text-accent"
+            className="font-serif text-[110px] leading-none text-accent"
             style={{ letterSpacing: "-3px" }}
           >
-            {session.totalUnits}
+            {fmtUnitsX10(totalX10)}
           </div>
           <div className="mt-2 text-[13px] text-mid">
-            {session.totalUnits === 1 ? "genstand" : "genstande"}
+            {totalX10 === 10 ? "genstand" : "genstande"}
           </div>
         </div>
 
         <div className="w-full max-w-[420px] space-y-3">
-          <button
-            type="button"
-            onClick={() => press("genstand")}
-            disabled={pending || ending}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-accent px-6 py-5 text-[18px] font-semibold text-white shadow-[0_8px_24px_rgba(110,169,242,0.35)] transition active:scale-[0.98] disabled:opacity-60"
-          >
-            <Plus className="size-5" />
-            Genstand
-          </button>
           <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => press("shot")}
-              disabled={pending || ending}
-              className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[12px] bg-bg-elevated px-4 py-3.5 text-[14px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
-            >
-              <Plus className="size-4" />
-              Shot
-              <span className="text-[11px] text-light">(1)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => press("stærk_shot")}
-              disabled={pending || ending}
-              className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[12px] bg-bg-elevated px-4 py-3.5 text-[14px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
-            >
-              <Plus className="size-4" />
-              Stærk shot
-              <span className="text-[11px] text-light">(2)</span>
-            </button>
+            <BigButton kind="øl" onPress={press} disabled={ending} />
+            <BigButton kind="drink" onPress={press} disabled={ending} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(
+              [
+                "mildt_shot_2",
+                "mildt_shot_4",
+                "stærkt_shot_2",
+                "stærkt_shot_4",
+              ] as const
+            ).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => press(kind)}
+                disabled={ending}
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-[12px] bg-bg-elevated px-3 py-3.5 text-[13px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
+              >
+                <Plus className="size-3.5" />
+                {KIND_LABEL[kind]}
+                <span className="text-[11px] text-light">
+                  ({fmtUnitsX10(KIND_UNITS_X10[kind])})
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </main>
@@ -165,35 +236,35 @@ export function CounterScreen({
             <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-light">
               Indtag
             </span>
-            {pending && (
+            {inFlight > 0 && (
               <Loader2 className="size-3 animate-spin text-light" />
             )}
           </div>
-          {session.logs.length === 0 ? (
-            <p className="text-[12px] italic text-dim">
+          {/* Fast højde: sektionen må ikke vokse med listen — så løfter
+              tælleren og knapperne sig ved hvert tryk. */}
+          {logs.length === 0 ? (
+            <p className="flex h-[22vh] items-start text-[12px] italic text-dim">
               Ingen indtag endnu. Tryk på en knap ovenfor.
             </p>
           ) : (
-            <ul className="max-h-[22vh] space-y-1.5 overflow-y-auto overscroll-contain">
-              {[...session.logs].reverse().map((l) => (
+            <ul className="h-[22vh] space-y-1.5 overflow-y-auto overscroll-contain">
+              {[...logs].reverse().map((l) => (
                 <li
-                  key={l.id}
+                  key={l.clientId}
                   className="flex items-center gap-3 rounded-[8px] bg-bg-elevated px-3 py-2 text-[13px]"
                 >
                   <span className="font-medium text-ink">
                     {KIND_LABEL[l.kind]}
                   </span>
                   <span className="text-accent">
-                    {l.unitCount}
-                    {l.unitCount === 1 ? " g." : " g."}
+                    {fmtUnitsX10(l.unitsX10)} g.
                   </span>
                   <span className="ml-auto text-[11px] text-light">
-                    {formatTime(l.occurredAt)}
+                    {l.serverId === null ? "…" : formatTime(l.occurredAt)}
                   </span>
                   <button
                     type="button"
-                    onClick={() => undo(l.id)}
-                    disabled={pending}
+                    onClick={() => undo(l.clientId)}
                     className="cursor-pointer text-dim hover:text-danger"
                     title="Fortryd"
                   >
@@ -222,6 +293,28 @@ export function CounterScreen({
         </button>
       </footer>
     </div>
+  );
+}
+
+function BigButton({
+  kind,
+  onPress,
+  disabled,
+}: {
+  kind: DrinkKind;
+  onPress: (kind: DrinkKind) => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onPress(kind)}
+      disabled={disabled}
+      className="flex cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-accent px-4 py-5 text-[17px] font-semibold text-white shadow-[0_8px_24px_rgba(110,169,242,0.35)] transition active:scale-[0.98] disabled:opacity-60"
+    >
+      <Plus className="size-5" />
+      {KIND_LABEL[kind]}
+    </button>
   );
 }
 
