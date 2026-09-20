@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
@@ -34,11 +34,26 @@ export async function getActiveSession(): Promise<ActiveSessionPayload | null> {
 
   const totalUnitsX10 = logs.reduce((sum, l) => sum + l.unitsX10, 0);
 
+  // Seneste vejning kalibrerer forbraendingen (~0,1 g alkohol/kg/time)
+  // i "aktive genstande"-indikatoren. null = fald tilbage til 80 kg.
+  const weightRows = await db
+    .select({ weightX10: schema.dayEntries.weightX10 })
+    .from(schema.dayEntries)
+    .where(
+      and(
+        eq(schema.dayEntries.userId, user.id),
+        isNotNull(schema.dayEntries.weightX10),
+      ),
+    )
+    .orderBy(desc(schema.dayEntries.date))
+    .limit(1);
+
   return {
     id: session.id,
     sessionDate: session.sessionDate,
     startedAt: session.startedAt,
     totalUnitsX10,
+    bodyWeightX10: weightRows[0]?.weightX10 ?? null,
     logs: logs.map((l) => ({
       id: l.id,
       unitsX10: l.unitsX10,

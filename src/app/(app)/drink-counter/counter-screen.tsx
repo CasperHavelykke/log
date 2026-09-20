@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { addDrink, endSession, getActiveSession, removeDrink } from "./actions";
 import {
-  ACTIVE_KINDS,
+  DEFAULT_BODY_WEIGHT_KG,
   KIND_LABEL,
   KIND_UNITS_X10,
+  activeUnitsX10,
+  burnUnitsX10PerHour,
   fmtUnitsX10,
+  paceLevel,
   type ActiveSessionPayload,
   type DrinkKind,
 } from "./constants";
@@ -164,6 +167,14 @@ export function CounterScreen({
   const totalX10 = logs.reduce((s, l) => s + l.unitsX10, 0);
   const elapsed = formatElapsed(now - new Date(initial.startedAt).getTime());
 
+  // Tempo-indikator: aktive genstande i kroppen lige nu (indtag minus
+  // forbrænding), kalibreret efter seneste vejning. Opdateres af samme
+  // 30s-puls som uret, og falder derfor synligt under pauser.
+  const weightX10 = initial.bodyWeightX10 ?? DEFAULT_BODY_WEIGHT_KG * 10;
+  const weightKg = weightX10 / 10;
+  const activeX10 = activeUnitsX10(logs, now, weightKg);
+  const pace = paceLevel(activeX10);
+
   return (
     <div
       className="fixed inset-0 flex h-[100vh] flex-col overflow-hidden bg-bg text-ink"
@@ -194,9 +205,55 @@ export function CounterScreen({
             {fmtUnitsX10(totalX10)}
           </div>
           <div className="mt-2 text-[13px] text-mid">
-            {totalX10 === 10 ? "genstand" : "genstande"}
+            {totalX10 === 10 ? "genstand" : "genstande"} i alt
           </div>
         </div>
+
+        {totalX10 > 0 && (
+          <div
+            className="mb-6 w-full max-w-[420px] rounded-[10px] px-4 py-2.5 text-center"
+            style={{ background: pace.softBg }}
+          >
+            {pace.alarm ? (
+              <div
+                className="py-1 text-[24px] font-bold uppercase tracking-[2px]"
+                style={{ color: pace.color }}
+              >
+                {pace.label}
+              </div>
+            ) : (
+              <div
+                className="text-[13px] font-medium"
+                style={{ color: pace.color }}
+              >
+                ~{fmtUnitsX10(Math.round(activeX10))} aktive genstande i
+                kroppen · {pace.label}
+              </div>
+            )}
+            <div
+              className="mt-0.5 text-[10px]"
+              style={{
+                color: pace.alarm ? "rgba(255,255,255,0.85)" : undefined,
+              }}
+            >
+              {pace.alarm && (
+                <>
+                  ~{fmtUnitsX10(Math.round(activeX10))} aktive genstande —
+                  dømmekraften er reelt væk herfra.{" "}
+                </>
+              )}
+              <span className={pace.alarm ? "" : "text-light"}>
+                Forbrænding ca.{" "}
+                {fmtUnitsX10(Math.round(burnUnitsX10PerHour(weightKg)))}{" "}
+                genstand/time ved {fmtUnitsX10(weightX10)} kg
+                {initial.bodyWeightX10 === null
+                  ? " (standard — log din vægt på I dag for at kalibrere)"
+                  : ""}{" "}
+                — tommelfingerregel, ikke promille.
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="w-full max-w-[420px] space-y-3">
           <div className="grid grid-cols-2 gap-3">

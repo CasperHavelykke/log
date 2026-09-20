@@ -90,6 +90,8 @@ export type ActiveSessionPayload = {
   sessionDate: string;
   startedAt: string;
   totalUnitsX10: number;
+  // Seneste vejning fra dagsdata (kg ×10) — kalibrerer forbrændingen.
+  bodyWeightX10: number | null;
   logs: Array<{
     id: number;
     unitsX10: number;
@@ -97,3 +99,95 @@ export type ActiveSessionPayload = {
     occurredAt: string;
   }>;
 };
+
+// --- "Aktive genstande" — tempo-indikatoren -------------------------------
+// Kroppen forbrænder ca. 0,1 g alkohol pr. kg kropsvægt pr. time
+// (tommelfingerregel, ikke en promillemåler — promille ville kræve køn/
+// højde/kropsvæske via Widmark). Vi simulerer sessionens indtag minus
+// forbrænding og får ét tal: genstande der er aktive i kroppen lige nu.
+// Det fanger både mængde OG tempo — og falder af sig selv under pauser.
+const BURN_G_PER_KG_PER_HOUR = 0.1;
+const GRAMS_PER_UNIT = 12;
+export const DEFAULT_BODY_WEIGHT_KG = 80;
+
+export function burnUnitsX10PerHour(weightKg: number): number {
+  return (BURN_G_PER_KG_PER_HOUR * weightKg * 10) / GRAMS_PER_UNIT;
+}
+
+export function activeUnitsX10(
+  logs: Array<{ unitsX10: number; occurredAt: string }>,
+  nowMs: number,
+  weightKg: number,
+): number {
+  const burnPerMs = burnUnitsX10PerHour(weightKg) / 3_600_000;
+  const sorted = [...logs].sort(
+    (a, b) => a.occurredAt.localeCompare(b.occurredAt),
+  );
+  let level = 0;
+  let prevMs: number | null = null;
+  for (const l of sorted) {
+    const t = new Date(l.occurredAt).getTime();
+    if (prevMs !== null) level = Math.max(0, level - burnPerMs * (t - prevMs));
+    level += l.unitsX10;
+    prevMs = t;
+  }
+  if (prevMs !== null) {
+    level = Math.max(0, level - burnPerMs * (nowMs - prevMs));
+  }
+  return level;
+}
+
+export type PaceLevel = {
+  key: "ro" | "gul" | "orange" | "rød" | "hjem";
+  label: string;
+  // Farver som CSS-værdier (orange findes ikke som app-token).
+  color: string;
+  softBg: string;
+  // Maksimalt niveau: banneret går i massiv alarm-visning.
+  alarm?: boolean;
+};
+
+// Tærskler i aktive genstande (×10).
+export function paceLevel(activeX10: number): PaceLevel {
+  if (activeX10 < 20) {
+    return {
+      key: "ro",
+      label: "Roligt tempo",
+      color: "var(--accent)",
+      softBg: "var(--accent-bg)",
+    };
+  }
+  if (activeX10 < 35) {
+    return {
+      key: "gul",
+      label: "Mærkbart",
+      color: "var(--warning)",
+      softBg: "var(--warning-soft)",
+    };
+  }
+  if (activeX10 < 50) {
+    return {
+      key: "orange",
+      label: "Overvej en pause",
+      color: "#fb923c",
+      softBg: "rgba(251, 146, 60, 0.14)",
+    };
+  }
+  if (activeX10 < 70) {
+    return {
+      key: "rød",
+      label: "Kroppen er langt bagud — vand og pause",
+      color: "var(--danger)",
+      softBg: "var(--danger-soft)",
+    };
+  }
+  // ~7 aktive genstande ≈ 1,4-1,6 promille ved 80-85 kg: dømmekraften er
+  // reelt væk og blackout-zonen begynder. Sidste påmindelse.
+  return {
+    key: "hjem",
+    label: "TAG HJEM",
+    color: "#ffffff",
+    softBg: "var(--danger)",
+    alarm: true,
+  };
+}
