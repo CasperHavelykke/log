@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
+import { ArrowLeft, Loader2, Martini, X } from "lucide-react";
+import {
+  BeerIcon,
+  Shot2clIcon,
+  Shot2clStrongIcon,
+  Shot4clIcon,
+  Shot4clStrongIcon,
+} from "./icons";
 import { addDrink, endSession, getActiveSession, removeDrink } from "./actions";
 import {
   DEFAULT_BODY_WEIGHT_KG,
@@ -36,8 +43,8 @@ type Meta = { serverId: number | null; cancelled: boolean };
 // Shot-knapperne bryder BEVIDST over to linjer (type øverst, størrelse
 // nederst) — de fulde et-linjes labels sprængte gridet på små skærme.
 const SHOT_BUTTON_TOP: Partial<Record<DrinkKind, string>> = {
-  mildt_shot_2: "Mildt shot",
-  mildt_shot_4: "Mildt shot",
+  mildt_shot_2: "Alm. shot",
+  mildt_shot_4: "Alm. shot",
   stærkt_shot_2: "Stærkt shot",
   stærkt_shot_4: "Stærkt shot",
 };
@@ -285,8 +292,18 @@ export function CounterScreen({
 
         <div className="w-full max-w-[420px] space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <BigButton kind="øl" onPress={press} disabled={ending} />
-            <BigButton kind="drink" onPress={press} disabled={ending} />
+            <BigButton
+              kind="øl"
+              icon={<BeerIcon className="h-6 w-auto" />}
+              onPress={press}
+              disabled={ending}
+            />
+            <BigButton
+              kind="drink"
+              icon={<Martini className="size-5" />}
+              onPress={press}
+              disabled={ending}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             {(
@@ -306,8 +323,16 @@ export function CounterScreen({
               >
                 {/* To nowrap-stykker i en flex-wrap: én linje når der er
                     plads, og bryder ellers præcis før "2 cl". */}
-                <span className="flex items-center gap-1 whitespace-nowrap">
-                  <Plus className="size-3.5 shrink-0" />
+                <span className="flex items-center gap-1.5 whitespace-nowrap">
+                  {kind === "mildt_shot_2" ? (
+                    <Shot2clIcon className="h-4 w-auto shrink-0" />
+                  ) : kind === "mildt_shot_4" ? (
+                    <Shot4clIcon className="h-4 w-auto shrink-0" />
+                  ) : kind === "stærkt_shot_2" ? (
+                    <Shot2clStrongIcon className="h-4 w-auto shrink-0" />
+                  ) : (
+                    <Shot4clStrongIcon className="h-4 w-auto shrink-0" />
+                  )}
                   {SHOT_BUTTON_TOP[kind] ?? KIND_LABEL[kind]}
                 </span>
                 <span className="whitespace-nowrap">
@@ -388,10 +413,12 @@ export function CounterScreen({
 
 function BigButton({
   kind,
+  icon,
   onPress,
   disabled,
 }: {
   kind: DrinkKind;
+  icon: React.ReactNode;
   onPress: (kind: DrinkKind) => void;
   disabled: boolean;
 }) {
@@ -402,7 +429,7 @@ function BigButton({
       disabled={disabled}
       className="flex cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-accent px-4 py-4 text-[16px] font-semibold text-white shadow-[0_8px_24px_rgba(110,169,242,0.35)] transition active:scale-[0.98] disabled:opacity-60 sm:py-5 sm:text-[17px]"
     >
-      <Plus className="size-5" />
+      {icon}
       {KIND_LABEL[kind]}
     </button>
   );

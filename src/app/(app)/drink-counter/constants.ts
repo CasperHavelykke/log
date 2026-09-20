@@ -53,8 +53,8 @@ export const KIND_KCAL: Record<DrinkKind, number> = {
 export const KIND_LABEL: Record<DrinkKind, string> = {
   øl: "Øl",
   drink: "Drink",
-  mildt_shot_2: "Mildt shot 2 cl",
-  mildt_shot_4: "Mildt shot 4 cl",
+  mildt_shot_2: "Alm. shot 2 cl",
+  mildt_shot_4: "Alm. shot 4 cl",
   stærkt_shot_2: "Stærkt shot 2 cl",
   stærkt_shot_4: "Stærkt shot 4 cl",
   genstand: "Genstand",
