@@ -197,3 +197,96 @@ export function Shot4clStrongIcon({ className }: { className?: string }) {
     </ShotSvg>
   );
 }
+
+// Roisin-cocktails (2026-09-21): mellem har pynt, stærk har ekstra
+// "sprut"-streger. Delt 24×26-viewBox (stærk, 23×24, er centreret i
+// rammen), så begge renderes med identisk klasse.
+
+function CocktailSvg({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 26"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+export function CocktailMediumIcon({ className }: { className?: string }) {
+  return (
+    <CocktailSvg className={className}>
+      <g transform="matrix(1,0,0,1,-4.06546,-2.76109)">
+        <g transform="matrix(1.05409,0,0,1.05409,0.90336,4.32119)">
+          <path
+            d="M12,12L4.207,4.207C4.074,4.074 4,3.894 4,3.707C4,3.319 4.319,3 4.707,3L19.293,3C19.681,3 20,3.319 20,3.707C20,3.894 19.926,4.074 19.793,4.207L12,12Z"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <path d="M12,12L12,22" stroke="currentColor" strokeWidth="2" />
+          <path d="M7,22L17,22" stroke="currentColor" strokeWidth="2" />
+        </g>
+        <g transform="matrix(1.22562,0,0,1.22562,-0.420799,-0.792186)">
+          <path
+            d="M14.183,6.752C14.183,6.752 17.212,4.662 18.405,3.839C18.715,3.625 19.082,3.511 19.458,3.511C20.452,3.511 22.38,3.511 22.38,3.511"
+            stroke="currentColor"
+            strokeWidth="1.22"
+            strokeMiterlimit="1.5"
+          />
+        </g>
+      </g>
+    </CocktailSvg>
+  );
+}
+
+export function CocktailStrongIcon({ className }: { className?: string }) {
+  return (
+    <CocktailSvg className={className}>
+      <g transform="translate(0.5,1)">
+        <g transform="matrix(1,0,0,1,-1.07377,-0.535741)">
+          <g transform="matrix(0.860041,0,0,0.860041,1.67951,4.17206)">
+            <path
+              d="M12,12L4.207,4.207C4.074,4.074 4,3.894 4,3.707C4,3.319 4.319,3 4.707,3L19.293,3C19.681,3 20,3.319 20,3.707C20,3.894 19.926,4.074 19.793,4.207L12,12Z"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path d="M12,12L12,22" stroke="currentColor" strokeWidth="2" />
+            <path d="M7,22L17,22" stroke="currentColor" strokeWidth="2" />
+          </g>
+          <g transform="matrix(1,0,0,1,0.599117,0)">
+            <path
+              d="M14.183,6.752C14.183,6.752 17.04,4.781 18.298,3.913C18.677,3.651 19.127,3.511 19.588,3.511C20.61,3.511 22.38,3.511 22.38,3.511"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeMiterlimit="1.5"
+            />
+          </g>
+          <g transform="matrix(1,0,0,1,-1.37306,-0.112675)">
+            <path
+              d="M9.225,6.752L5.676,3.934L9.788,1.398"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeMiterlimit="1.5"
+            />
+            <path
+              d="M5.676,3.934L3.197,8.243"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeMiterlimit="1.5"
+            />
+          </g>
+        </g>
+      </g>
+    </CocktailSvg>
+  );
+}

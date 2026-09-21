@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Beer, Bird, ChevronDown, ChevronUp, Loader2, Martini, X } from "lucide-react";
 import {
   BeerIcon,
+  CocktailMediumIcon,
+  CocktailStrongIcon,
   Shot2clIcon,
   Shot2clStrongIcon,
   Shot4clIcon,
@@ -380,7 +382,13 @@ export function CounterScreen({
                     disabled={ending}
                     className="flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-[12px] bg-bg-elevated px-2 py-2.5 text-[13px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
                   >
-                    <Martini className="size-4 text-accent" />
+                    {kind === "roisin_drink_mild" ? (
+                      <Martini className="size-4 text-accent" />
+                    ) : kind === "roisin_drink_mellem" ? (
+                      <CocktailMediumIcon className="h-4 w-auto text-accent" />
+                    ) : (
+                      <CocktailStrongIcon className="h-4 w-auto text-accent" />
+                    )}
                     {label}
                   </button>
                 ))}
