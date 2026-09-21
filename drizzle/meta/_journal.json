@@ -288,6 +288,13 @@
       "when": 1789905001043,
       "tag": "0040_counter_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1790017293892,
+      "tag": "0041_plan_checkins",
+      "breakpoints": true
     }
   ]
 }

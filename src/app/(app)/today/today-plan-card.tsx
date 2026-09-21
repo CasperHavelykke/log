@@ -9,16 +9,19 @@ import {
   CircleDashed,
   Dumbbell,
   FolderKanban,
+  LogIn,
   Pill,
   Undo2,
   UtensilsCrossed,
   X,
 } from "lucide-react";
 import {
+  checkInPlanItem,
   markPlanItem,
   markTrainedToday,
   postponePlanItem,
   startPlannedWorkout,
+  undoCheckIn,
   undoPostponePlanItem,
   unmarkPlanItem,
 } from "./plan-actions";
@@ -47,6 +50,8 @@ export type TodayPlanEntry = {
   workoutTemplateId: number | null;
   minutesPlanned: number | null;
   minutesActual: number | null;
+  // Check-in: dagens faktiske starttidspunkt (kun projekt-poster).
+  checkInAt: string | null;
   // Ernærings-mål som intervaller: min = "mindst", max = "højst".
   targets: {
     kcal: NutritionRange;
@@ -145,6 +150,22 @@ function NutritionBars({
       ))}
     </div>
   );
+}
+
+// "09:00"/"9.00" i timeOfDay parses som mødetid (minutter siden midnat);
+// fri tekst som "formiddag" giver null — så vises check-in uden farve.
+function parseClock(t: string | null): number | null {
+  if (!t) return null;
+  const m = /^([01]?\d|2[0-3])[.:]([0-5]\d)$/.exec(t.trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function fmtClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString("da-DK", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function fmtMinutes(min: number): string {
@@ -332,6 +353,31 @@ export function TodayPlanCard({
                       {fmtMinutes(e.minutesPlanned)}
                     </span>
                   )}
+                  {e.kind === "project" && e.checkInAt !== null && (() => {
+                    const planned = parseClock(e.timeOfDay);
+                    const d = new Date(e.checkInAt);
+                    const actualMin = d.getHours() * 60 + d.getMinutes();
+                    const late = planned !== null && actualMin > planned;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          run(e.id, () => undoCheckIn(e.id, date))
+                        }
+                        disabled={pending}
+                        title="Fortryd check-in"
+                        className={`cursor-pointer hover:underline ${
+                          planned === null
+                            ? ""
+                            : late
+                              ? "text-warning"
+                              : "text-success"
+                        }`}
+                      >
+                        {" · "}mødt {fmtClock(e.checkInAt)}
+                      </button>
+                    );
+                  })()}
                 </div>
                 {e.kind === "nutrition" && e.targets && (
                   <NutritionBars targets={e.targets} actuals={e.actuals} />
@@ -364,6 +410,21 @@ export function TodayPlanCard({
                 e.state === "open" &&
                 !isInfo && (
                   <div className="flex shrink-0 items-center">
+                    {e.kind === "project" &&
+                      e.timeOfDay !== null &&
+                      e.checkInAt === null && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            run(e.id, () => checkInPlanItem(e.id, date))
+                          }
+                          disabled={pending}
+                          title="Tjek ind — registrér at du er i gang"
+                          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[6px] text-dim hover:text-accent sm:size-7"
+                        >
+                          <LogIn className="size-3.5" />
+                        </button>
+                      )}
                     <button
                       type="button"
                       onClick={() => run(e.id, () => postponePlanItem(e.id, date))}

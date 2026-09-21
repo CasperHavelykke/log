@@ -101,7 +101,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Hent dagens plan",
       description:
-        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/postponed/open ('postponed' = udsat til dagen efter; en post udsat i går vises som dagens forekomst). Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte. Ernærings-mål er INTERVALLER per felt (kcalTarget=minimum, kcalMax=loft osv.) — done når alle satte grænser er overholdt af dagens loggede værdier.",
+        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/postponed/open ('postponed' = udsat til dagen efter; en post udsat i går vises som dagens forekomst). Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte. Ernærings-mål er INTERVALLER per felt (kcalTarget=minimum, kcalMax=loft osv.) — done når alle satte grænser er overholdt af dagens loggede værdier. Projekt-poster kan have checkInAt: dagens faktiske starttidspunkt ('mødt'), sat med mark_plan_item mark='checkin' — brug det når brugeren siger 'jeg sidder ved bordet nu'.",
       inputSchema: {
         date: z
           .string()
@@ -113,7 +113,7 @@ export function registerPlanTools(server: McpServer) {
     async ({ date }) => {
       const user = await getActiveUser();
       const d = date ?? todayIso();
-      const [items, marks, intakes, workouts, entryRows, timeRows, names] =
+      const [items, marks, checkins, intakes, workouts, entryRows, timeRows, names] =
         await Promise.all([
           db
             .select()
@@ -128,6 +128,15 @@ export function registerPlanTools(server: McpServer) {
                 // Også gårsdagens marks: en 'postpone' i går = tilflyttet
                 // forekomst i dag (ugedags-/månedsplaner).
                 inArray(schema.planMarks.date, [addDaysIso(d, -1), d]),
+              ),
+            ),
+          db
+            .select()
+            .from(schema.planCheckins)
+            .where(
+              and(
+                eq(schema.planCheckins.userId, user.id),
+                eq(schema.planCheckins.date, d),
               ),
             ),
           db
@@ -170,6 +179,7 @@ export function registerPlanTools(server: McpServer) {
           loadNames(user.id),
         ]);
       const entry = entryRows[0];
+      const checkinByItem = new Map(checkins.map((c) => [c.planItemId, c.at]));
       const markByItem = new Map(
         marks.filter((m) => m.date === d).map((m) => [m.planItemId, m.kind]),
       );
@@ -280,6 +290,8 @@ export function registerPlanTools(server: McpServer) {
             ...base,
             status,
             minutesActual,
+            checkInAt:
+              i.kind === "project" ? (checkinByItem.get(i.id) ?? null) : null,
             doseDone: doseDone === null ? null : doseDone / 100,
           };
         });
@@ -501,7 +513,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Markér plan-post for en dag",
       description:
-        "Sætter dagens markering på en plan-post: 'done' (manuelt klaret — mest til måltider), 'skip' ('ikke i dag' — rører ikke rytmen), 'postpone' ('udsæt til i morgen' — posten vises i morgen i stedet; for interval-planer rykkes ankeret så rytmen fortsætter fra i morgen, mens ugedags-/månedsplaner kun får et engangs-ryk) eller 'clear' (fjern markeringen; en fortrudt udsættelse ruller også interval-ankeret tilbage). Tilskud bør IKKE markeres done manuelt — log i stedet indtaget med log_supplement, så følger status automatisk.",
+        "Sætter dagens markering på en plan-post: 'done' (manuelt klaret — mest til måltider), 'skip' ('ikke i dag' — rører ikke rytmen), 'postpone' ('udsæt til i morgen' — posten vises i morgen i stedet; for interval-planer rykkes ankeret så rytmen fortsætter fra i morgen, mens ugedags-/månedsplaner kun får et engangs-ryk) 'checkin' (registrér at brugeren er I GANG — dagens faktiske starttidspunkt, første tryk gælder; rører ikke done/skip) eller 'clear' (fjern markeringen; en fortrudt udsættelse ruller også interval-ankeret tilbage). Tilskud bør IKKE markeres done manuelt — log i stedet indtaget med log_supplement, så følger status automatisk.",
       inputSchema: {
         id: z.number().int(),
         date: z
@@ -509,7 +521,7 @@ export function registerPlanTools(server: McpServer) {
           .regex(DATE_RE)
           .optional()
           .describe("ISO-dato; udelades = i dag."),
-        mark: z.enum(["done", "skip", "postpone", "clear"]),
+        mark: z.enum(["done", "skip", "postpone", "checkin", "clear"]),
       },
     },
     async ({ id, date, mark }) => {
@@ -524,6 +536,29 @@ export function registerPlanTools(server: McpServer) {
         .limit(1);
       const item = itemRows[0];
       if (!item) return errorContent("Planen findes ikke");
+      if (mark === "checkin") {
+        const existing = await db
+          .select()
+          .from(schema.planCheckins)
+          .where(
+            and(
+              eq(schema.planCheckins.planItemId, id),
+              eq(schema.planCheckins.date, d),
+            ),
+          )
+          .limit(1);
+        if (existing[0]) {
+          return jsonContent({ ok: true, id, date: d, checkInAt: existing[0].at });
+        }
+        const at = new Date().toISOString();
+        await db.insert(schema.planCheckins).values({
+          userId: user.id,
+          planItemId: id,
+          date: d,
+          at,
+        });
+        return jsonContent({ ok: true, id, date: d, checkInAt: at });
+      }
       const removed = await db
         .delete(schema.planMarks)
         .where(

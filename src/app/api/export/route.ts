@@ -47,6 +47,7 @@ export async function GET() {
     workoutTemplates,
     planItems,
     planMarks,
+    planCheckinsRows,
     goalsRows,
     goalEntriesRows,
   ] = await Promise.all([
@@ -100,6 +101,10 @@ export async function GET() {
       .select()
       .from(schema.planMarks)
       .where(eq(schema.planMarks.userId, user.id)),
+    db
+      .select()
+      .from(schema.planCheckins)
+      .where(eq(schema.planCheckins.userId, user.id)),
     db.select().from(schema.goals).where(eq(schema.goals.userId, user.id)),
     db
       .select()
@@ -142,6 +147,7 @@ export async function GET() {
       workoutTemplates: strip(workoutTemplates),
       planItems: strip(planItems),
       planMarks: strip(planMarks),
+      planCheckins: strip(planCheckinsRows),
       goals: strip(goalsRows),
       goalEntries: strip(goalEntriesRows),
     },

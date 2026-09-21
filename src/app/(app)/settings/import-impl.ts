@@ -340,6 +340,14 @@ const planMarkRow = z.object({
   createdAt: z.string().optional(),
 });
 
+const planCheckinRow = z.object({
+  id: z.number().int(),
+  planItemId: z.number().int(),
+  date: z.string(),
+  at: z.string(),
+  createdAt: z.string().optional(),
+});
+
 const goalRow = z.object({
   id: z.number().int(),
   title: z.string(),
@@ -395,6 +403,7 @@ export const backupSchema = z.object({
     workoutTemplates: z.array(workoutTemplateRow).optional().default([]),
     planItems: z.array(planItemRow).optional().default([]),
     planMarks: z.array(planMarkRow).optional().default([]),
+    planCheckins: z.array(planCheckinRow).optional().default([]),
     goals: z.array(goalRow).optional().default([]),
     goalEntries: z.array(goalEntryRow).optional().default([]),
   }),
@@ -489,6 +498,7 @@ export async function performImport(
   await tx.delete(schema.trackers).where(eq(schema.trackers.userId, uid));
   await tx.delete(schema.recipes).where(eq(schema.recipes.userId, uid));
   await tx.delete(schema.workouts).where(eq(schema.workouts.userId, uid));
+  await tx.delete(schema.planCheckins).where(eq(schema.planCheckins.userId, uid));
   await tx.delete(schema.planMarks).where(eq(schema.planMarks.userId, uid));
   await tx.delete(schema.planItems).where(eq(schema.planItems.userId, uid));
   await tx.delete(schema.goalEntries).where(eq(schema.goalEntries.userId, uid));
@@ -960,6 +970,23 @@ export async function performImport(
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
     if (rows.length > 0) await tx.insert(schema.planMarks).values(rows);
+  }
+
+  if (d.planCheckins.length > 0) {
+    const rows = d.planCheckins
+      .map((c) => {
+        const newItemId = planItemMap.get(c.planItemId);
+        if (newItemId === undefined) return null;
+        return {
+          userId: uid,
+          planItemId: newItemId,
+          date: c.date,
+          at: c.at,
+          createdAt: c.createdAt ?? nowIso(),
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await tx.insert(schema.planCheckins).values(rows);
   }
 
   // Årsmål: entries mappes via nyt goal-id.

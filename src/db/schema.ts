@@ -885,6 +885,30 @@ export const goalEntries = sqliteTable(
   (t) => [index("goal_entries_goal").on(t.goalId)],
 );
 
+// Check-in: ét tryk når man SÆTTER SIG — dagens faktiske starttidspunkt,
+// holdt op mod planens tidspunkt ("mødetiden"). Adskilt fra plan_marks:
+// check-in er fremmøde, ikke fuldførelse. Første tryk gælder.
+export const planCheckins = sqliteTable(
+  "plan_checkins",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    planItemId: integer("plan_item_id")
+      .notNull()
+      .references(() => planItems.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // ISO YYYY-MM-DD
+    at: text("at").notNull(), // ISO timestamp
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [uniqueIndex("plan_checkins_item_date").on(t.planItemId, t.date)],
+);
+
+export type PlanCheckin = typeof planCheckins.$inferSelect;
+
 export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
 export type GoalEntry = typeof goalEntries.$inferSelect;

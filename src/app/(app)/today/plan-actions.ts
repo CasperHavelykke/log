@@ -314,6 +314,63 @@ export async function unmarkPlanItem(planItemId: number, date: string) {
   return { ok: true as const };
 }
 
+// Check-in: registrér at man er I GANG (sat sig ved bordet) — dagens
+// faktiske starttidspunkt mod planens mødetid. Første tryk gælder; et
+// nyt tryk samme dag ændrer ingenting.
+export async function checkInPlanItem(planItemId: number, date: string) {
+  const user = await requireUser();
+  if (!DATE_RE.test(date)) return { ok: false as const, error: "Ugyldig dato" };
+  const item = await db
+    .select({ id: schema.planItems.id })
+    .from(schema.planItems)
+    .where(
+      and(
+        eq(schema.planItems.id, planItemId),
+        eq(schema.planItems.userId, user.id),
+      ),
+    )
+    .limit(1);
+  if (!item[0]) return { ok: false as const, error: "Planen findes ikke" };
+
+  const existing = await db
+    .select()
+    .from(schema.planCheckins)
+    .where(
+      and(
+        eq(schema.planCheckins.planItemId, planItemId),
+        eq(schema.planCheckins.date, date),
+      ),
+    )
+    .limit(1);
+  if (existing[0]) return { ok: true as const, at: existing[0].at };
+
+  const at = new Date().toISOString();
+  await db.insert(schema.planCheckins).values({
+    userId: user.id,
+    planItemId,
+    date,
+    at,
+  });
+  revalidatePath("/today");
+  return { ok: true as const, at };
+}
+
+export async function undoCheckIn(planItemId: number, date: string) {
+  const user = await requireUser();
+  if (!DATE_RE.test(date)) return { ok: false as const, error: "Ugyldig dato" };
+  await db
+    .delete(schema.planCheckins)
+    .where(
+      and(
+        eq(schema.planCheckins.planItemId, planItemId),
+        eq(schema.planCheckins.date, date),
+        eq(schema.planCheckins.userId, user.id),
+      ),
+    );
+  revalidatePath("/today");
+  return { ok: true as const };
+}
+
 // Klik på en planlagt træning med skabelon: opret dagens session forudfyldt
 // fra skabelonen og send brugeren direkte i redigering.
 export async function startPlannedWorkout(planItemId: number) {

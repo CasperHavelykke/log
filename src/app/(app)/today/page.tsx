@@ -167,7 +167,7 @@ export default async function Today() {
   // vises i dag som tilflyttet forekomst (ugedags-/månedsplaner — interval
   // forekommer naturligt via det rykkede anker).
   const prevDate = addDaysIso(date, -1);
-  const [planItemsRows, planMarksRows, workoutsToday, allTemplates] =
+  const [planItemsRows, planMarksRows, checkinRows, workoutsToday, allTemplates] =
     await Promise.all([
       db
         .select()
@@ -180,6 +180,15 @@ export default async function Today() {
           and(
             eq(schema.planMarks.userId, user.id),
             inArray(schema.planMarks.date, [prevDate, date]),
+          ),
+        ),
+      db
+        .select()
+        .from(schema.planCheckins)
+        .where(
+          and(
+            eq(schema.planCheckins.userId, user.id),
+            eq(schema.planCheckins.date, date),
           ),
         ),
       (user.trainingEnabled ?? false)
@@ -207,6 +216,7 @@ export default async function Today() {
       .filter((m) => m.date === prevDate && m.kind === "postpone")
       .map((m) => m.planItemId),
   );
+  const checkinByItem = new Map(checkinRows.map((c) => [c.planItemId, c.at]));
   const projectsById = new Map(projects.map((p) => [p.id, p]));
   const templatesById = new Map(allTemplates.map((t) => [t.id, t]));
   const dayK = dayKcal({
@@ -367,6 +377,8 @@ export default async function Today() {
         workoutTemplateId: i.workoutTemplateId,
         minutesPlanned: i.minutesPlanned,
         minutesActual,
+        checkInAt:
+          i.kind === "project" ? (checkinByItem.get(i.id) ?? null) : null,
         targets: nutritionTargets,
         actuals: nutritionActuals,
       };
