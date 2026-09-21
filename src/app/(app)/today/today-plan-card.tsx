@@ -152,13 +152,16 @@ function NutritionBars({
   );
 }
 
-// "09:00"/"9.00" i timeOfDay parses som mødetid (minutter siden midnat);
-// fri tekst som "formiddag" giver null — så vises check-in uden farve.
+// timeOfDay parses lempeligt som mødetid: "9", "09", "kl 9", "kl. 9",
+// "9:00", "9.30" virker alle (minutter udelades = :00). Fri tekst som
+// "formiddag" giver null — så vises check-in bare uden farve.
 function parseClock(t: string | null): number | null {
   if (!t) return null;
-  const m = /^([01]?\d|2[0-3])[.:]([0-5]\d)$/.exec(t.trim());
+  const m = /^(?:kl\.?\s*)?([01]?\d|2[0-3])(?:[.:]([0-5]\d))?$/i.exec(
+    t.trim(),
+  );
   if (!m) return null;
-  return Number(m[1]) * 60 + Number(m[2]);
+  return Number(m[1]) * 60 + Number(m[2] ?? 0);
 }
 
 function fmtClock(iso: string): string {
