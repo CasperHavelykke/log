@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Bird, Loader2, Plus } from "lucide-react";
 import { CounterScreen } from "./counter-screen";
 import { startSession } from "./actions";
 import { fmtUnitsX10, type ActiveSessionPayload } from "./constants";
@@ -12,9 +12,11 @@ const ESCAPE_COOKIE = "drink-counter-escape";
 export function CounterWrapper({
   initial,
   counterMode = false,
+  roisin = false,
 }: {
   initial: ActiveSessionPayload | null;
   counterMode?: boolean;
+  roisin?: boolean;
 }) {
   const router = useRouter();
 
@@ -26,14 +28,25 @@ export function CounterWrapper({
 
   if (initial === null) {
     // Genstandstæller-tilstand uden aktiv session: minimal startskærm.
-    return <CounterStartScreen onEscape={escape} />;
+    return <CounterStartScreen roisin={roisin} onEscape={escape} />;
   }
   return (
-    <CounterScreen initial={initial} counterMode={counterMode} onEscape={escape} />
+    <CounterScreen
+      initial={initial}
+      counterMode={counterMode}
+      roisin={roisin}
+      onEscape={escape}
+    />
   );
 }
 
-function CounterStartScreen({ onEscape }: { onEscape: () => void }) {
+function CounterStartScreen({
+  roisin,
+  onEscape,
+}: {
+  roisin: boolean;
+  onEscape: () => void;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -52,7 +65,7 @@ function CounterStartScreen({ onEscape }: { onEscape: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 flex h-[100vh] flex-col bg-bg text-ink"
+      className={`fixed inset-0 flex h-[100vh] flex-col bg-bg text-ink ${roisin ? "roisin" : ""}`}
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <header className="flex shrink-0 items-center justify-end px-5 pt-6">
@@ -66,6 +79,11 @@ function CounterStartScreen({ onEscape }: { onEscape: () => void }) {
         </button>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center px-6 pb-16">
+        {roisin && (
+          <span className="mb-4 inline-flex size-20 items-center justify-center rounded-full bg-accent-bg text-accent">
+            <Bird className="size-11" strokeWidth={1.75} />
+          </span>
+        )}
         <h1 className="mb-2 font-serif text-[34px] text-ink">
           Genstandstæller
         </h1>

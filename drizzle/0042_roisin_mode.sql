@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `roisin_mode_enabled` integer DEFAULT false NOT NULL;

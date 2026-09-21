@@ -13,6 +13,17 @@ export type DrinkKind =
   | "mildt_shot_4"
   | "stærkt_shot_2"
   | "stærkt_shot_4"
+  // Roisin mode (udvidet knapsæt — se ROISIN_* i counter-screen):
+  | "roisin_øl_alm"
+  | "roisin_øl_stor"
+  | "roisin_øl_alm_stærk"
+  | "roisin_øl_stor_stærk"
+  | "roisin_drink_mild"
+  | "roisin_drink_mellem"
+  | "roisin_drink_stærk"
+  | "roisin_drink_mild_dbl"
+  | "roisin_drink_mellem_dbl"
+  | "roisin_drink_stærk_dbl"
   // Legacy (før 0039):
   | "genstand"
   | "shot"
@@ -32,6 +43,18 @@ export const KIND_UNITS_X10: Record<DrinkKind, number> = {
   mildt_shot_4: 4,
   stærkt_shot_2: 5,
   stærkt_shot_4: 10,
+  // Roisin: øl 33/50 cl i alm (~4,6 %) og stærk (~7 %); drinks i tre
+  // styrker (~2/4/6 cl spiritus), dbl = ekstra 2 cl 40 % (+0,5).
+  roisin_øl_alm: 10,
+  roisin_øl_stor: 15,
+  roisin_øl_alm_stærk: 15,
+  roisin_øl_stor_stærk: 23,
+  roisin_drink_mild: 5,
+  roisin_drink_mellem: 10,
+  roisin_drink_stærk: 15,
+  roisin_drink_mild_dbl: 10,
+  roisin_drink_mellem_dbl: 15,
+  roisin_drink_stærk_dbl: 20,
   genstand: 10,
   shot: 10,
   stærk_shot: 20,
@@ -45,6 +68,16 @@ export const KIND_KCAL: Record<DrinkKind, number> = {
   mildt_shot_4: 60,
   stærkt_shot_2: 45,
   stærkt_shot_4: 90,
+  roisin_øl_alm: 130,
+  roisin_øl_stor: 200,
+  roisin_øl_alm_stærk: 180,
+  roisin_øl_stor_stærk: 270,
+  roisin_drink_mild: 120,
+  roisin_drink_mellem: 180,
+  roisin_drink_stærk: 240,
+  roisin_drink_mild_dbl: 165,
+  roisin_drink_mellem_dbl: 225,
+  roisin_drink_stærk_dbl: 285,
   genstand: 100,
   shot: 50,
   stærk_shot: 70,
@@ -57,6 +90,16 @@ export const KIND_LABEL: Record<DrinkKind, string> = {
   mildt_shot_4: "Alm. shot 4 cl",
   stærkt_shot_2: "Stærkt shot 2 cl",
   stærkt_shot_4: "Stærkt shot 4 cl",
+  roisin_øl_alm: "Alm. øl 33 cl",
+  roisin_øl_stor: "Stor øl 50 cl",
+  roisin_øl_alm_stærk: "Stærk øl 33 cl",
+  roisin_øl_stor_stærk: "Stærk øl 50 cl",
+  roisin_drink_mild: "Drink mild",
+  roisin_drink_mellem: "Drink mellem",
+  roisin_drink_stærk: "Drink stærk",
+  roisin_drink_mild_dbl: "Drink mild · dobbelt",
+  roisin_drink_mellem_dbl: "Drink mellem · dobbelt",
+  roisin_drink_stærk_dbl: "Drink stærk · dobbelt",
   genstand: "Genstand",
   shot: "Shot",
   stærk_shot: "Stærk shot",

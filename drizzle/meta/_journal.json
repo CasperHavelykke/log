@@ -295,6 +295,13 @@
       "when": 1790017293892,
       "tag": "0041_plan_checkins",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "6",
+      "when": 1790019065008,
+      "tag": "0042_roisin_mode",
+      "breakpoints": true
     }
   ]
 }

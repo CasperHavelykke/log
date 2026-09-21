@@ -36,6 +36,12 @@ export const users = sqliteTable("users", {
   counterModeEnabled: integer("counter_mode_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Roisin mode: lyserød skin + maskot + udvidet knapsæt til
+  // genstandstælleren. Kun aktiv sammen med counterModeEnabled.
+  // Bevidst en for-sjov-feature — deler alt maskinrum med tælleren.
+  roisinModeEnabled: integer("roisin_mode_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   // Hemmeligt token til offentlig deling af hele opskriftssamlingen
   // (/samling/{token}). null = deling slået fra.
   recipesShareToken: text("recipes_share_token"),

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Martini, X } from "lucide-react";
+import { ArrowLeft, Beer, Bird, ChevronDown, ChevronUp, Loader2, Martini, X } from "lucide-react";
 import {
   BeerIcon,
   Shot2clIcon,
@@ -16,7 +16,6 @@ import {
   KIND_LABEL,
   KIND_UNITS_X10,
   activeUnitsX10,
-  burnUnitsX10PerHour,
   fmtUnitsX10,
   paceLevel,
   type ActiveSessionPayload,
@@ -58,11 +57,14 @@ const SHOT_BUTTON_BOTTOM: Partial<Record<DrinkKind, string>> = {
 export function CounterScreen({
   initial,
   counterMode = false,
+  roisin = false,
   onEscape,
 }: {
   initial: ActiveSessionPayload;
   // Genstandstæller-tilstand: afslut fører til startskærmen, ikke /today.
   counterMode?: boolean;
+  // Roisin mode: lyserød skin, maskot og udvidet knapsæt.
+  roisin?: boolean;
   onEscape: () => void;
 }) {
   const router = useRouter();
@@ -84,6 +86,10 @@ export function CounterScreen({
   const [inFlight, setInFlight] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [ending, setEnding] = useState(false);
+  // Roisin: næste drink-tryk logges som dobbelt (ekstra 2 cl i drinken).
+  const [doubleDrink, setDoubleDrink] = useState(false);
+  // Indtags-listen kan klappes sammen, så knapperne får mere plads.
+  const [logsOpen, setLogsOpen] = useState(true);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30_000);
@@ -201,6 +207,23 @@ export function CounterScreen({
   const totalX10 = logs.reduce((s, l) => s + l.unitsX10, 0);
   const elapsed = formatElapsed(now - new Date(initial.startedAt).getTime());
 
+  // Maskottens replikker følger tempo-niveauet (duolingo-agtigt nøk).
+  const mascotLine = (key: string, empty: boolean): string => {
+    if (empty) return "Klar når du er!";
+    switch (key) {
+      case "ro":
+        return "Jeg holder øje. Skål!";
+      case "gul":
+        return "Sådan — stille og roligt…";
+      case "orange":
+        return "Et glas vand ville klæde dig.";
+      case "rød":
+        return "Vand. Nu. Jeg mener det.";
+      default:
+        return "HJEM. NU. Jeg ringer efter en taxa.";
+    }
+  };
+
   // Tempo-indikator: aktive genstande i kroppen lige nu (indtag minus
   // forbrænding), kalibreret efter seneste vejning. Opdateres af samme
   // 30s-puls som uret, og falder derfor synligt under pauser.
@@ -211,7 +234,7 @@ export function CounterScreen({
 
   return (
     <div
-      className="fixed inset-0 flex h-[100vh] flex-col overflow-hidden bg-bg text-ink"
+      className={`fixed inset-0 flex h-[100vh] flex-col overflow-hidden bg-bg text-ink ${roisin ? "roisin" : ""}`}
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}
@@ -232,6 +255,16 @@ export function CounterScreen({
 
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 pb-4">
         <div className="my-auto flex w-full flex-col items-center">
+        {roisin && (
+          <div className="mb-3 flex items-center gap-2.5">
+            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
+              <Bird className="size-6" strokeWidth={1.75} />
+            </span>
+            <span className="rounded-[10px] rounded-bl-[2px] bg-bg-elevated px-3 py-1.5 text-[12px] italic text-mid">
+              {mascotLine(pace.key, totalX10 === 0)}
+            </span>
+          </div>
+        )}
         <div className="mb-4 flex flex-col items-center sm:mb-6">
           <div
             className="font-serif text-[76px] leading-none text-accent sm:text-[110px]"
@@ -265,46 +298,110 @@ export function CounterScreen({
                 kroppen · {pace.label}
               </div>
             )}
-            <div
-              className="mt-0.5 text-[10px]"
-              style={{
-                color: pace.alarm ? "rgba(255,255,255,0.85)" : undefined,
-              }}
-            >
-              {pace.alarm && (
-                <>
-                  ~{fmtUnitsX10(Math.round(activeX10))} aktive genstande —
-                  dømmekraften er reelt væk herfra.{" "}
-                </>
-              )}
-              <span className={pace.alarm ? "" : "text-light"}>
-                Forbrænding ca.{" "}
-                {fmtUnitsX10(Math.round(burnUnitsX10PerHour(weightKg)))}{" "}
-                genstand/time ved {fmtUnitsX10(weightX10)} kg
-                {initial.bodyWeightX10 === null
-                  ? " (standard — log din vægt på I dag for at kalibrere)"
-                  : ""}{" "}
-                — tommelfingerregel, ikke promille.
-              </span>
-            </div>
+            {pace.alarm && (
+              <div
+                className="mt-0.5 text-[10px]"
+                style={{ color: "rgba(255,255,255,0.85)" }}
+              >
+                ~{fmtUnitsX10(Math.round(activeX10))} aktive genstande —
+                dømmekraften er reelt væk herfra.
+              </div>
+            )}
           </div>
         )}
 
         <div className="w-full max-w-[420px] space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <BigButton
-              kind="øl"
-              icon={<BeerIcon className="h-6 w-auto" />}
-              onPress={press}
-              disabled={ending}
-            />
-            <BigButton
-              kind="drink"
-              icon={<Martini className="size-5" />}
-              onPress={press}
-              disabled={ending}
-            />
-          </div>
+          {roisin ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["roisin_øl_alm", "Alm. øl", "33 cl"],
+                    ["roisin_øl_stor", "Stor øl", "50 cl"],
+                    ["roisin_øl_alm_stærk", "Stærk øl", "33 cl"],
+                    ["roisin_øl_stor_stærk", "Stærk øl", "50 cl"],
+                  ] as const
+                ).map(([kind, top, bottom]) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => press(kind)}
+                    disabled={ending}
+                    className="flex cursor-pointer flex-wrap items-center justify-center gap-x-1 gap-y-0.5 rounded-[12px] bg-accent px-2 py-3 text-[13px] font-semibold text-white shadow-[0_6px_18px_rgba(236,72,153,0.35)] transition active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      {/* 33 cl = Caspers slanke flaske; 50 cl = Lucides
+                          krus — størrelsen aflæses på ikonet. */}
+                      {bottom === "50 cl" ? (
+                        <Beer className="size-4 shrink-0" />
+                      ) : (
+                        <BeerIcon className="h-4 w-auto shrink-0" />
+                      )}
+                      {top}
+                    </span>
+                    <span className="whitespace-nowrap">{bottom}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-light">
+                  Drinks
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDoubleDrink((d) => !d)}
+                  aria-pressed={doubleDrink}
+                  className={`cursor-pointer rounded-full px-3 py-1 text-[11px] font-medium transition ${
+                    doubleDrink
+                      ? "bg-accent text-white"
+                      : "bg-bg-elevated text-mid hover:text-ink"
+                  }`}
+                >
+                  Dobbelt shot {doubleDrink ? "TIL" : "fra"}
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["roisin_drink_mild", "Mild"],
+                    ["roisin_drink_mellem", "Mellem"],
+                    ["roisin_drink_stærk", "Stærk"],
+                  ] as const
+                ).map(([kind, label]) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => {
+                      press(
+                        doubleDrink ? (`${kind}_dbl` as DrinkKind) : kind,
+                      );
+                      setDoubleDrink(false);
+                    }}
+                    disabled={ending}
+                    className="flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-[12px] bg-bg-elevated px-2 py-2.5 text-[13px] font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <Martini className="size-4 text-accent" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <BigButton
+                kind="øl"
+                icon={<BeerIcon className="h-6 w-auto" />}
+                onPress={press}
+                disabled={ending}
+              />
+              <BigButton
+                kind="drink"
+                icon={<Martini className="size-5" />}
+                onPress={press}
+                disabled={ending}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             {(
               [
@@ -347,17 +444,34 @@ export function CounterScreen({
 
       <section className="shrink-0 border-t border-hair px-5 py-4">
         <div className="mx-auto w-full max-w-[420px]">
-          <div className="mb-2 flex items-baseline justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-light">
+          <button
+            type="button"
+            onClick={() => setLogsOpen((o) => !o)}
+            aria-expanded={logsOpen}
+            className="mb-2 flex w-full cursor-pointer items-baseline justify-between"
+            title={logsOpen ? "Skjul indtag" : "Vis indtag"}
+          >
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.6px] text-light">
               Indtag
+              {logsOpen ? (
+                <ChevronDown className="size-3" />
+              ) : (
+                <ChevronUp className="size-3" />
+              )}
+              {!logsOpen && logs.length > 0 && (
+                <span className="normal-case tracking-normal">
+                  ({logs.length})
+                </span>
+              )}
             </span>
             {inFlight > 0 && (
               <Loader2 className="size-3 animate-spin text-light" />
             )}
-          </div>
-          {/* Fast højde: sektionen må ikke vokse med listen — så løfter
-              tælleren og knapperne sig ved hvert tryk. */}
-          {logs.length === 0 ? (
+          </button>
+          {/* Fast højde når åben: sektionen må ikke vokse med listen —
+              så løfter tælleren og knapperne sig ved hvert tryk. Klappet
+              sammen viser den kun overskriften. */}
+          {!logsOpen ? null : logs.length === 0 ? (
             <p className="flex h-[22vh] items-start text-[12px] italic text-dim">
               Ingen indtag endnu. Tryk på en knap ovenfor.
             </p>

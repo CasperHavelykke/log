@@ -19,6 +19,7 @@ export default async function Settings() {
   const trainingEnabled = user.trainingEnabled ?? false;
   const goalsEnabled = user.goalsEnabled ?? false;
   const counterModeEnabled = user.counterModeEnabled ?? false;
+  const roisinModeEnabled = user.roisinModeEnabled ?? false;
   const themePreference = await getThemePreference();
   const [clients, customParameters, activePeriod, allPeriods, allApps] =
     await Promise.all([
@@ -84,6 +85,7 @@ export default async function Settings() {
       initialTrainingEnabled={trainingEnabled}
       initialGoalsEnabled={goalsEnabled}
       initialCounterModeEnabled={counterModeEnabled}
+      initialRoisinModeEnabled={roisinModeEnabled}
       initialTheme={themePreference}
     />
   );

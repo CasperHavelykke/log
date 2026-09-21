@@ -67,6 +67,16 @@ export async function setCounterModeEnabled(enabled: boolean) {
   return { ok: true as const };
 }
 
+export async function setRoisinModeEnabled(enabled: boolean) {
+  const user = await requireUser();
+  await db
+    .update(schema.users)
+    .set({ roisinModeEnabled: enabled })
+    .where(eq(schema.users.id, user.id));
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
 export async function setGarminSleepEnabled(enabled: boolean) {
   const user = await requireUser();
   await db

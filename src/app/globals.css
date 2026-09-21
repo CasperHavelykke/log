@@ -182,3 +182,31 @@ textarea {
   min-height: 80px;
   line-height: 1.5;
 }
+
+/* Roisin mode — lyserød skin til genstandstælleren (for-sjov-feature,
+   kun aktiv sammen med counter-mode). Scoped var-override: accent bliver
+   pink, og i lyst tema tones hele fladen rosa. */
+.roisin {
+  --accent: #ec4899;
+  --accent-bright: #db2777;
+  --accent-bg: rgba(236, 72, 153, 0.16);
+  --accent-soft-strong: rgba(236, 72, 153, 0.26);
+  --bg: #170d13;
+  --bg-elevated: #241521;
+  --bg-subtle: #2b1a27;
+  /* Alarm i violet: rød drukner ved siden af pink — violet ligger
+     længere væk på farvehjulet og springer i øjnene på skinnet. */
+  --danger: #7c3aed;
+  --danger-soft: rgba(124, 58, 237, 0.18);
+  --danger-strong: rgba(124, 58, 237, 0.35);
+}
+:root[data-theme="light"] .roisin {
+  --bg: #fdf2f8;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #fce7f3;
+  --hair: rgba(190, 24, 93, 0.10);
+  --hair-strong: rgba(190, 24, 93, 0.20);
+  --danger: #6d28d9;
+  --danger-soft: rgba(109, 40, 217, 0.14);
+  --danger-strong: rgba(109, 40, 217, 0.30);
+}

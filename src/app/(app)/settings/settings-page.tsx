@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Beer, Briefcase, Check, Clock, Dumbbell, EyeOff, LogOut, Monitor, Moon, Plus, Sun, Target, Trash2 } from "lucide-react";
+import { AlertTriangle, Beer, Bird, Briefcase, Check, Clock, Dumbbell, EyeOff, LogOut, Monitor, Moon, Plus, Sun, Target, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import {
   createOAuthClient,
@@ -19,6 +19,7 @@ import { formatDanishDate } from "@/lib/date";
 import {
   setCounterModeEnabled,
   setFasteEnabled,
+  setRoisinModeEnabled,
   setGarminSleepEnabled,
   setGoalsEnabled,
   setTrainingEnabled,
@@ -68,6 +69,7 @@ export function SettingsPage({
   initialTrainingEnabled,
   initialGoalsEnabled,
   initialCounterModeEnabled,
+  initialRoisinModeEnabled,
   initialTheme,
 }: {
   username: string;
@@ -81,6 +83,7 @@ export function SettingsPage({
   initialTrainingEnabled: boolean;
   initialGoalsEnabled: boolean;
   initialCounterModeEnabled: boolean;
+  initialRoisinModeEnabled: boolean;
   initialTheme: Theme;
 }) {
   return (
@@ -113,6 +116,7 @@ export function SettingsPage({
           initialTrainingEnabled={initialTrainingEnabled}
           initialGoalsEnabled={initialGoalsEnabled}
           initialCounterModeEnabled={initialCounterModeEnabled}
+          initialRoisinModeEnabled={initialRoisinModeEnabled}
         />
         <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
         <CustomParametersCard initial={initialCustomParameters} />
@@ -234,12 +238,14 @@ function FeaturesCard({
   initialTrainingEnabled,
   initialGoalsEnabled,
   initialCounterModeEnabled,
+  initialRoisinModeEnabled,
 }: {
   initialFasteEnabled: boolean;
   initialGarminSleepEnabled: boolean;
   initialTrainingEnabled: boolean;
   initialGoalsEnabled: boolean;
   initialCounterModeEnabled: boolean;
+  initialRoisinModeEnabled: boolean;
 }) {
   const [fasteEnabled, setFastEnabledState] = useState(initialFasteEnabled);
   const [garminEnabled, setGarminEnabledState] = useState(
@@ -251,6 +257,9 @@ function FeaturesCard({
   const [goalsEnabled, setGoalsEnabledState] = useState(initialGoalsEnabled);
   const [counterModeEnabled, setCounterModeEnabledState] = useState(
     initialCounterModeEnabled,
+  );
+  const [roisinModeEnabled, setRoisinModeEnabledState] = useState(
+    initialRoisinModeEnabled,
   );
   const [, start] = useTransition();
 
@@ -275,6 +284,14 @@ function FeaturesCard({
     setCounterModeEnabledState(next);
     start(async () => {
       await setCounterModeEnabled(next);
+    });
+  }
+
+  function toggleRoisinMode() {
+    const next = !roisinModeEnabled;
+    setRoisinModeEnabledState(next);
+    start(async () => {
+      await setRoisinModeEnabled(next);
     });
   }
 
@@ -336,6 +353,15 @@ function FeaturesCard({
           enabled={counterModeEnabled}
           onToggle={toggleCounterMode}
         />
+        {counterModeEnabled && (
+          <FeatureToggle
+            icon={<Bird className="size-4" />}
+            title="Roisin mode"
+            description="Lyserød genstandstæller med maskot og udvidet knapsæt (flere øl- og drink-muligheder). Kun når 'Kun genstandstæller' er slået til."
+            enabled={roisinModeEnabled}
+            onToggle={toggleRoisinMode}
+          />
+        )}
         <IdleBlurSetting />
       </div>
 

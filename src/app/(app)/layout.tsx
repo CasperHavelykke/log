@@ -30,7 +30,11 @@ export default async function AppLayout({
     const escaped = cookieStore.get(ESCAPE_COOKIE)?.value === "1";
     if (!escaped) {
       return (
-        <CounterWrapper initial={drinkSession} counterMode={counterMode} />
+        <CounterWrapper
+          initial={drinkSession}
+          counterMode={counterMode}
+          roisin={user.roisinModeEnabled ?? false}
+        />
       );
     }
   }
