@@ -154,7 +154,10 @@ export default async function StatistikPage() {
     const trimmedName = (i.name ?? "").trim();
     if (!trimmedName) continue;
     const unit = (i.doseUnit ?? "").trim() || null;
-    const groupKey = `${trimmedName.toLowerCase()}|${unit ?? ""}`;
+    // Enheden normaliseres i nøglen: "Tsk" og "tsk" er samme serie —
+    // planers ét-kliks-logning kan stave enheden anderledes end chippen,
+    // og en delt serie må aldrig knække på store/små bogstaver.
+    const groupKey = `${trimmedName.toLowerCase()}|${(unit ?? "").toLowerCase()}`;
     let group = suppGroups.get(groupKey);
     if (!group) {
       group = {
