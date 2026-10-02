@@ -15,7 +15,8 @@ import { dayKcal } from "../../lib/kcal";
 import { addDaysIso } from "../../lib/date";
 
 // Planlæggeren: tilbagevendende planer for projekter, kosttilskud, træning,
-// ernærings-mål og måltider. Vises som "Dagens plan" på /today.
+// ernærings-mål, måltider og fritstående påmindelser. Vises som "Dagens
+// plan" på /today.
 
 function todayIso(): string {
   const d = new Date();
@@ -51,6 +52,7 @@ function shapeItem(
     weekdays: row.weekdays,
     intervalDays: row.intervalDays,
     anchorDate: row.anchorDate,
+    endDate: row.endDate,
     schedule: scheduleLabel(row),
     timeOfDay: row.timeOfDay,
     minutesPlanned: row.minutesPlanned,
@@ -101,7 +103,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Hent dagens plan",
       description:
-        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, projekt-tid, ernærings-mål) med status: done/skipped/postponed/open ('postponed' = udsat til dagen efter; en post udsat i går vises som dagens forekomst). Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte. Ernærings-mål er INTERVALLER per felt (kcalTarget=minimum, kcalMax=loft osv.) — done når alle satte grænser er overholdt af dagens loggede værdier. Projekt-poster kan have checkInAt: dagens faktiske starttidspunkt ('mødt'), sat med mark_plan_item mark='checkin' — brug det når brugeren siger 'jeg sidder ved bordet nu'.",
+        "Returnerer de planlagte poster for datoen (kosttilskud, træning, måltider, påmindelser, projekt-tid, ernærings-mål) med status: done/skipped/postponed/open ('postponed' = udsat til dagen efter; en post udsat i går vises som dagens forekomst). Brug den til at svare på 'hvad skal jeg i dag?'. Tilskuds-planer matcher på NAVN (label): alle dagens indtag med navnet summeres mod planens doseTarget (doseDone viser fremdrift — fx 6 af 12 g); uden doseTarget tæller ét indtag med navnet. Træning er done når en session/didExercise findes; projekt-tid når tidsregistreringen når det planlagte. Ernærings-mål er INTERVALLER per felt (kcalTarget=minimum, kcalMax=loft osv.) — done når alle satte grænser er overholdt af dagens loggede værdier. Projekt-poster kan have checkInAt: dagens faktiske starttidspunkt ('mødt'), sat med mark_plan_item mark='checkin' — brug det når brugeren siger 'jeg sidder ved bordet nu'.",
       inputSchema: {
         date: z
           .string()
@@ -328,7 +330,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Opret/opdatér plan",
       description:
-        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver label = tilskuddets NAVN — planer bindes via navnet, alle indtag med navnet tæller; sæt evt. doseTarget+doseUnit som dagens mål), 'training' (evt. workoutTemplateId eller label), 'nutrition' (interval-mål for dagen: *Target = minimum, *Max = loft — kun minimum = 'mindst X', kun loft = 'højst X', begge = interval, fx kcalTarget 2000 + kcalMax 2100), 'meal' (label påkrævet). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke) eller 'monthly' (anchorDates dag-i-måneden). anchorDate udeladt = i dag.",
+        "Opretter (uden id) eller opdaterer (med id) en planlægger-post. kind: 'project' (kræver projectId, evt. minutesPlanned), 'supplement' (kræver label = tilskuddets NAVN — planer bindes via navnet, alle indtag med navnet tæller; sæt evt. doseTarget+doseUnit som dagens mål), 'training' (evt. workoutTemplateId eller label), 'nutrition' (interval-mål for dagen: *Target = minimum, *Max = loft — kun minimum = 'mindst X', kun loft = 'højst X', begge = interval, fx kcalTarget 2000 + kcalMax 2100), 'meal' (label påkrævet), 'reminder' (fritstående påmindelse — label påkrævet, intet at logge, krydses manuelt af; brug den når brugeren siger 'mind mig om X'). Gentagelse: scheduleType 'weekdays' (weekdays: '0,2,4' — 0=mandag..6=søndag), 'interval' (intervalDays: hver N. dag i FAST kalender-rytme fra anchorDate — misset dag skrider ikke), 'monthly' (anchorDates dag-i-måneden) eller 'once' (én enkelt dato = anchorDate; 'udsæt' flytter datoen). anchorDate udeladt = i dag. endDate ('til og med', valgfri, ikke for 'once') afslutter en gentagen rytme — fx 'hver dag i 14 dage' = interval 1 + endDate om 13 dage. Udløbne påmindelser ryddes automatisk op. Eksempler: 'mind mig om at trimme hår på lørdag' = reminder + once + anchorDate lørdag; 'dagligt Apphive-tjek de næste 14 dage' = reminder + interval 1 + endDate.",
       inputSchema: {
         id: z.number().int().optional(),
         kind: z.enum(schema.PLAN_KINDS),
@@ -345,6 +347,14 @@ export function registerPlanTools(server: McpServer) {
           .describe("Kun for scheduleType 'weekdays'. 0=mandag..6=søndag."),
         intervalDays: z.number().int().min(1).max(365).nullable().default(null),
         anchorDate: z.string().regex(DATE_RE).nullable().default(null),
+        endDate: z
+          .string()
+          .regex(DATE_RE)
+          .nullable()
+          .default(null)
+          .describe(
+            "Valgfri slutdato ('til og med') for gentagne rytmer. Ikke for 'once'.",
+          ),
         timeOfDay: z
           .string()
           .max(50)
@@ -407,6 +417,17 @@ export function registerPlanTools(server: McpServer) {
           "kind 'supplement' kræver label (tilskuddets navn — planer bindes via navnet)",
         );
       }
+      if (input.kind === "reminder" && !input.label?.trim()) {
+        return errorContent("kind 'reminder' kræver label (påmindelsens tekst)");
+      }
+      if (
+        input.endDate !== null &&
+        input.anchorDate !== null &&
+        input.scheduleType !== "weekdays" &&
+        input.endDate < input.anchorDate
+      ) {
+        return errorContent("endDate ligger før anchorDate");
+      }
       const rangePairs: [number | null, number | null][] = [
         [input.kcalTarget, input.kcalMax],
         [input.carbsTargetG, input.carbsMaxG],
@@ -437,6 +458,8 @@ export function registerPlanTools(server: McpServer) {
           input.scheduleType === "weekdays"
             ? null
             : (input.anchorDate ?? todayIso()),
+        // 'once' slutter selv — slutdato kun for gentagne rytmer.
+        endDate: input.scheduleType === "once" ? null : input.endDate,
         timeOfDay: input.timeOfDay?.trim() || null,
         minutesPlanned: input.kind === "project" ? input.minutesPlanned : null,
         doseTargetX100:
@@ -513,7 +536,7 @@ export function registerPlanTools(server: McpServer) {
     {
       title: "Markér plan-post for en dag",
       description:
-        "Sætter dagens markering på en plan-post: 'done' (manuelt klaret — mest til måltider), 'skip' ('ikke i dag' — rører ikke rytmen), 'postpone' ('udsæt til i morgen' — posten vises i morgen i stedet; for interval-planer rykkes ankeret så rytmen fortsætter fra i morgen, mens ugedags-/månedsplaner kun får et engangs-ryk) 'checkin' (registrér at brugeren er I GANG — dagens faktiske starttidspunkt, første tryk gælder; rører ikke done/skip) eller 'clear' (fjern markeringen; en fortrudt udsættelse ruller også interval-ankeret tilbage). Tilskud bør IKKE markeres done manuelt — log i stedet indtaget med log_supplement, så følger status automatisk.",
+        "Sætter dagens markering på en plan-post: 'done' (manuelt klaret — mest til måltider og påmindelser), 'skip' ('ikke i dag' — rører ikke rytmen), 'postpone' ('udsæt til i morgen' — posten vises i morgen i stedet; for interval-planer rykkes ankeret så rytmen fortsætter fra i morgen, 'once'-planer får flyttet selve datoen, mens ugedags-/månedsplaner kun får et engangs-ryk) 'checkin' (registrér at brugeren er I GANG — dagens faktiske starttidspunkt, første tryk gælder; rører ikke done/skip) eller 'clear' (fjern markeringen; en fortrudt udsættelse ruller også interval-ankeret tilbage). Tilskud bør IKKE markeres done manuelt — log i stedet indtaget med log_supplement, så følger status automatisk.",
       inputSchema: {
         id: z.number().int(),
         date: z
@@ -575,8 +598,9 @@ export function registerPlanTools(server: McpServer) {
       }
       // Interval-rytmen følger udsættelsen: 'postpone' rykker ankeret til
       // dagen efter, 'clear' af en udsættelse ruller det tilbage (dagen
-      // selv er rytme-ækvivalent med det gamle anker).
-      if (item.scheduleType === "interval") {
+      // selv er rytme-ækvivalent med det gamle anker). 'once' rykker selve
+      // datoen (ankeret) på samme måde.
+      if (item.scheduleType === "interval" || item.scheduleType === "once") {
         if (mark === "postpone") {
           await db
             .update(schema.planItems)

@@ -25,6 +25,7 @@ const planItemSchema = z
       .default(null),
     intervalDays: z.number().int().min(1).max(365).nullable().default(null),
     anchorDate: z.string().regex(DATE_RE).nullable().default(null),
+    endDate: z.string().regex(DATE_RE).nullable().default(null),
     timeOfDay: z.string().max(50).nullable().default(null),
     minutesPlanned: z.number().int().min(5).max(1440).nullable().default(null),
     doseTargetX100: z
@@ -71,6 +72,17 @@ const planItemSchema = z
     if (v.kind === "supplement" && !v.label?.trim()) {
       ctx.addIssue({ code: "custom", message: "Angiv tilskuddets navn" });
     }
+    if (v.kind === "reminder" && !v.label?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Giv påmindelsen et navn" });
+    }
+    if (
+      v.endDate !== null &&
+      v.anchorDate !== null &&
+      v.scheduleType !== "weekdays" &&
+      v.endDate < v.anchorDate
+    ) {
+      ctx.addIssue({ code: "custom", message: "Slutdato ligger før startdato" });
+    }
   });
 
 export type PlanItemInput = z.infer<typeof planItemSchema>;
@@ -92,7 +104,7 @@ export async function upsertPlanItem(input: PlanItemInput) {
   }
   const d = parsed.data;
   const now = new Date().toISOString();
-  // interval/monthly uden anker forankres i dag ("fra nu af").
+  // interval/monthly/once uden anker forankres i dag ("fra nu af" / i dag).
   const anchorDate =
     d.scheduleType === "weekdays" ? null : (d.anchorDate ?? todayIsoDate());
 
@@ -107,6 +119,8 @@ export async function upsertPlanItem(input: PlanItemInput) {
     weekdays: d.scheduleType === "weekdays" ? d.weekdays : null,
     intervalDays: d.scheduleType === "interval" ? d.intervalDays : null,
     anchorDate,
+    // Slutdato giver kun mening for gentagne rytmer — 'once' slutter selv.
+    endDate: d.scheduleType === "once" ? null : d.endDate,
     timeOfDay: d.timeOfDay?.trim() || null,
     minutesPlanned: d.kind === "project" ? d.minutesPlanned : null,
     doseTargetX100: d.kind === "supplement" ? d.doseTargetX100 : null,
@@ -215,7 +229,7 @@ export async function markPlanItem(
 // dagen efter. For interval-planer rykkes ankeret samtidig, så rytmen
 // fortsætter fra den nye dag ("hver 3. dag" tæller fra i morgen);
 // ugedags- og månedsplaner får kun et engangs-ryk — deres rytme ligger
-// fast på ugedage/dag-i-måneden.
+// fast på ugedage/dag-i-måneden. 'once' rykker selve datoen (ankeret).
 export async function postponePlanItem(planItemId: number, date: string) {
   const user = await requireUser();
   if (!DATE_RE.test(date)) return { ok: false as const, error: "Ugyldig dato" };
@@ -246,7 +260,7 @@ export async function postponePlanItem(planItemId: number, date: string) {
     date,
     kind: "postpone",
   });
-  if (item.scheduleType === "interval") {
+  if (item.scheduleType === "interval" || item.scheduleType === "once") {
     await db
       .update(schema.planItems)
       .set({
@@ -288,7 +302,10 @@ export async function undoPostponePlanItem(planItemId: number, date: string) {
       ),
     )
     .returning();
-  if (deleted.length > 0 && item.scheduleType === "interval") {
+  if (
+    deleted.length > 0 &&
+    (item.scheduleType === "interval" || item.scheduleType === "once")
+  ) {
     await db
       .update(schema.planItems)
       .set({ anchorDate: date, updatedAt: new Date().toISOString() })

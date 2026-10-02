@@ -56,8 +56,9 @@ export function PlanDialog({
   onChanged: () => void;
   onClose: () => void;
 }) {
+  // Påmindelser er oftest "husk på lørdag" — de starter på 'once'.
   const [scheduleType, setScheduleType] = useState<PlanScheduleType>(
-    existing?.scheduleType ?? "weekdays",
+    existing?.scheduleType ?? (kind === "reminder" ? "once" : "weekdays"),
   );
   const [days, setDays] = useState<Set<number>>(() => {
     const s = new Set<number>();
@@ -73,6 +74,9 @@ export function PlanDialog({
   const [anchorDate, setAnchorDate] = useState<string>(
     existing?.anchorDate ?? todayIsoDate(),
   );
+  // "Til og med": valgfri slutdato for gentagne rytmer ("hver dag i 14
+  // dage"). Tom streng = ingen slutdato.
+  const [endDate, setEndDate] = useState<string>(existing?.endDate ?? "");
   const [timeOfDay, setTimeOfDay] = useState(existing?.timeOfDay ?? "");
   const [minutes, setMinutes] = useState<number | null>(
     existing?.minutesPlanned ?? null,
@@ -126,7 +130,13 @@ export function PlanDialog({
       return;
     }
     if (showLabel && !templateId && !itemLabel.trim()) {
-      setError(kind === "meal" ? "Giv måltidet et navn" : "Giv planen et navn");
+      setError(
+        kind === "meal"
+          ? "Giv måltidet et navn"
+          : kind === "reminder"
+            ? "Giv påmindelsen et navn"
+            : "Giv planen et navn",
+      );
       return;
     }
     if (showSupplementFields && !itemLabel.trim()) {
@@ -166,6 +176,7 @@ export function PlanDialog({
           : null,
       intervalDays: scheduleType === "interval" ? intervalDays : null,
       anchorDate: scheduleType === "weekdays" ? null : anchorDate,
+      endDate: scheduleType === "once" ? null : endDate || null,
       timeOfDay: timeOfDay.trim() || null,
       minutesPlanned: minutes,
       doseTargetX100,
@@ -241,7 +252,11 @@ export function PlanDialog({
         {showLabel && (
           <div className="mb-4">
             <FieldLabel>
-              {kind === "meal" ? "Måltid" : "Navn"}
+              {kind === "meal"
+                ? "Måltid"
+                : kind === "reminder"
+                  ? "Påmindelse"
+                  : "Navn"}
             </FieldLabel>
             <input
               type="text"
@@ -250,7 +265,9 @@ export function PlanDialog({
               placeholder={
                 kind === "meal"
                   ? "fx 'Frokost: kylling i karry'"
-                  : "fx 'Styrketræning'"
+                  : kind === "reminder"
+                    ? "fx 'Trim hår'"
+                    : "fx 'Styrketræning'"
               }
               className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
             />
@@ -332,15 +349,23 @@ export function PlanDialog({
           </div>
         )}
 
-        {/* Gentagelse */}
+        {/* Gentagelse — påmindelser har 'Én gang' forrest (den typiske). */}
         <FieldLabel>Gentagelse</FieldLabel>
-        <div className="mb-3 inline-flex gap-0.5 rounded-[8px] bg-bg p-0.5">
+        <div className="mb-3 inline-flex flex-wrap gap-0.5 rounded-[8px] bg-bg p-0.5">
           {(
-            [
-              ["weekdays", "Ugedage"],
-              ["interval", "Interval"],
-              ["monthly", "Månedligt"],
-            ] as const
+            kind === "reminder"
+              ? ([
+                  ["once", "Én gang"],
+                  ["weekdays", "Ugedage"],
+                  ["interval", "Interval"],
+                  ["monthly", "Månedligt"],
+                ] as const)
+              : ([
+                  ["weekdays", "Ugedage"],
+                  ["interval", "Interval"],
+                  ["monthly", "Månedligt"],
+                  ["once", "Én gang"],
+                ] as const)
           ).map(([value, text]) => (
             <button
               key={value}
@@ -438,6 +463,39 @@ export function PlanDialog({
               Gentages på samme dag i måneden (d. 31 bliver månedens sidste
               dag i korte måneder).
             </p>
+          </div>
+        )}
+
+        {scheduleType === "once" && (
+          <div className="mb-4 space-y-2">
+            <div className="flex items-center gap-2 text-[13px] text-mid">
+              Dato
+              <input
+                type="date"
+                value={anchorDate}
+                onChange={(e) => setAnchorDate(e.target.value)}
+                className="!w-auto min-w-0 !rounded-[8px] !border-hair !bg-bg-subtle !py-1.5 !text-[13px]"
+              />
+            </div>
+            <p className="text-[11px] italic text-light">
+              Vises kun denne ene dag — &apos;udsæt&apos; flytter datoen.
+            </p>
+          </div>
+        )}
+
+        {/* Slutdato for gentagne rytmer: "hver dag i 14 dage". */}
+        {scheduleType !== "once" && (
+          <div className="mb-4 flex items-center gap-2 text-[13px] text-mid">
+            Til og med
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="!w-auto min-w-0 !rounded-[8px] !border-hair !bg-bg-subtle !py-1.5 !text-[13px]"
+            />
+            <span className="text-[11px] italic text-light">
+              valgfri — tom = for evigt
+            </span>
           </div>
         )}
 

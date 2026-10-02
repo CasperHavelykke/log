@@ -301,6 +301,7 @@ export function TodayPage(props: {
   weekHoursX10: number;
   initialWeekGoal: WeekGoalState;
   planEntries: TodayPlanEntry[];
+  reminderPlans: PlanItemData[];
   yearGoals: GoalView[] | null;
   counterModeEnabled: boolean;
   supplementPlans: PlanItemData[];
@@ -497,7 +498,11 @@ export function TodayPage(props: {
         }
         focusHoursTargetX10={weekGoal.focusHoursTargetX10}
       />
-      <TodayPlanCard date={props.date} entries={props.planEntries} />
+      <TodayPlanCard
+        date={props.date}
+        entries={props.planEntries}
+        reminderPlans={props.reminderPlans}
+      />
       <DayIntention
         date={props.date}
         initialNote={dayGoals.goalNote ?? ""}

@@ -720,10 +720,11 @@ export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
 export type NewWorkoutTemplate = typeof workoutTemplates.$inferInsert;
 
 // --- Planlægger -------------------------------------------------------------
-// Tilbagevendende planer for projekter, kosttilskud, træning, ernærings-mål
-// og måltider. Vises samlet som "Dagens plan" på /today; redigeres decentralt
-// dér hvor tingene bor. Forekomster materialiseres IKKE — de beregnes ved
-// læsning ud fra scheduleType (se src/lib/plan.ts).
+// Tilbagevendende planer for projekter, kosttilskud, træning, ernærings-mål,
+// måltider og fritstående påmindelser. Vises samlet som "Dagens plan" på
+// /today; redigeres decentralt dér hvor tingene bor (påmindelser direkte på
+// kortet — de bor ingen steder). Forekomster materialiseres IKKE — de
+// beregnes ved læsning ud fra scheduleType (se src/lib/plan.ts).
 
 export const PLAN_KINDS = [
   "project",
@@ -731,10 +732,17 @@ export const PLAN_KINDS = [
   "training",
   "nutrition",
   "meal",
+  "reminder",
 ] as const;
 export type PlanKind = (typeof PLAN_KINDS)[number];
 
-export const PLAN_SCHEDULE_TYPES = ["weekdays", "interval", "monthly"] as const;
+// 'once' = én enkelt dato (anchorDate); "udsæt" flytter selve datoen.
+export const PLAN_SCHEDULE_TYPES = [
+  "weekdays",
+  "interval",
+  "monthly",
+  "once",
+] as const;
 export type PlanScheduleType = (typeof PLAN_SCHEDULE_TYPES)[number];
 
 export const planItems = sqliteTable(
@@ -771,6 +779,9 @@ export const planItems = sqliteTable(
     weekdays: text("weekdays"), // "0,2,4" — 0=mandag..6=søndag
     intervalDays: integer("interval_days"),
     anchorDate: text("anchor_date"), // ISO YYYY-MM-DD
+    // Valgfri slutdato ("til og med") for gentagne rytmer — fx "hver dag i
+    // 14 dage". Efter datoen forekommer planen ikke mere. null = for evigt.
+    endDate: text("end_date"), // ISO YYYY-MM-DD
     timeOfDay: text("time_of_day"), // fritekst, fx "formiddag" eller "08:30"
     // project-kind: planlagt tid den dag.
     minutesPlanned: integer("minutes_planned"),

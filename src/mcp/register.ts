@@ -18,7 +18,8 @@ import { registerGoalTools } from "./tools/goals";
 
 export const MCP_SERVER_INFO = {
   name: "dagbog",
-  version: "0.14.0",
+  // Bump ved skema-ændringer i tools — connector-caches skal forbi.
+  version: "0.15.0",
 } as const;
 
 export function registerAllTools(server: McpServer): void {

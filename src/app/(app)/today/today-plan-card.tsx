@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Apple,
+  Bell,
+  BellPlus,
   Check,
   ChevronsRight,
   CircleDashed,
@@ -15,6 +17,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
+import { PlanDialog, type PlanItemData } from "@/components/plan-dialog";
 import {
   checkInPlanItem,
   markPlanItem,
@@ -75,6 +78,7 @@ const KIND_ICON: Record<PlanKind, typeof Pill> = {
   project: FolderKanban,
   nutrition: Apple,
   meal: UtensilsCrossed,
+  reminder: Bell,
 };
 
 // Interval-bjælker per makro: målzonen (min–maks) er et bånd på en tynd
@@ -182,16 +186,23 @@ function fmtMinutes(min: number): string {
 export function TodayPlanCard({
   date,
   entries,
+  reminderPlans,
 }: {
   date: string;
   entries: TodayPlanEntry[];
+  // Alle påmindelses-planer (også dem der ikke falder i dag) — bruges til
+  // redigering: tap på en påmindelse på kortet åbner dens dialog.
+  reminderPlans: PlanItemData[];
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<number | null>(null);
+  const [reminderEdit, setReminderEdit] = useState<PlanItemData | "new" | null>(
+    null,
+  );
   const [, start] = useTransition();
 
-  if (entries.length === 0) return null;
-
+  // Kortet vises altid: "+"-knappen i headeren er eneste sted en
+  // påmindelse kan oprettes (de bor ingen andre steder i appen).
   const openCount = entries.filter((e) => e.state === "open").length;
   const doneCount = entries.filter((e) => e.state === "done").length;
 
@@ -248,14 +259,33 @@ export function TodayPlanCard({
 
   return (
     <section className="mb-4 rounded-[10px] bg-bg-elevated p-4 shadow-[var(--shadow-card)] sm:p-5">
-      <div className="mb-3 flex items-baseline justify-between border-b border-hair pb-2">
+      <div className="mb-3 flex items-center justify-between border-b border-hair pb-2">
         <span className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
           Dagens plan
         </span>
-        <span className="text-[11px] text-light">
-          {doneCount}/{doneCount + openCount} klaret
-        </span>
+        <div className="flex items-center gap-1.5">
+          {doneCount + openCount > 0 && (
+            <span className="text-[11px] text-light">
+              {doneCount}/{doneCount + openCount} klaret
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setReminderEdit("new")}
+            title="Ny påmindelse"
+            className="-my-2 inline-flex size-10 cursor-pointer items-center justify-center rounded-[6px] text-dim hover:text-accent sm:size-7"
+          >
+            <BellPlus className="size-3.5" />
+          </button>
+        </div>
       </div>
+
+      {entries.length === 0 && (
+        <p className="text-[12px] italic text-light">
+          Intet planlagt i dag. Klokke-knappen øverst opretter en
+          påmindelse — fx &apos;Trim hår&apos; på en bestemt dato.
+        </p>
+      )}
 
       <ul className="space-y-1.5">
         {entries.map((e) => {
@@ -329,7 +359,23 @@ export function TodayPlanCard({
                     e.state === "done" ? "text-mid line-through" : "text-ink"
                   }`}
                 >
-                  {e.title}
+                  {e.kind === "reminder" ? (
+                    // Påmindelser bor ingen andre steder — titlen ER
+                    // redigerings-indgangen.
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pl = reminderPlans.find((p) => p.id === e.id);
+                        if (pl) setReminderEdit(pl);
+                      }}
+                      title="Redigér påmindelsen"
+                      className="cursor-pointer hover:underline"
+                    >
+                      {e.title}
+                    </button>
+                  ) : (
+                    e.title
+                  )}
                   {e.doseText && (
                     <span className="ml-1.5 text-[12px] text-light">
                       {e.doseText}
@@ -453,6 +499,22 @@ export function TodayPlanCard({
           );
         })}
       </ul>
+
+      {reminderEdit !== null && (
+        <PlanDialog
+          label="Planlægning"
+          title={
+            reminderEdit === "new"
+              ? "Ny påmindelse"
+              : (reminderEdit.label ?? "Påmindelse")
+          }
+          kind="reminder"
+          existing={reminderEdit === "new" ? null : reminderEdit}
+          showLabel
+          onChanged={() => router.refresh()}
+          onClose={() => setReminderEdit(null)}
+        />
+      )}
     </section>
   );
 }

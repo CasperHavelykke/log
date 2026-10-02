@@ -6,6 +6,10 @@
 //              En misset dag skrider ikke — næste forekomst ligger fast.
 //   monthly  : månedligt på anchorDates dag-i-måneden, clampet til
 //              månedens sidste dag (anker d. 31 → 28./29. februar).
+//   once     : én enkelt dato (anchorDate) — "udsæt" flytter selve datoen.
+//
+// endDate ("til og med") afslutter enhver rytme: efter datoen forekommer
+// planen ikke mere ("hver dag i 14 dage").
 
 import type { PlanItem, PlanKind, PlanScheduleType } from "@/db/schema";
 
@@ -21,6 +25,7 @@ export type PlanItemData = {
   weekdays: string | null;
   intervalDays: number | null;
   anchorDate: string | null;
+  endDate: string | null;
   timeOfDay: string | null;
   minutesPlanned: number | null;
   doseTargetX100: number | null;
@@ -50,6 +55,7 @@ export function toPlanItemData(row: PlanItem): PlanItemData {
     weekdays: row.weekdays,
     intervalDays: row.intervalDays,
     anchorDate: row.anchorDate,
+    endDate: row.endDate,
     timeOfDay: row.timeOfDay,
     minutesPlanned: row.minutesPlanned,
     doseTargetX100: row.doseTargetX100,
@@ -130,16 +136,26 @@ export function parseWeekdays(weekdays: string | null): number[] {
 
 type ScheduleFields = Pick<
   PlanItem,
-  "scheduleType" | "weekdays" | "intervalDays" | "anchorDate" | "paused"
+  | "scheduleType"
+  | "weekdays"
+  | "intervalDays"
+  | "anchorDate"
+  | "endDate"
+  | "paused"
 >;
 
-// Forekommer planen på datoen? Pausede planer forekommer aldrig.
+// Forekommer planen på datoen? Pausede planer forekommer aldrig; en plan
+// med slutdato forekommer ikke efter den.
 export function occursOn(item: ScheduleFields, dateIso: string): boolean {
   if (item.paused) return false;
+  if (item.endDate !== null && dateIso > item.endDate) return false;
   if (item.scheduleType === "weekdays") {
     return parseWeekdays(item.weekdays).includes(mondayWeekday(dateIso));
   }
   if (!item.anchorDate || dateIso < item.anchorDate) return false;
+  if (item.scheduleType === "once") {
+    return dateIso === item.anchorDate;
+  }
   if (item.scheduleType === "interval") {
     const n = item.intervalDays ?? 1;
     if (n < 1) return false;
@@ -201,25 +217,42 @@ export function fmtDoseX100(x100: number): string {
 }
 
 const WEEKDAY_SHORT = ["man", "tir", "ons", "tor", "fre", "lør", "søn"];
+const MONTH_SHORT = [
+  "jan.", "feb.", "mar.", "apr.", "maj", "jun.",
+  "jul.", "aug.", "sep.", "okt.", "nov.", "dec.",
+];
+
+function shortDate(iso: string): string {
+  return `${Number(iso.slice(8, 10))}. ${MONTH_SHORT[Number(iso.slice(5, 7)) - 1]}`;
+}
 
 // Menneskelig beskrivelse af rytmen, til visning i editorer og på kortet.
 export function scheduleLabel(item: ScheduleFields): string {
+  let base = "";
   if (item.scheduleType === "weekdays") {
     const days = parseWeekdays(item.weekdays);
-    if (days.length === 7) return "hver dag";
-    if (days.length === 0) return "ingen dage valgt";
-    return days.map((d) => WEEKDAY_SHORT[d]).join(", ");
-  }
-  if (item.scheduleType === "interval") {
+    base =
+      days.length === 7
+        ? "hver dag"
+        : days.length === 0
+          ? "ingen dage valgt"
+          : days.map((d) => WEEKDAY_SHORT[d]).join(", ");
+  } else if (item.scheduleType === "interval") {
     const n = item.intervalDays ?? 1;
-    if (n === 1) return "hver dag";
-    if (n === 7) return "hver uge";
-    if (n === 14) return "hver 14. dag";
-    return `hver ${n}. dag`;
-  }
-  if (item.scheduleType === "monthly") {
+    base =
+      n === 1
+        ? "hver dag"
+        : n === 7
+          ? "hver uge"
+          : n === 14
+            ? "hver 14. dag"
+            : `hver ${n}. dag`;
+  } else if (item.scheduleType === "monthly") {
     const day = item.anchorDate ? Number(item.anchorDate.slice(8, 10)) : null;
-    return day !== null ? `månedligt d. ${day}.` : "månedligt";
+    base = day !== null ? `månedligt d. ${day}.` : "månedligt";
+  } else if (item.scheduleType === "once") {
+    return item.anchorDate ? shortDate(item.anchorDate) : "én gang";
   }
-  return "";
+  if (item.endDate !== null) return `${base} til ${shortDate(item.endDate)}`;
+  return base;
 }

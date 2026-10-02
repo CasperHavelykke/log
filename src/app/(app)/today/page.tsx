@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt, or } from "drizzle-orm";
 import { requireUser } from "@/lib/session";
 import { db, schema } from "@/db";
 import {
@@ -167,6 +167,26 @@ export default async function Today() {
   // vises i dag som tilflyttet forekomst (ugedags-/månedsplaner — interval
   // forekommer naturligt via det rykkede anker).
   const prevDate = addDaysIso(date, -1);
+  // Selvoprydning: udløbne påmindelser (engangsdato eller slutdato mere end
+  // én dag bag os — i går kan stadig være "udsat til i dag") er døde rækker
+  // uden log-værdi. Fjernes stille, så hverken kortet eller AI'ens
+  // plan-liste samler fossiler. Gælder KUN kind 'reminder' — andre planer
+  // med slutdato beholdes, så de kan forlænges fra deres chips.
+  await db
+    .delete(schema.planItems)
+    .where(
+      and(
+        eq(schema.planItems.userId, user.id),
+        eq(schema.planItems.kind, "reminder"),
+        or(
+          and(
+            eq(schema.planItems.scheduleType, "once"),
+            lt(schema.planItems.anchorDate, prevDate),
+          ),
+          lt(schema.planItems.endDate, prevDate),
+        ),
+      ),
+    );
   const [planItemsRows, planMarksRows, checkinRows, workoutsToday, allTemplates] =
     await Promise.all([
       db
@@ -231,8 +251,9 @@ export default async function Today() {
     supplement: 0,
     training: 1,
     meal: 2,
-    project: 3,
-    nutrition: 4,
+    reminder: 3,
+    project: 4,
+    nutrition: 5,
   };
   const planEntries: TodayPlanEntry[] = planItemsRows
     .filter(
@@ -280,6 +301,8 @@ export default async function Today() {
         title = t?.title ?? i.label ?? "Træning";
       } else if (i.kind === "nutrition") {
         title = i.label ?? "Dagens mål";
+      } else if (i.kind === "reminder") {
+        title = i.label ?? "Påmindelse";
       }
 
       // hoursX10 → minutter: ×10-timer × 6.
@@ -401,6 +424,9 @@ export default async function Today() {
         goalNote: await resolveGoalNote(user.id, date, entry?.goalNote),
       }}
       planEntries={planEntries}
+      reminderPlans={planItemsRows
+        .filter((i) => i.kind === "reminder")
+        .map(toPlanItemData)}
       yearGoals={yearGoals}
       counterModeEnabled={user.counterModeEnabled ?? false}
       supplementPlans={planItemsRows

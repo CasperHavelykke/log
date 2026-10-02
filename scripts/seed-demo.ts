@@ -378,6 +378,27 @@ async function main() {
       timeOfDay: "aften",
       sortOrder: 6,
     },
+    // Påmindelser: én engangsdato (i dag, så den ses i demoen) og én
+    // tidsbegrænset daglig rytme ("hver dag i 10 dage").
+    {
+      userId: uid,
+      kind: "reminder",
+      label: "Trim hår",
+      scheduleType: "once",
+      anchorDate: isoDaysAgo(0),
+      sortOrder: 7,
+    },
+    {
+      userId: uid,
+      kind: "reminder",
+      label: "Vand basilikummen",
+      scheduleType: "interval",
+      intervalDays: 1,
+      anchorDate: isoDaysAgo(2),
+      endDate: isoDaysAgo(-8),
+      timeOfDay: "morgen",
+      sortOrder: 8,
+    },
   ]);
 
   // --- Årsmål ---------------------------------------------------------------
