@@ -201,103 +201,117 @@
     {
       "idx": 28,
       "version": "6",
+      "when": 1781900000000,
+      "tag": "0028_garmin_sleep_enabled",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1781900001000,
+      "tag": "0029_drink_counter",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
       "when": 1785393645798,
       "tag": "0028_long_ravenous",
       "breakpoints": true
     },
     {
-      "idx": 29,
+      "idx": 31,
       "version": "6",
       "when": 1785399234704,
       "tag": "0029_flat_iron_fist",
       "breakpoints": true
     },
     {
-      "idx": 30,
+      "idx": 32,
       "version": "6",
       "when": 1786528297521,
       "tag": "0030_funny_marvel_apes",
       "breakpoints": true
     },
     {
-      "idx": 31,
+      "idx": 33,
       "version": "6",
       "when": 1786531319458,
       "tag": "0031_blue_thunderbird",
       "breakpoints": true
     },
     {
-      "idx": 32,
+      "idx": 34,
       "version": "6",
       "when": 1788005451704,
       "tag": "0032_glossy_shockwave",
       "breakpoints": true
     },
     {
-      "idx": 33,
+      "idx": 35,
       "version": "6",
       "when": 1788163975560,
       "tag": "0033_closed_ultimo",
       "breakpoints": true
     },
     {
-      "idx": 34,
+      "idx": 36,
       "version": "6",
       "when": 1788164677273,
       "tag": "0034_dry_ink",
       "breakpoints": true
     },
     {
-      "idx": 35,
+      "idx": 37,
       "version": "6",
       "when": 1789118033468,
       "tag": "0035_dazzling_lenny_balinger",
       "breakpoints": true
     },
     {
-      "idx": 36,
+      "idx": 38,
       "version": "6",
       "when": 1789294303372,
       "tag": "0036_careful_lady_vermin",
       "breakpoints": true
     },
     {
-      "idx": 37,
+      "idx": 39,
       "version": "6",
       "when": 1789315988234,
       "tag": "0037_nutrition_ranges",
       "breakpoints": true
     },
     {
-      "idx": 38,
+      "idx": 40,
       "version": "6",
       "when": 1789759335585,
       "tag": "0038_year_goals",
       "breakpoints": true
     },
     {
-      "idx": 39,
+      "idx": 41,
       "version": "6",
       "when": 1789898048638,
       "tag": "0039_drink_units_x10",
       "breakpoints": true
     },
     {
-      "idx": 40,
+      "idx": 42,
       "version": "6",
       "when": 1789905001043,
       "tag": "0040_counter_mode",
       "breakpoints": true
     },
     {
-      "idx": 41,
+      "idx": 43,
       "version": "6",
       "when": 1790017293892,
       "tag": "0041_plan_checkins",
       "breakpoints": true
     },
     {
-      "idx": 42,
+      "idx": 44,
       "version": "6",
       "when": 1790019065008,
       "tag": "0042_roisin_mode",
