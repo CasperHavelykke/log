@@ -18,6 +18,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Kun dev: lader telefonen på hjemmenetværket hente dev-serverens
+  // klient-scripts (ellers blokeres de som cross-origin, og klient-
+  // komponenter som login-formularen renderer aldrig). Ingen effekt i prod.
+  allowedDevOrigins: ["10.44.0.*", "localhost"],
   serverExternalPackages: ["better-sqlite3", "mammoth"],
   experimental: {
     serverActions: {

@@ -210,3 +210,18 @@ textarea {
   --danger-soft: rgba(109, 40, 217, 0.14);
   --danger-strong: rgba(109, 40, 217, 0.30);
 }
+
+/* Lightbox: datolinjen glider ind, når man swiper over en dagsgrænse. */
+.lightbox-date-in {
+  animation: lightbox-date-in 260ms ease-out;
+}
+@keyframes lightbox-date-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

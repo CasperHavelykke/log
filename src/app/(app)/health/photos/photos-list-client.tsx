@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, X } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
-import { useHorizontalSwipe } from "@/lib/use-swipe";
 import { PRIVATE_BLUR_CLASS, PrivateOverlay } from "@/components/private-photo";
+import { PhotoLightbox } from "@/components/photo-lightbox";
 import { setPhotoPrivate } from "@/app/(app)/health/trackere/actions";
 import { deletePhoto, setPhotoTracker, updatePhotoCaption } from "./actions";
 
@@ -144,15 +144,26 @@ export function PhotosListClient({
       )}
 
       {lightboxIndex !== null && visible[lightboxIndex] && (
-        <Lightbox
+        <PhotoLightbox
           photos={visible}
           index={lightboxIndex}
           revealed={revealed}
           onReveal={reveal}
           onPrivateChanged={setPrivateLocal}
+          describe={(p) =>
+            p.trackerId ? (trackerById.get(p.trackerId)?.name ?? null) : null
+          }
+          onDelete={async (id) => {
+            const res = await deletePhoto(id);
+            if (!res.ok) return;
+            const remaining = visible.length - 1;
+            setPhotos((prev) => prev.filter((x) => x.id !== id));
+            setLightboxIndex((i) =>
+              i === null || remaining === 0 ? null : Math.min(i, remaining - 1),
+            );
+          }}
           onChangeIndex={setLightboxIndex}
           onClose={() => setLightboxIndex(null)}
-          trackerById={trackerById}
         />
       )}
     </div>
@@ -319,157 +330,6 @@ function PhotoCard({
             <Trash2 className="size-3" />
             Slet
           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Lightbox({
-  photos,
-  index,
-  revealed,
-  onReveal,
-  onPrivateChanged,
-  onChangeIndex,
-  onClose,
-  trackerById,
-}: {
-  photos: PhotoRow[];
-  index: number;
-  revealed: Set<number>;
-  onReveal: (id: number) => void;
-  onPrivateChanged: (id: number, isPrivate: boolean) => void;
-  onChangeIndex: (i: number) => void;
-  onClose: () => void;
-  trackerById: Map<number, TrackerRow>;
-}) {
-  const photo = photos[index];
-  const hasPrev = index > 0;
-  const hasNext = index < photos.length - 1;
-  const tracker = photo.trackerId ? trackerById.get(photo.trackerId) : null;
-  const hidden = photo.private && !revealed.has(photo.id);
-  const [pendingPrivate, startPrivate] = useTransition();
-  function togglePrivate(e: React.MouseEvent) {
-    e.stopPropagation();
-    const next = !photo.private;
-    startPrivate(async () => {
-      const res = await setPhotoPrivate(photo.id, next);
-      if (res.ok) onPrivateChanged(photo.id, next);
-    });
-  }
-
-  function go(delta: number) {
-    const next = index + delta;
-    if (next < 0 || next >= photos.length) return;
-    onChangeIndex(next);
-  }
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") go(-1);
-      else if (e.key === "ArrowRight") go(1);
-      else if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, photos.length]);
-
-  const swipe = useHorizontalSwipe({
-    onSwipeLeft: () => hasNext && go(1),
-    onSwipeRight: () => hasPrev && go(-1),
-  });
-
-  return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
-      onTouchStart={swipe.onTouchStart}
-      onTouchEnd={swipe.onTouchEnd}
-    >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-4 inline-flex cursor-pointer items-center rounded-full bg-black/60 p-2 text-white/85 backdrop-blur-sm hover:text-white top-[max(1rem,env(safe-area-inset-top))]"
-        aria-label="Luk"
-      >
-        <X className="size-5" />
-      </button>
-      <button
-        type="button"
-        onClick={togglePrivate}
-        disabled={pendingPrivate}
-        className="absolute left-4 inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-full bg-black/60 px-3 text-[12px] text-white/85 backdrop-blur-sm hover:text-white disabled:opacity-50 top-[max(1rem,env(safe-area-inset-top))]"
-      >
-        {photo.private ? (
-          <>
-            <Eye className="size-4" />
-            Fjern privat
-          </>
-        ) : (
-          <>
-            <EyeOff className="size-4" />
-            Gør privat
-          </>
-        )}
-      </button>
-
-      {hasPrev && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            go(-1);
-          }}
-          className="absolute left-2 top-1/2 hidden -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-white/85 backdrop-blur-sm hover:text-white sm:left-6 sm:inline-flex"
-          aria-label="Forrige"
-        >
-          <ChevronLeft className="size-6" />
-        </button>
-      )}
-      {hasNext && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            go(1);
-          }}
-          className="absolute right-2 top-1/2 hidden -translate-y-1/2 cursor-pointer rounded-full bg-black/60 p-3 text-white/85 backdrop-blur-sm hover:text-white sm:right-6 sm:inline-flex"
-          aria-label="Næste"
-        >
-          <ChevronRight className="size-6" />
-        </button>
-      )}
-
-      {/* Private billeder åbner slørede også her — et tryk viser dem. */}
-      <div
-        className="relative overflow-hidden"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (hidden) onReveal(photo.id);
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`/api/files/photo/${photo.id}`}
-          alt={photo.caption ?? ""}
-          className={`max-h-[85vh] max-w-full select-none object-contain ${
-            hidden ? "blur-3xl" : ""
-          }`}
-          draggable={false}
-        />
-        {hidden && <PrivateOverlay />}
-      </div>
-
-      <div className="absolute left-4 right-4 text-center text-[13px] text-white/80 bottom-[max(1rem,env(safe-area-inset-bottom))]">
-        <div>
-          {formatDanishDate(photo.takenAt.slice(0, 10))}
-          {tracker && <span> · {tracker.name}</span>}
-          {photo.caption && <span> · {photo.caption}</span>}
-        </div>
-        <div className="mt-1 text-[11px] text-white/50">
-          {index + 1} / {photos.length}
         </div>
       </div>
     </div>
