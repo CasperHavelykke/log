@@ -380,18 +380,28 @@ export function StatistikClient({
     [filteredData, selectedMetrics, showMA],
   );
 
+  function persist(next: Set<MetricKey>) {
+    try {
+      localStorage.setItem(SELECTED_STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      // Storage fuld/utilgængelig — valget virker stadig for sessionen.
+    }
+  }
+
   function toggle(k: MetricKey) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(k)) next.delete(k);
       else next.add(k);
-      try {
-        localStorage.setItem(SELECTED_STORAGE_KEY, JSON.stringify([...next]));
-      } catch {
-        // Storage fuld/utilgængelig — valget virker stadig for sessionen.
-      }
+      persist(next);
       return next;
     });
+  }
+
+  function clearAll() {
+    const next = new Set<MetricKey>();
+    persist(next);
+    setSelected(next);
   }
 
   const overlayMetrics = selectedMetrics.slice(0, MAX_OVERLAY);
@@ -411,6 +421,7 @@ export function StatistikClient({
         <MetricPicker
           selected={selected}
           onToggle={toggle}
+          onClearAll={clearAll}
           data={filteredData}
           allMetrics={ALL_METRICS}
           garminSleepEnabled={garminSleepEnabled}
@@ -531,6 +542,7 @@ function ModeToggle({
 function MetricPicker({
   selected,
   onToggle,
+  onClearAll,
   data,
   allMetrics,
   garminSleepEnabled,
@@ -539,6 +551,7 @@ function MetricPicker({
 }: {
   selected: Set<MetricKey>;
   onToggle: (k: MetricKey) => void;
+  onClearAll: () => void;
   data: DataPoint[];
   allMetrics: Metric[];
   garminSleepEnabled: boolean;
@@ -573,6 +586,25 @@ function MetricPicker({
 
   return (
     <aside className="space-y-3 self-start md:rounded-[10px] md:bg-bg-elevated md:p-5 md:shadow-[var(--shadow-card)]">
+      {/* Valg-status + "Ryd alle": fravalg én ad gangen er trægt, når man
+          har samlet mange grafer. */}
+      <div className="flex min-h-[28px] items-center justify-between border-b border-hair pb-2">
+        <span className="text-[11px] text-light">
+          {selected.size === 0
+            ? "Ingen valgt"
+            : `${selected.size} valgt`}
+        </span>
+        {selected.size > 0 && (
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="-my-2 inline-flex min-h-[40px] cursor-pointer items-center gap-1 rounded-[6px] px-2 text-[11px] text-dim hover:text-danger md:min-h-[28px]"
+          >
+            <X className="size-3" />
+            Ryd alle
+          </button>
+        )}
+      </div>
       {CATEGORIES.map((cat) => {
         if (cat.id === "garmin" && !garminSleepEnabled) return null;
         const metrics = allMetrics

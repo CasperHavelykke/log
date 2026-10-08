@@ -569,6 +569,10 @@ export const photos = sqliteTable(
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     takenAt: text("taken_at").notNull(),
+    // Privat = vises sløret overalt indtil man aktivt trykker. Ren
+    // visning (værn mod blikke over skulderen) — adgangskontrollen
+    // sidder uændret i /api/files og er bruger-scopet.
+    private: integer("private", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),

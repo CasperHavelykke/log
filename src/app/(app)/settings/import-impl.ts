@@ -220,6 +220,7 @@ const photoRow = z.object({
   mimeType: z.string(),
   sizeBytes: z.number().int(),
   takenAt: z.string(),
+  private: z.boolean().optional(),
   createdAt: z.string().optional(),
 });
 
@@ -816,6 +817,7 @@ export async function performImport(
         mimeType: p.mimeType,
         sizeBytes: p.sizeBytes,
         takenAt: p.takenAt,
+        private: p.private ?? false,
         createdAt: p.createdAt ?? nowIso(),
       })),
     );

@@ -80,6 +80,7 @@ export function registerTrackerTools(server: McpServer) {
           caption: schema.photos.caption,
           blobUrl: schema.photos.blobUrl,
           mimeType: schema.photos.mimeType,
+          private: schema.photos.private,
         })
         .from(schema.photos)
         .where(
@@ -128,6 +129,7 @@ export function registerTrackerTools(server: McpServer) {
           takenAt: p.takenAt,
           caption: p.caption,
           mimeType: p.mimeType,
+          private: p.private,
           blobUrl: p.blobUrl,
         })),
         metricSeries,

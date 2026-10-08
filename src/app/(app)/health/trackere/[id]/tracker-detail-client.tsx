@@ -7,6 +7,8 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   ImagePlus,
   MoreVertical,
   Trash2,
@@ -24,7 +26,13 @@ import {
 } from "recharts";
 import { compressImage, formatFileSize } from "@/lib/image-compress";
 import { useHorizontalSwipe } from "@/lib/use-swipe";
-import { deletePhoto, deleteTracker, uploadTrackerPhoto } from "../actions";
+import { PRIVATE_BLUR_CLASS, PrivateOverlay } from "@/components/private-photo";
+import {
+  deletePhoto,
+  deleteTracker,
+  setPhotoPrivate,
+  uploadTrackerPhoto,
+} from "../actions";
 
 type TrackerInfo = {
   id: number;
@@ -40,6 +48,7 @@ type Photo = {
   takenAt: string;
   mimeType: string;
   sizeBytes: number;
+  private: boolean;
 };
 
 const KIND_LABELS: Record<string, string> = {
@@ -91,6 +100,17 @@ export function TrackerDetailClient({
   const [menuOpen, setMenuOpen] = useState(false);
   const [, startDelete] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
+  // Afslørede private billeder — kun for denne sidevisning. Deles mellem
+  // gitter og viser, så ét tryk rækker til begge; genindlæs = sløret igen.
+  const [revealed, setRevealed] = useState<Set<number>>(() => new Set());
+  function reveal(id: number) {
+    setRevealed((prev) => new Set(prev).add(id));
+  }
+  function setPrivateLocal(id: number, isPrivate: boolean) {
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, private: isPrivate } : p)),
+    );
+  }
 
   const hasMetric = metricData.length > 0;
   const photoDates = useMemo(
@@ -313,6 +333,9 @@ export function TrackerDetailClient({
               <PhotoCard
                 key={p.id}
                 photo={p}
+                hidden={p.private && !revealed.has(p.id)}
+                onReveal={() => reveal(p.id)}
+                onPrivateChanged={(v) => setPrivateLocal(p.id, v)}
                 onPick={() => setViewerIndex(i)}
                 onDeleted={() =>
                   setPhotos((prev) => prev.filter((x) => x.id !== p.id))
@@ -340,6 +363,9 @@ export function TrackerDetailClient({
         <PhotoViewer
           photos={photos}
           index={viewerIndex}
+          revealed={revealed}
+          onReveal={reveal}
+          onPrivateChanged={setPrivateLocal}
           onChangeIndex={setViewerIndex}
           onClose={() => setViewerIndex(null)}
         />
@@ -350,10 +376,17 @@ export function TrackerDetailClient({
 
 function PhotoCard({
   photo,
+  hidden,
+  onReveal,
+  onPrivateChanged,
   onPick,
   onDeleted,
 }: {
   photo: Photo;
+  // Privat og endnu ikke afsløret: første tryk viser, næste åbner viseren.
+  hidden: boolean;
+  onReveal: () => void;
+  onPrivateChanged: (isPrivate: boolean) => void;
   onPick: () => void;
   onDeleted: () => void;
 }) {
@@ -366,19 +399,31 @@ function PhotoCard({
       if (res.ok) onDeleted();
     });
   }
+  function togglePrivate(e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = !photo.private;
+    start(async () => {
+      const res = await setPhotoPrivate(photo.id, next);
+      if (res.ok) onPrivateChanged(next);
+    });
+  }
   return (
     <div className="group relative">
       <button
         type="button"
-        onClick={onPick}
-        className="block w-full cursor-pointer overflow-hidden rounded-[10px] bg-bg-subtle"
+        onClick={hidden ? onReveal : onPick}
+        title={hidden ? "Privat — tryk for at vise" : undefined}
+        className="relative block w-full cursor-pointer overflow-hidden rounded-[10px] bg-bg-subtle"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/api/files/photo/${photo.id}`}
           alt={photo.caption ?? fmtDate(photo.takenAt)}
-          className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
+          className={`aspect-square w-full object-cover transition-transform group-hover:scale-[1.02] ${
+            hidden ? PRIVATE_BLUR_CLASS : ""
+          }`}
         />
+        {hidden && <PrivateOverlay compact />}
       </button>
       <div className="mt-1.5 text-[11px] font-medium text-mid">
         {fmtDate(photo.takenAt)}
@@ -388,15 +433,30 @@ function PhotoCard({
           {photo.caption}
         </div>
       )}
-      <button
-        type="button"
-        onClick={remove}
-        disabled={pending}
-        className="absolute right-1.5 top-1.5 inline-flex cursor-pointer items-center rounded-[6px] bg-black/55 p-1.5 text-white opacity-0 backdrop-blur-sm transition-opacity hover:text-danger group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
-        title="Slet"
-      >
-        <Trash2 className="size-3.5" />
-      </button>
+      <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+        <button
+          type="button"
+          onClick={togglePrivate}
+          disabled={pending}
+          className="inline-flex cursor-pointer items-center rounded-[6px] bg-black/55 p-1.5 text-white backdrop-blur-sm hover:text-accent-bright disabled:opacity-50"
+          title={photo.private ? "Fjern privat" : "Gør privat"}
+        >
+          {photo.private ? (
+            <Eye className="size-3.5" />
+          ) : (
+            <EyeOff className="size-3.5" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={remove}
+          disabled={pending}
+          className="inline-flex cursor-pointer items-center rounded-[6px] bg-black/55 p-1.5 text-white backdrop-blur-sm hover:text-danger disabled:opacity-50"
+          title="Slet"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -404,17 +464,33 @@ function PhotoCard({
 function PhotoViewer({
   photos,
   index,
+  revealed,
+  onReveal,
+  onPrivateChanged,
   onChangeIndex,
   onClose,
 }: {
   photos: Photo[];
   index: number;
+  revealed: Set<number>;
+  onReveal: (id: number) => void;
+  onPrivateChanged: (id: number, isPrivate: boolean) => void;
   onChangeIndex: (i: number) => void;
   onClose: () => void;
 }) {
   const photo = photos[index];
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
+  const hidden = photo.private && !revealed.has(photo.id);
+  const [pendingPrivate, startPrivate] = useTransition();
+  function togglePrivate(e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = !photo.private;
+    startPrivate(async () => {
+      const res = await setPhotoPrivate(photo.id, next);
+      if (res.ok) onPrivateChanged(photo.id, next);
+    });
+  }
 
   function go(delta: number) {
     const next = index + delta;
@@ -453,6 +529,24 @@ function PhotoViewer({
       >
         <X className="size-5" />
       </button>
+      <button
+        type="button"
+        onClick={togglePrivate}
+        disabled={pendingPrivate}
+        className="absolute left-4 inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-full bg-black/60 px-3 text-[12px] text-white/85 backdrop-blur-sm hover:text-white disabled:opacity-50 top-[max(1rem,env(safe-area-inset-top))]"
+      >
+        {photo.private ? (
+          <>
+            <Eye className="size-4" />
+            Fjern privat
+          </>
+        ) : (
+          <>
+            <EyeOff className="size-4" />
+            Gør privat
+          </>
+        )}
+      </button>
 
       {hasPrev && (
         <button
@@ -481,14 +575,26 @@ function PhotoViewer({
         </button>
       )}
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/api/files/photo/${photo.id}`}
-        alt={photo.caption ?? ""}
-        className="max-h-[85vh] max-w-full select-none object-contain"
-        onClick={(e) => e.stopPropagation()}
-        draggable={false}
-      />
+      {/* Private billeder åbner slørede også her — et tryk på billedet
+          viser det. Bladrer man videre til et andet privat, er dét sløret. */}
+      <div
+        className="relative overflow-hidden"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (hidden) onReveal(photo.id);
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/files/photo/${photo.id}`}
+          alt={photo.caption ?? ""}
+          className={`max-h-[85vh] max-w-full select-none object-contain ${
+            hidden ? "blur-3xl" : ""
+          }`}
+          draggable={false}
+        />
+        {hidden && <PrivateOverlay />}
+      </div>
 
       <div className="absolute left-4 right-4 text-center text-[13px] text-white/80 bottom-[max(1rem,env(safe-area-inset-bottom))]">
         <div>
@@ -522,6 +628,7 @@ function UploadDialog({
   } | null>(null);
   const [caption, setCaption] = useState("");
   const [takenAt, setTakenAt] = useState(todayIso());
+  const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -570,6 +677,7 @@ function UploadDialog({
     fd.append("trackerId", String(trackerId));
     fd.append("caption", caption.trim());
     fd.append("takenAt", takenAt);
+    fd.append("private", isPrivate ? "1" : "0");
 
     start(async () => {
       const res = await uploadTrackerPhoto(fd);
@@ -583,6 +691,7 @@ function UploadDialog({
         takenAt,
         mimeType: "image/jpeg",
         sizeBytes: compressed.bytes,
+        private: isPrivate,
       });
     });
   }
@@ -678,6 +787,19 @@ function UploadDialog({
               className="!rounded-[8px] !border-hair !bg-bg-subtle"
             />
           </div>
+
+          <label className="flex min-h-[40px] cursor-pointer items-center gap-2 text-[13px] text-mid">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              className="size-4"
+            />
+            <span className="inline-flex items-center gap-1.5">
+              <EyeOff className="size-3.5" />
+              Privat — vises sløret, indtil du trykker
+            </span>
+          </label>
 
           {error && <p className="text-[13px] text-danger">{error}</p>}
 

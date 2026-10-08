@@ -48,6 +48,7 @@ export function registerPhotoTools(server: McpServer) {
           takenAt: p.takenAt,
           mimeType: p.mimeType,
           sizeBytes: p.sizeBytes,
+          private: p.private,
           blobUrl: p.blobUrl,
         })),
       });

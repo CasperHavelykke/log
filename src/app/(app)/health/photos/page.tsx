@@ -29,6 +29,7 @@ export default async function PhotosPage() {
         takenAt: p.takenAt,
         mimeType: p.mimeType,
         sizeBytes: p.sizeBytes,
+        private: p.private,
       }))}
       trackers={trackers.map((t) => ({ id: t.id, name: t.name, kind: t.kind }))}
     />

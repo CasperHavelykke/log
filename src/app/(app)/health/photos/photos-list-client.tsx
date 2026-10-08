@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, X } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
 import { useHorizontalSwipe } from "@/lib/use-swipe";
+import { PRIVATE_BLUR_CLASS, PrivateOverlay } from "@/components/private-photo";
+import { setPhotoPrivate } from "@/app/(app)/health/trackere/actions";
 import { deletePhoto, setPhotoTracker, updatePhotoCaption } from "./actions";
 
 type PhotoRow = {
@@ -14,6 +16,7 @@ type PhotoRow = {
   takenAt: string;
   mimeType: string;
   sizeBytes: number;
+  private: boolean;
 };
 
 type TrackerRow = {
@@ -32,6 +35,17 @@ export function PhotosListClient({
   const [photos, setPhotos] = useState(initialPhotos);
   const [filter, setFilter] = useState<"all" | "orphans">("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Afslørede private billeder — kun for denne sidevisning, delt mellem
+  // gitter og lightbox. Genindlæs siden, og alt er sløret igen.
+  const [revealed, setRevealed] = useState<Set<number>>(() => new Set());
+  function reveal(id: number) {
+    setRevealed((prev) => new Set(prev).add(id));
+  }
+  function setPrivateLocal(id: number, isPrivate: boolean) {
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, private: isPrivate } : p)),
+    );
+  }
 
   const visible = photos.filter((p) =>
     filter === "orphans" ? p.trackerId === null : true,
@@ -107,6 +121,9 @@ export function PhotosListClient({
               photo={p}
               tracker={p.trackerId ? trackerById.get(p.trackerId) : undefined}
               trackers={trackers}
+              hidden={p.private && !revealed.has(p.id)}
+              onReveal={() => reveal(p.id)}
+              onPrivateChanged={(v) => setPrivateLocal(p.id, v)}
               onTrackerChanged={(trackerId) =>
                 setPhotos((prev) =>
                   prev.map((x) => (x.id === p.id ? { ...x, trackerId } : x)),
@@ -130,6 +147,9 @@ export function PhotosListClient({
         <Lightbox
           photos={visible}
           index={lightboxIndex}
+          revealed={revealed}
+          onReveal={reveal}
+          onPrivateChanged={setPrivateLocal}
           onChangeIndex={setLightboxIndex}
           onClose={() => setLightboxIndex(null)}
           trackerById={trackerById}
@@ -143,6 +163,9 @@ function PhotoCard({
   photo,
   tracker,
   trackers,
+  hidden,
+  onReveal,
+  onPrivateChanged,
   onTrackerChanged,
   onCaptionChanged,
   onDeleted,
@@ -151,6 +174,10 @@ function PhotoCard({
   photo: PhotoRow;
   tracker: TrackerRow | undefined;
   trackers: TrackerRow[];
+  // Privat og endnu ikke afsløret: første tryk viser, næste åbner lightbox.
+  hidden: boolean;
+  onReveal: () => void;
+  onPrivateChanged: (isPrivate: boolean) => void;
   onTrackerChanged: (trackerId: number | null) => void;
   onCaptionChanged: (caption: string | null) => void;
   onDeleted: () => void;
@@ -190,20 +217,32 @@ function PhotoCard({
     });
   }
 
+  function togglePrivate() {
+    const next = !photo.private;
+    start(async () => {
+      const res = await setPhotoPrivate(photo.id, next);
+      if (res.ok) onPrivateChanged(next);
+    });
+  }
+
   return (
     <div className="overflow-hidden rounded-[10px] bg-bg-elevated shadow-[var(--shadow-card)]">
       <button
         type="button"
-        onClick={onOpen}
-        className="group block aspect-square w-full cursor-pointer overflow-hidden bg-bg-subtle"
+        onClick={hidden ? onReveal : onOpen}
+        title={hidden ? "Privat — tryk for at vise" : undefined}
+        className="group relative block aspect-square w-full cursor-pointer overflow-hidden bg-bg-subtle"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/api/files/photo/${photo.id}`}
           alt={photo.caption ?? ""}
-          className="size-full object-cover transition-transform group-hover:scale-[1.03]"
+          className={`size-full object-cover transition-transform group-hover:scale-[1.03] ${
+            hidden ? PRIVATE_BLUR_CLASS : ""
+          }`}
           loading="lazy"
         />
+        {hidden && <PrivateOverlay compact />}
       </button>
       <div className="space-y-2 p-3">
         {editingCaption ? (
@@ -252,7 +291,25 @@ function PhotoCard({
             </option>
           ))}
         </select>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1">
+          <button
+            type="button"
+            onClick={togglePrivate}
+            disabled={pending}
+            className="inline-flex cursor-pointer items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-dim hover:bg-bg hover:text-ink"
+          >
+            {photo.private ? (
+              <>
+                <Eye className="size-3" />
+                Fjern privat
+              </>
+            ) : (
+              <>
+                <EyeOff className="size-3" />
+                Gør privat
+              </>
+            )}
+          </button>
           <button
             type="button"
             onClick={remove}
@@ -271,12 +328,18 @@ function PhotoCard({
 function Lightbox({
   photos,
   index,
+  revealed,
+  onReveal,
+  onPrivateChanged,
   onChangeIndex,
   onClose,
   trackerById,
 }: {
   photos: PhotoRow[];
   index: number;
+  revealed: Set<number>;
+  onReveal: (id: number) => void;
+  onPrivateChanged: (id: number, isPrivate: boolean) => void;
   onChangeIndex: (i: number) => void;
   onClose: () => void;
   trackerById: Map<number, TrackerRow>;
@@ -285,6 +348,16 @@ function Lightbox({
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
   const tracker = photo.trackerId ? trackerById.get(photo.trackerId) : null;
+  const hidden = photo.private && !revealed.has(photo.id);
+  const [pendingPrivate, startPrivate] = useTransition();
+  function togglePrivate(e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = !photo.private;
+    startPrivate(async () => {
+      const res = await setPhotoPrivate(photo.id, next);
+      if (res.ok) onPrivateChanged(photo.id, next);
+    });
+  }
 
   function go(delta: number) {
     const next = index + delta;
@@ -323,6 +396,24 @@ function Lightbox({
       >
         <X className="size-5" />
       </button>
+      <button
+        type="button"
+        onClick={togglePrivate}
+        disabled={pendingPrivate}
+        className="absolute left-4 inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-full bg-black/60 px-3 text-[12px] text-white/85 backdrop-blur-sm hover:text-white disabled:opacity-50 top-[max(1rem,env(safe-area-inset-top))]"
+      >
+        {photo.private ? (
+          <>
+            <Eye className="size-4" />
+            Fjern privat
+          </>
+        ) : (
+          <>
+            <EyeOff className="size-4" />
+            Gør privat
+          </>
+        )}
+      </button>
 
       {hasPrev && (
         <button
@@ -351,14 +442,25 @@ function Lightbox({
         </button>
       )}
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/api/files/photo/${photo.id}`}
-        alt={photo.caption ?? ""}
-        className="max-h-[85vh] max-w-full select-none object-contain"
-        onClick={(e) => e.stopPropagation()}
-        draggable={false}
-      />
+      {/* Private billeder åbner slørede også her — et tryk viser dem. */}
+      <div
+        className="relative overflow-hidden"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (hidden) onReveal(photo.id);
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/files/photo/${photo.id}`}
+          alt={photo.caption ?? ""}
+          className={`max-h-[85vh] max-w-full select-none object-contain ${
+            hidden ? "blur-3xl" : ""
+          }`}
+          draggable={false}
+        />
+        {hidden && <PrivateOverlay />}
+      </div>
 
       <div className="absolute left-4 right-4 text-center text-[13px] text-white/80 bottom-[max(1rem,env(safe-area-inset-bottom))]">
         <div>

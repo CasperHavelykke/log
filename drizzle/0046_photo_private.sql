@@ -1,0 +1,1 @@
+ALTER TABLE `photos` ADD `private` integer DEFAULT false NOT NULL;

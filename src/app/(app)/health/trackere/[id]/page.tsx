@@ -61,6 +61,7 @@ export default async function TrackerDetailPage({
         takenAt: p.takenAt,
         mimeType: p.mimeType,
         sizeBytes: p.sizeBytes,
+        private: p.private,
       }))}
       metricData={metricData}
       backTo={backTo}

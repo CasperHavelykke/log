@@ -236,6 +236,7 @@ export async function uploadTrackerPhoto(formData: FormData) {
 
   const tracker = await getTracker(parsed.data.trackerId);
   if (!tracker) return { ok: false as const, error: "Tracker findes ikke" };
+  const isPrivate = formData.get("private") === "1";
 
   const buf = Buffer.from(await file.arrayBuffer());
   const uploaded = await uploadBlob({
@@ -258,11 +259,13 @@ export async function uploadTrackerPhoto(formData: FormData) {
       mimeType: file.type,
       sizeBytes: uploaded.size,
       takenAt: parsed.data.takenAt,
+      private: isPrivate,
     })
     .returning();
 
   revalidatePath("/health/trackere");
   revalidatePath(`/health/trackere/${parsed.data.trackerId}`);
+  revalidatePath("/health/photos");
   revalidatePath("/today");
   revalidatePath("/health");
   return {
@@ -270,6 +273,21 @@ export async function uploadTrackerPhoto(formData: FormData) {
     id: inserted[0].id,
     url: uploaded.url,
   };
+}
+
+// Privat-flag: ren visning (sløret indtil man trykker) — ingen ændring
+// af hvem der kan hente filen.
+export async function setPhotoPrivate(id: number, isPrivate: boolean) {
+  const user = await requireUser();
+  await db
+    .update(schema.photos)
+    .set({ private: isPrivate })
+    .where(
+      and(eq(schema.photos.id, id), eq(schema.photos.userId, user.id)),
+    );
+  revalidatePath("/health/trackere");
+  revalidatePath("/health/photos");
+  return { ok: true as const };
 }
 
 export async function deletePhoto(id: number) {
