@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
@@ -41,6 +41,13 @@ export function PhotosListClient({
   function reveal(id: number) {
     setRevealed((prev) => new Set(prev).add(id));
   }
+  // "Vis private": afslør alle på én gang i denne sidevisning.
+  const [revealAll, setRevealAll] = useState(false);
+  const hasPrivate = photos.some((p) => p.private);
+  const revealedAll = useMemo(
+    () => (revealAll ? new Set(photos.map((p) => p.id)) : revealed),
+    [revealAll, revealed, photos],
+  );
   function setPrivateLocal(id: number, isPrivate: boolean) {
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, private: isPrivate } : p)),
@@ -108,6 +115,30 @@ export function PhotosListClient({
           Uden tracker ({orphanCount})
         </button>
       </div>
+      {hasPrivate && (
+        <div className="-mt-3 mb-5 flex">
+          <div className="-ml-2.5">
+            <button
+              type="button"
+              onClick={() => setRevealAll((v) => !v)}
+              aria-pressed={revealAll}
+              className="inline-flex min-h-[40px] shrink-0 cursor-pointer items-center gap-1.5 rounded-[8px] px-2.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink"
+            >
+              {revealAll ? (
+                <>
+                  <EyeOff className="size-3.5" />
+                  Skjul private
+                </>
+              ) : (
+                <>
+                  <Eye className="size-3.5" />
+                  Vis private
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {visible.length === 0 ? (
         <div className="rounded-[10px] border border-dashed border-hair-strong px-6 py-12 text-center text-[13px] italic text-light">
@@ -121,7 +152,7 @@ export function PhotosListClient({
               photo={p}
               tracker={p.trackerId ? trackerById.get(p.trackerId) : undefined}
               trackers={trackers}
-              hidden={p.private && !revealed.has(p.id)}
+              hidden={p.private && !revealedAll.has(p.id)}
               onReveal={() => reveal(p.id)}
               onPrivateChanged={(v) => setPrivateLocal(p.id, v)}
               onTrackerChanged={(trackerId) =>
@@ -147,7 +178,7 @@ export function PhotosListClient({
         <PhotoLightbox
           photos={visible}
           index={lightboxIndex}
-          revealed={revealed}
+          revealed={revealedAll}
           onReveal={reveal}
           onPrivateChanged={setPrivateLocal}
           describe={(p) =>

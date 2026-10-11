@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   Camera,
+  Eye,
   EyeOff,
   ImagePlus,
   MoreVertical,
@@ -98,6 +99,14 @@ export function TrackerDetailClient({
   function reveal(id: number) {
     setRevealed((prev) => new Set(prev).add(id));
   }
+  // "Vis private": afslør alle på én gang i denne sidevisning — det er
+  // trættende at trykke på hvert billede, når man selv sidder med appen.
+  const [revealAll, setRevealAll] = useState(false);
+  const hasPrivate = photos.some((p) => p.private);
+  const revealedAll = useMemo(
+    () => (revealAll ? new Set(photos.map((p) => p.id)) : revealed),
+    [revealAll, revealed, photos],
+  );
   function setPrivateLocal(id: number, isPrivate: boolean) {
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, private: isPrivate } : p)),
@@ -343,6 +352,26 @@ export function TrackerDetailClient({
                   }`}
             </h2>
           </div>
+          {hasPrivate && (
+            <button
+              type="button"
+              onClick={() => setRevealAll((v) => !v)}
+              aria-pressed={revealAll}
+              className="inline-flex min-h-[40px] shrink-0 cursor-pointer items-center gap-1.5 rounded-[8px] px-2.5 text-[12px] text-mid hover:bg-bg-subtle hover:text-ink"
+            >
+              {revealAll ? (
+                <>
+                  <EyeOff className="size-3.5" />
+                  Skjul private
+                </>
+              ) : (
+                <>
+                  <Eye className="size-3.5" />
+                  Vis private
+                </>
+              )}
+            </button>
+          )}
         </div>
         {photos.length === 0 ? (
           <p className="py-6 text-center text-[13px] italic text-light">
@@ -356,7 +385,8 @@ export function TrackerDetailClient({
                 day={d}
                 // Er bare ét af dagens billeder privat, sløres forsiden.
                 hidden={
-                  d.photos.some((p) => p.private) && !revealed.has(d.cover.id)
+                  d.photos.some((p) => p.private) &&
+                  !revealedAll.has(d.cover.id)
                 }
                 onReveal={() => reveal(d.cover.id)}
                 onPick={() => setViewerIndex(d.firstIndex)}
@@ -384,7 +414,7 @@ export function TrackerDetailClient({
           photos={orderedPhotos}
           index={viewerIndex}
           dayGroups
-          revealed={revealed}
+          revealed={revealedAll}
           onReveal={reveal}
           onPrivateChanged={setPrivateLocal}
           onDelete={async (id) => {
