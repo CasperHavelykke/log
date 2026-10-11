@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
@@ -183,13 +184,25 @@ export function TrackerDetailClient({
     });
   }
 
+  const router = useRouter();
   const backHref = backTo === "today" ? "/today" : "/health";
   const backLabel = backTo === "today" ? "I dag" : "Helbred";
+
+  // "I dag"-linket findes kun med ?from=today, altså når man kom hertil
+  // fra /today. Så er browserens tilbage det rigtige: den husker scroll-
+  // positionen, hvor et nyt link ville starte i toppen. Uden historik
+  // (siden åbnet direkte) falder vi tilbage til et almindeligt link.
+  function onBack(e: React.MouseEvent) {
+    if (backTo !== "today" || window.history.length <= 1) return;
+    e.preventDefault();
+    router.back();
+  }
 
   return (
     <div className="mx-auto max-w-[880px] px-4 py-6 sm:py-8">
       <Link
         href={backHref}
+        onClick={onBack}
         className="mb-3 inline-flex items-center gap-1 text-[12px] text-light hover:text-accent"
       >
         <ArrowLeft className="size-3.5" />
