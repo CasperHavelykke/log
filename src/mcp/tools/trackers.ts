@@ -42,6 +42,7 @@ export function registerTrackerTools(server: McpServer) {
           kind: t.kind,
           notes: t.notes,
           archived: t.archived,
+          private: t.private,
           createdAt: t.createdAt,
         })),
       });
@@ -122,6 +123,7 @@ export function registerTrackerTools(server: McpServer) {
           kind: tracker.kind,
           notes: tracker.notes,
           archived: tracker.archived,
+          private: tracker.private,
           createdAt: tracker.createdAt,
         },
         photos: photos.map((p) => ({

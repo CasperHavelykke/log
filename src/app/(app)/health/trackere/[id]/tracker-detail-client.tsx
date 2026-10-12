@@ -10,6 +10,7 @@ import {
   EyeOff,
   ImagePlus,
   MoreVertical,
+  Pencil,
   Trash2,
   X,
 } from "lucide-react";
@@ -24,9 +25,16 @@ import {
   YAxis,
 } from "recharts";
 import { compressImage, formatFileSize } from "@/lib/image-compress";
+import { readExifDate } from "@/lib/exif-date";
 import { PRIVATE_BLUR_CLASS, PrivateOverlay } from "@/components/private-photo";
 import { PhotoLightbox } from "@/components/photo-lightbox";
-import { deletePhoto, deleteTracker, uploadTrackerPhoto } from "../actions";
+import { TrackerName } from "@/components/tracker-name";
+import {
+  deletePhoto,
+  deleteTracker,
+  updateTracker,
+  uploadTrackerPhoto,
+} from "../actions";
 
 type TrackerInfo = {
   id: number;
@@ -34,6 +42,7 @@ type TrackerInfo = {
   kind: string;
   notes: string | null;
   archived: boolean;
+  private: boolean;
 };
 
 type Photo = {
@@ -53,6 +62,15 @@ const KIND_LABELS: Record<string, string> = {
   waist: "Livvidde",
   other: "Andet",
 };
+
+const KIND_ORDER = [
+  "skin_spot",
+  "dermatitis",
+  "staph",
+  "weight",
+  "waist",
+  "other",
+] as const;
 
 const METRIC_UNITS: Record<string, string> = {
   weight: "kg",
@@ -90,6 +108,7 @@ export function TrackerDetailClient({
 }) {
   const [photos, setPhotos] = useState(initialPhotos);
   const [showUpload, setShowUpload] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [, startDelete] = useTransition();
@@ -103,7 +122,7 @@ export function TrackerDetailClient({
   // "Vis private": afslør alle på én gang i denne sidevisning — det er
   // trættende at trykke på hvert billede, når man selv sidder med appen.
   const [revealAll, setRevealAll] = useState(false);
-  const hasPrivate = photos.some((p) => p.private);
+  const hasPrivate = tracker.private || photos.some((p) => p.private);
   const revealedAll = useMemo(
     () => (revealAll ? new Set(photos.map((p) => p.id)) : revealed),
     [revealAll, revealed, photos],
@@ -216,7 +235,11 @@ export function TrackerDetailClient({
               {KIND_LABELS[tracker.kind] ?? tracker.kind}
             </div>
             <h1 className="font-serif text-[26px] font-medium leading-[1.05] text-ink sm:text-[34px]">
-              {tracker.name}
+              <TrackerName
+                name={tracker.name}
+                hidden={tracker.private}
+                forceReveal={revealAll}
+              />
             </h1>
             {tracker.notes && (
               <p className="mt-2 text-[13px] text-mid">{tracker.notes}</p>
@@ -233,6 +256,17 @@ export function TrackerDetailClient({
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-full z-10 mt-1 min-w-[160px] rounded-[10px] bg-bg-elevated p-1 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowEdit(true);
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[13px] text-ink hover:bg-bg"
+                >
+                  <Pencil className="size-3.5" />
+                  Redigér
+                </button>
                 <button
                   type="button"
                   onClick={removeTracker}
@@ -398,7 +432,7 @@ export function TrackerDetailClient({
                 day={d}
                 // Er bare ét af dagens billeder privat, sløres forsiden.
                 hidden={
-                  d.photos.some((p) => p.private) &&
+                  (tracker.private || d.photos.some((p) => p.private)) &&
                   !revealedAll.has(d.cover.id)
                 }
                 onReveal={() => reveal(d.cover.id)}
@@ -413,11 +447,21 @@ export function TrackerDetailClient({
         <UploadDialog
           trackerId={tracker.id}
           onClose={() => setShowUpload(false)}
-          onUploaded={(p) => {
+          onUploaded={(p) =>
             setPhotos((prev) =>
               [...prev, p].sort((a, b) => b.takenAt.localeCompare(a.takenAt)),
-            );
-            setShowUpload(false);
+            )
+          }
+        />
+      )}
+
+      {showEdit && (
+        <EditTrackerDialog
+          tracker={tracker}
+          onClose={() => setShowEdit(false)}
+          onSaved={() => {
+            setShowEdit(false);
+            router.refresh();
           }}
         />
       )}
@@ -427,6 +471,7 @@ export function TrackerDetailClient({
           photos={orderedPhotos}
           index={viewerIndex}
           dayGroups
+          privateLocked={tracker.private}
           revealed={revealedAll}
           onReveal={reveal}
           onPrivateChanged={setPrivateLocal}
@@ -504,6 +549,25 @@ function DayCard({
   );
 }
 
+// Flere billeder ad gangen. Hvert billede komprimeres for sig (i række —
+// parallelt kan vælte Safari på hukommelse), får sin dato fra EXIF hvis
+// den findes (ellers i dag) og kan rettes per billede. Note og privat-
+// flaget gælder hele bunken. Upload sker én fil ad gangen mod den
+// eksisterende server-handling, så én fejl ikke vælter resten.
+type UploadItem = {
+  key: number;
+  file: File;
+  previewUrl: string;
+  status: "compressing" | "ready" | "uploading" | "done" | "error";
+  blob: Blob | null;
+  bytes: number;
+  takenAt: string;
+  fromExif: boolean;
+  error: string | null;
+};
+
+let uploadKeySeq = 0;
+
 function UploadDialog({
   trackerId,
   onClose,
@@ -513,83 +577,130 @@ function UploadDialog({
   onClose: () => void;
   onUploaded: (p: Photo) => void;
 }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [compressing, setCompressing] = useState(false);
-  const [compressed, setCompressed] = useState<{
-    blob: Blob;
-    bytes: number;
-    width: number;
-    height: number;
-  } | null>(null);
+  const [items, setItems] = useState<UploadItem[]>([]);
   const [caption, setCaption] = useState("");
-  const [takenAt, setTakenAt] = useState(todayIso());
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Komprimeringskø: nye valg stilles bag igangværende, aldrig ved siden af.
+  const queue = useRef<Promise<void>>(Promise.resolve());
 
-  async function onPick(f: File | undefined) {
-    setError(null);
-    setCompressed(null);
-    if (!f) {
-      setFile(null);
-      return;
-    }
-    if (!f.type.startsWith("image/")) {
-      setError("Vælg en billede-fil");
-      return;
-    }
-    setFile(f);
-    setCompressing(true);
-    try {
-      const result = await compressImage(f);
-      setCompressed({
-        blob: result.blob,
-        bytes: result.bytes,
-        width: result.width,
-        height: result.height,
-      });
-    } catch (err) {
-      setError(`Komprimering fejlede: ${err instanceof Error ? err.message : "ukendt fejl"}`);
-    } finally {
-      setCompressing(false);
-    }
+  // Preview-URL'er frigives, når dialogen lukkes (ref holdes ajour i en
+  // effect — ikke under render).
+  const itemsRef = useRef<UploadItem[]>([]);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+  useEffect(() => {
+    return () => {
+      for (const it of itemsRef.current) URL.revokeObjectURL(it.previewUrl);
+    };
+  }, []);
+
+  function update(key: number, patch: Partial<UploadItem>) {
+    setItems((prev) =>
+      prev.map((it) => (it.key === key ? { ...it, ...patch } : it)),
+    );
   }
 
-  function submit() {
-    if (!file || !compressed) {
-      setError("Vælg en fil først");
-      return;
-    }
+  function onPick(list: FileList | null) {
+    if (!list || list.length === 0) return;
     setError(null);
-
-    const compressedFile = new File(
-      [compressed.blob],
-      file.name.replace(/\.[^.]+$/, ".jpg"),
-      { type: "image/jpeg" },
-    );
-    const fd = new FormData();
-    fd.append("file", compressedFile);
-    fd.append("trackerId", String(trackerId));
-    fd.append("caption", caption.trim());
-    fd.append("takenAt", takenAt);
-    fd.append("private", isPrivate ? "1" : "0");
-
-    start(async () => {
-      const res = await uploadTrackerPhoto(fd);
-      if (!res.ok) {
-        setError(res.error);
-        return;
+    const files = [...list].filter((f) => f.type.startsWith("image/"));
+    if (files.length < list.length) setError("Kun billedfiler kan tilføjes");
+    const fresh: UploadItem[] = files.map((file) => ({
+      key: ++uploadKeySeq,
+      file,
+      previewUrl: URL.createObjectURL(file),
+      status: "compressing",
+      blob: null,
+      bytes: 0,
+      takenAt: todayIso(),
+      fromExif: false,
+      error: null,
+    }));
+    setItems((prev) => [...prev, ...fresh]);
+    queue.current = queue.current.then(async () => {
+      for (const it of fresh) {
+        const exif = await readExifDate(it.file);
+        if (exif) update(it.key, { takenAt: exif, fromExif: true });
+        try {
+          const result = await compressImage(it.file);
+          update(it.key, { status: "ready", blob: result.blob, bytes: result.bytes });
+        } catch (err) {
+          update(it.key, {
+            status: "error",
+            error: `Komprimering fejlede: ${err instanceof Error ? err.message : "ukendt fejl"}`,
+          });
+        }
       }
-      onUploaded({
-        id: res.id,
-        caption: caption.trim() || null,
-        takenAt,
-        mimeType: "image/jpeg",
-        sizeBytes: compressed.bytes,
-        private: isPrivate,
-      });
     });
   }
+
+  function removeItem(key: number) {
+    setItems((prev) => {
+      const it = prev.find((x) => x.key === key);
+      if (it) URL.revokeObjectURL(it.previewUrl);
+      return prev.filter((x) => x.key !== key);
+    });
+  }
+
+  const readyCount = items.filter((it) => it.status === "ready").length;
+  const busy = items.some((it) => it.status === "compressing");
+
+  function submit() {
+    const ready = items.filter((it) => it.status === "ready");
+    if (ready.length === 0) {
+      setError("Vælg mindst ét billede");
+      return;
+    }
+    if (ready.some((it) => !/^\d{4}-\d{2}-\d{2}$/.test(it.takenAt))) {
+      setError("Alle billeder skal have en gyldig dato");
+      return;
+    }
+    setError(null);
+    start(async () => {
+      let failed = 0;
+      for (const it of ready) {
+        update(it.key, { status: "uploading" });
+        const compressedFile = new File(
+          [it.blob!],
+          it.file.name.replace(/\.[^.]+$/, ".jpg"),
+          { type: "image/jpeg" },
+        );
+        const fd = new FormData();
+        fd.append("file", compressedFile);
+        fd.append("trackerId", String(trackerId));
+        fd.append("caption", caption.trim());
+        fd.append("takenAt", it.takenAt);
+        fd.append("private", isPrivate ? "1" : "0");
+        const res = await uploadTrackerPhoto(fd);
+        if (!res.ok) {
+          failed++;
+          update(it.key, { status: "error", error: res.error });
+          continue;
+        }
+        onUploaded({
+          id: res.id,
+          caption: caption.trim() || null,
+          takenAt: it.takenAt,
+          mimeType: "image/jpeg",
+          sizeBytes: it.bytes,
+          private: isPrivate,
+        });
+        update(it.key, { status: "done" });
+      }
+      if (failed === 0) {
+        onClose();
+      } else {
+        // Behold kun dem, der fejlede, så man kan prøve igen.
+        setItems((prev) => prev.filter((it) => it.status !== "done"));
+        setError(`${failed} ${failed === 1 ? "billede" : "billeder"} kunne ikke uploades`);
+      }
+    });
+  }
+
+  const today = todayIso();
 
   return (
     <div
@@ -597,16 +708,16 @@ function UploadDialog({
       onClick={() => !pending && onClose()}
     >
       <div
-        className="w-full max-w-[440px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-[14px] bg-bg-elevated p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
-              Nyt billede
+              Nye billeder
             </div>
             <h2 className="mt-0.5 font-serif text-[20px] leading-none text-ink">
-              Tilføj billede
+              Tilføj billeder
             </h2>
           </div>
           <button
@@ -621,58 +732,104 @@ function UploadDialog({
         <div className="space-y-4">
           <div>
             <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
-              Billede
+              Billeder
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-subtle px-3 py-2.5 text-[13px] text-ink hover:bg-bg">
+              <label className="inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-subtle px-3 py-2.5 text-[13px] text-ink hover:bg-bg">
                 <Camera className="size-4" />
                 Tag billede
                 <input
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  onChange={(e) => onPick(e.target.files?.[0])}
+                  onChange={(e) => {
+                    onPick(e.target.files);
+                    e.target.value = "";
+                  }}
                   className="hidden"
                 />
               </label>
-              <label className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-subtle px-3 py-2.5 text-[13px] text-ink hover:bg-bg">
+              <label className="inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-bg-subtle px-3 py-2.5 text-[13px] text-ink hover:bg-bg">
                 <ImagePlus className="size-4" />
                 Bibliotek
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => onPick(e.target.files?.[0])}
+                  multiple
+                  onChange={(e) => {
+                    onPick(e.target.files);
+                    e.target.value = "";
+                  }}
                   className="hidden"
                 />
               </label>
             </div>
-            {compressing && (
-              <p className="mt-2 text-[11px] italic text-light">Komprimerer…</p>
-            )}
-            {compressed && file && (
-              <p className="mt-2 text-[11px] text-success">
-                {formatFileSize(file.size)} → {formatFileSize(compressed.bytes)}
-                {" "}({compressed.width}×{compressed.height})
-              </p>
-            )}
+            <p className="mt-1.5 text-[11px] italic text-light">
+              Vælg gerne flere ad gangen. Datoen hentes fra billedet, når den
+              findes — ret den, hvis den er forkert.
+            </p>
           </div>
+
+          {items.length > 0 && (
+            <ul className="space-y-2">
+              {items.map((it) => (
+                <li
+                  key={it.key}
+                  className="flex items-center gap-3 rounded-[10px] bg-bg-subtle p-2"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={it.previewUrl}
+                    alt=""
+                    className="size-14 shrink-0 rounded-[8px] object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] text-ink">{it.file.name}</div>
+                    <div className="text-[11px] text-light">
+                      {it.status === "compressing" && "Komprimerer…"}
+                      {it.status === "ready" &&
+                        `${formatFileSize(it.file.size)} → ${formatFileSize(it.bytes)}`}
+                      {it.status === "uploading" && "Uploader…"}
+                      {it.status === "done" && "Uploadet"}
+                      {it.status === "error" && (
+                        <span className="text-danger">{it.error}</span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={it.takenAt}
+                        max={today}
+                        onChange={(e) =>
+                          update(it.key, { takenAt: e.target.value, fromExif: false })
+                        }
+                        disabled={it.status === "uploading" || it.status === "done"}
+                        className={`!w-auto min-w-0 !rounded-[8px] !border-hair !bg-bg !py-1 !text-[12px] ${
+                          it.takenAt !== today ? "!text-warning" : ""
+                        }`}
+                      />
+                      <span className="text-[10px] text-light">
+                        {it.fromExif ? "fra billedet" : it.takenAt === today ? "i dag" : "rettet"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(it.key)}
+                    disabled={it.status === "uploading"}
+                    aria-label="Fjern"
+                    className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[6px] text-dim hover:bg-bg hover:text-danger disabled:opacity-50"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div>
             <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
-              Dato taget
-            </label>
-            <input
-              type="date"
-              value={takenAt}
-              onChange={(e) => setTakenAt(e.target.value)}
-              max={todayIso()}
-              className="!rounded-[8px] !border-hair !bg-bg-subtle"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
-              Note <span className="normal-case tracking-normal text-dim">— valgfri</span>
+              Note <span className="normal-case tracking-normal text-dim">— valgfri, gælder alle</span>
             </label>
             <input
               type="text"
@@ -692,7 +849,7 @@ function UploadDialog({
             />
             <span className="inline-flex items-center gap-1.5">
               <EyeOff className="size-3.5" />
-              Privat — vises sløret, indtil du trykker
+              Private — vises slørede, indtil du trykker
             </span>
           </label>
 
@@ -710,10 +867,168 @@ function UploadDialog({
             <button
               type="button"
               onClick={submit}
-              disabled={pending || !compressed || compressing}
+              disabled={pending || busy || readyCount === 0}
               className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
             >
-              {pending ? "Uploader…" : "Upload"}
+              {pending
+                ? "Uploader…"
+                : readyCount > 1
+                  ? `Upload ${readyCount} billeder`
+                  : "Upload"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Redigér navn, type, noter og skjult-flag. Serveren er sandheden —
+// efter gem genindlæses siden (router.refresh), så header og billeder
+// følger med.
+function EditTrackerDialog({
+  tracker,
+  onClose,
+  onSaved,
+}: {
+  tracker: TrackerInfo;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(tracker.name);
+  const [kind, setKind] = useState(tracker.kind);
+  const [notes, setNotes] = useState(tracker.notes ?? "");
+  const [isPrivate, setIsPrivate] = useState(tracker.private);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function save() {
+    if (!name.trim()) {
+      setError("Giv trackeren et navn");
+      return;
+    }
+    setError(null);
+    start(async () => {
+      const res = await updateTracker({
+        id: tracker.id,
+        name: name.trim(),
+        kind: kind as (typeof KIND_ORDER)[number],
+        notes: notes.trim() || null,
+        private: isPrivate,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onSaved();
+    });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+      onClick={() => !pending && onClose()}
+    >
+      <div
+        className="w-full max-w-[440px] rounded-[14px] bg-bg-elevated p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Tracker
+            </div>
+            <h2 className="mt-0.5 font-serif text-[20px] leading-none text-ink">
+              Redigér
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex cursor-pointer items-center rounded-[6px] p-1 text-dim hover:bg-bg hover:text-ink"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Navn
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Type
+            </label>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
+            >
+              {KIND_ORDER.map((k) => (
+                <option key={k} value={k}>
+                  {KIND_LABELS[k]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+              Noter <span className="normal-case tracking-normal text-dim">— valgfri</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              className="!rounded-[8px] !border-hair !bg-bg-subtle"
+            />
+          </div>
+          <label className="flex min-h-[40px] cursor-pointer items-start gap-2 text-[13px] text-mid">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              className="mt-0.5 size-4"
+            />
+            <span>
+              <span className="inline-flex items-center gap-1.5 text-ink">
+                <EyeOff className="size-3.5" />
+                Skjult
+              </span>
+              <span className="block text-[11px] text-light">
+                Navnet vises som &quot;Skjult&quot;, og alle billeder sløres,
+                indtil du trykker på dem.
+              </span>
+            </span>
+          </label>
+
+          {error && <p className="text-[13px] text-danger">{error}</p>}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={pending}
+              className="cursor-pointer rounded-[8px] px-3 py-2 text-[13px] text-mid hover:text-ink disabled:opacity-50"
+            >
+              Annullér
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="cursor-pointer rounded-[8px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-bright disabled:opacity-50"
+            >
+              {pending ? "Gemmer…" : "Gem"}
             </button>
           </div>
         </div>

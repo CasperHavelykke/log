@@ -330,6 +330,13 @@
       "when": 1791461788109,
       "tag": "0046_photo_private",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1791810182248,
+      "tag": "0047_tracker_private",
+      "breakpoints": true
     }
   ]
 }

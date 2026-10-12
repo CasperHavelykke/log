@@ -19,6 +19,7 @@ import {
   Loader2,
   Trash2,
 } from "lucide-react";
+import { TrackerName } from "@/components/tracker-name";
 import { getDaySnapshot, saveDayEntry } from "../today/actions";
 import { dayKcal, kcalMetaText } from "@/lib/kcal";
 import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
@@ -83,6 +84,7 @@ type TrackerRef = {
   id: number;
   name: string;
   kind: string;
+  private: boolean;
   photoCount: number;
   latestTakenAt: string | null;
 };
@@ -1626,6 +1628,7 @@ function FotoOpfoelgningCard({
         id: res.tracker.id,
         name: res.tracker.name,
         kind: res.tracker.kind,
+        private: false,
         photoCount: 0,
         latestTakenAt: null,
       });
@@ -1645,6 +1648,7 @@ function FotoOpfoelgningCard({
         id: res.tracker.id,
         name: res.tracker.name,
         kind: res.tracker.kind,
+        private: false,
         photoCount: 0,
         latestTakenAt: null,
       });
@@ -1673,7 +1677,7 @@ function FotoOpfoelgningCard({
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-medium text-ink">
-                {t.name}
+                <TrackerName name={t.name} hidden={t.private} />
               </div>
               <div className="mt-0.5 text-[11px] text-light">
                 {t.photoCount === 0

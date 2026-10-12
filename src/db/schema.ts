@@ -543,6 +543,10 @@ export const trackers = sqliteTable(
     kind: text("kind").notNull(),
     notes: text("notes"),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+    // Skjult tracker: navnet vises som "Skjult" og ALLE dens billeder
+    // sløres, indtil man trykker — uanset billedernes eget private-flag.
+    // Ren visning; adgangskontrollen er uændret.
+    private: integer("private", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),

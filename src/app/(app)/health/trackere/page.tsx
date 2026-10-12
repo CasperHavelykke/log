@@ -39,6 +39,7 @@ export default async function TrackersListPage() {
         kind: t.kind,
         notes: t.notes,
         archived: t.archived,
+        private: t.private,
         createdAt: t.createdAt,
         photoCount: countMap.get(t.id)?.count ?? 0,
         latestTaken: countMap.get(t.id)?.latest ?? null,

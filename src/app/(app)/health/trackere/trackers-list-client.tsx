@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Activity, Archive, Plus, X } from "lucide-react";
+import { TrackerName } from "@/components/tracker-name";
 import { createTracker, updateTracker } from "./actions";
 
 type TrackerRow = {
@@ -11,6 +12,7 @@ type TrackerRow = {
   kind: string;
   notes: string | null;
   archived: boolean;
+  private: boolean;
   createdAt: string;
   photoCount: number;
   latestTaken: string | null;
@@ -139,6 +141,7 @@ export function TrackersListClient({
                 ...t,
                 notes: t.notes ?? null,
                 archived: false,
+                private: false,
                 createdAt: new Date().toISOString(),
                 photoCount: 0,
                 latestTaken: null,
@@ -178,7 +181,7 @@ function TrackerCard({
           href={`/health/trackere/${tracker.id}?from=health`}
           className="font-serif text-[18px] leading-tight text-ink hover:text-accent"
         >
-          {tracker.name}
+          <TrackerName name={tracker.name} hidden={tracker.private} />
         </Link>
         <span
           className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.3px] ${

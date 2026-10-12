@@ -6,6 +6,7 @@ import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { formatDanishDate } from "@/lib/date";
 import { PRIVATE_BLUR_CLASS, PrivateOverlay } from "@/components/private-photo";
 import { PhotoLightbox } from "@/components/photo-lightbox";
+import { TrackerName } from "@/components/tracker-name";
 import { setPhotoPrivate } from "@/app/(app)/health/trackere/actions";
 import { deletePhoto, setPhotoTracker, updatePhotoCaption } from "./actions";
 
@@ -23,6 +24,7 @@ type TrackerRow = {
   id: number;
   name: string;
   kind: string;
+  private: boolean;
 };
 
 export function PhotosListClient({
@@ -43,7 +45,15 @@ export function PhotosListClient({
   }
   // "Vis private": afslør alle på én gang i denne sidevisning.
   const [revealAll, setRevealAll] = useState(false);
-  const hasPrivate = photos.some((p) => p.private);
+  const trackerById = new Map(trackers.map((t) => [t.id, t]));
+  // Skjult tracker → alle dens billeder regnes som private.
+  function isPrivate(p: PhotoRow): boolean {
+    return (
+      p.private ||
+      (p.trackerId !== null && (trackerById.get(p.trackerId)?.private ?? false))
+    );
+  }
+  const hasPrivate = photos.some(isPrivate) || trackers.some((t) => t.private);
   const revealedAll = useMemo(
     () => (revealAll ? new Set(photos.map((p) => p.id)) : revealed),
     [revealAll, revealed, photos],
@@ -59,7 +69,6 @@ export function PhotosListClient({
   );
 
   const orphanCount = photos.filter((p) => p.trackerId === null).length;
-  const trackerById = new Map(trackers.map((t) => [t.id, t]));
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8">
@@ -152,7 +161,8 @@ export function PhotosListClient({
               photo={p}
               tracker={p.trackerId ? trackerById.get(p.trackerId) : undefined}
               trackers={trackers}
-              hidden={p.private && !revealedAll.has(p.id)}
+              forceRevealNames={revealAll}
+              hidden={isPrivate(p) && !revealedAll.has(p.id)}
               onReveal={() => reveal(p.id)}
               onPrivateChanged={(v) => setPrivateLocal(p.id, v)}
               onTrackerChanged={(trackerId) =>
@@ -176,14 +186,16 @@ export function PhotosListClient({
 
       {lightboxIndex !== null && visible[lightboxIndex] && (
         <PhotoLightbox
-          photos={visible}
+          photos={visible.map((p) => ({ ...p, private: isPrivate(p) }))}
           index={lightboxIndex}
           revealed={revealedAll}
           onReveal={reveal}
           onPrivateChanged={setPrivateLocal}
-          describe={(p) =>
-            p.trackerId ? (trackerById.get(p.trackerId)?.name ?? null) : null
-          }
+          describe={(p) => {
+            const t = p.trackerId ? trackerById.get(p.trackerId) : undefined;
+            if (!t) return null;
+            return t.private && !revealAll ? "Skjult" : t.name;
+          }}
           onDelete={async (id) => {
             const res = await deletePhoto(id);
             if (!res.ok) return;
@@ -205,6 +217,7 @@ function PhotoCard({
   photo,
   tracker,
   trackers,
+  forceRevealNames,
   hidden,
   onReveal,
   onPrivateChanged,
@@ -216,6 +229,8 @@ function PhotoCard({
   photo: PhotoRow;
   tracker: TrackerRow | undefined;
   trackers: TrackerRow[];
+  // Sidens "Vis private" afslører også skjulte trackeres navne.
+  forceRevealNames: boolean;
   // Privat og endnu ikke afsløret: første tryk viser, næste åbner lightbox.
   hidden: boolean;
   onReveal: () => void;
@@ -318,7 +333,11 @@ function PhotoCard({
         )}
         <div className="text-[11px] text-light">
           {formatDanishDate(photo.takenAt.slice(0, 10))}
-          {tracker && <span className="ml-1 text-accent">· {tracker.name}</span>}
+          {tracker && (
+            <span className="ml-1 text-accent">
+              · <TrackerName name={tracker.name} hidden={tracker.private} forceReveal={forceRevealNames} />
+            </span>
+          )}
         </div>
         <select
           value={photo.trackerId ?? ""}
@@ -329,7 +348,7 @@ function PhotoCard({
           <option value="">— ingen tracker —</option>
           {trackers.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name}
+              {t.private && !forceRevealNames ? "Skjult" : t.name}
             </option>
           ))}
         </select>

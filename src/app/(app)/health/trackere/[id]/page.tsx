@@ -54,6 +54,7 @@ export default async function TrackerDetailPage({
         kind: tracker.kind,
         notes: tracker.notes,
         archived: tracker.archived,
+        private: tracker.private,
       }}
       initialPhotos={photos.map((p) => ({
         id: p.id,

@@ -1,0 +1,1 @@
+ALTER TABLE `trackers` ADD `private` integer DEFAULT false NOT NULL;

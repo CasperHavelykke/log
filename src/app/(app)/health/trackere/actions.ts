@@ -47,6 +47,7 @@ const updateSchema = z.object({
   kind: z.enum(schema.TRACKER_KINDS).optional(),
   notes: z.string().max(2000).nullable().optional(),
   archived: z.boolean().optional(),
+  private: z.boolean().optional(),
 });
 
 export async function updateTracker(input: z.infer<typeof updateSchema>) {
@@ -64,6 +65,7 @@ export async function updateTracker(input: z.infer<typeof updateSchema>) {
   if (changes.kind !== undefined) fields.kind = changes.kind;
   if (changes.notes !== undefined) fields.notes = changes.notes?.trim() || null;
   if (changes.archived !== undefined) fields.archived = changes.archived;
+  if (changes.private !== undefined) fields.private = changes.private;
 
   if (Object.keys(fields).length === 0) return { ok: true as const };
 
@@ -146,6 +148,7 @@ export async function listTrackersWithPhotoStats() {
     id: t.id,
     name: t.name,
     kind: t.kind,
+    private: t.private,
     photoCount: statsByTracker.get(t.id)?.photoCount ?? 0,
     latestTakenAt: statsByTracker.get(t.id)?.latestTakenAt ?? null,
   }));

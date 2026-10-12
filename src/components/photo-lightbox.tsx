@@ -53,6 +53,7 @@ export function PhotoLightbox<T extends LightboxPhoto>({
   onDelete,
   describe,
   dayGroups = false,
+  privateLocked = false,
 }: {
   photos: T[];
   index: number;
@@ -67,11 +68,16 @@ export function PhotoLightbox<T extends LightboxPhoto>({
   describe?: (photo: T) => string | null;
   // Trackere: "2 af 3 denne dag" + prikker, og datoen glider ind ved dagskifte.
   dayGroups?: boolean;
+  // Skjult tracker: alle billeder sløres uanset eget flag, og toggle'en
+  // skjules — den ville ellers vise et flag, der ikke gælder.
+  privateLocked?: boolean;
 }) {
+  const hiddenOf = (p: LightboxPhoto) =>
+    (privateLocked || p.private) && !revealed.has(p.id);
   const photo = photos[index];
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
-  const currentHidden = photo.private && !revealed.has(photo.id);
+  const currentHidden = hiddenOf(photo);
 
   const trackRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -356,7 +362,7 @@ export function PhotoLightbox<T extends LightboxPhoto>({
 
   function onImageTap(p: T) {
     if (consumeMoved()) return;
-    if (p.private && !revealed.has(p.id)) onReveal(p.id);
+    if (hiddenOf(p)) onReveal(p.id);
   }
 
   function togglePrivate(e: React.MouseEvent) {
@@ -407,7 +413,7 @@ export function PhotoLightbox<T extends LightboxPhoto>({
         {([-1, 0, 1] as const).map((d) => {
           const p = photos[index + d];
           if (!p) return null;
-          const hidden = p.private && !revealed.has(p.id);
+          const hidden = hiddenOf(p);
           const isCurrent = d === 0;
           return (
             <div
@@ -463,6 +469,7 @@ export function PhotoLightbox<T extends LightboxPhoto>({
       </button>
 
       <div className="absolute left-4 flex items-center gap-1.5 top-[max(1rem,env(safe-area-inset-top))]">
+        {!privateLocked && (
         <button
           type="button"
           onClick={togglePrivate}
@@ -481,6 +488,7 @@ export function PhotoLightbox<T extends LightboxPhoto>({
             </>
           )}
         </button>
+        )}
         {onDelete && (
           <button
             type="button"

@@ -193,6 +193,7 @@ const trackerRow = z.object({
   kind: z.string(),
   notes: z.string().nullable().optional(),
   archived: z.boolean().optional(),
+  private: z.boolean().optional(),
   createdAt: z.string().optional(),
 });
 
@@ -595,6 +596,7 @@ export async function performImport(
     kind: t.kind,
     notes: t.notes ?? null,
     archived: t.archived ?? false,
+    private: t.private ?? false,
     createdAt: t.createdAt ?? nowIso(),
   }));
 
