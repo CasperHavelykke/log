@@ -568,6 +568,19 @@ type UploadItem = {
 
 let uploadKeySeq = 0;
 
+// iOS som hjemmeskærms-app (standalone) har en kendt WebKit-fejl: en
+// filvælger med `multiple` giver intet change-event, når man vælger fra
+// Fotos — vælgeren lukker, og siden hører aldrig om filerne. I en Safari-
+// fane virker det. Dér vælges ét ad gangen; dialogen samler alligevel op.
+function isStandaloneIos(): boolean {
+  if (typeof window === "undefined") return false;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const standalone =
+    (navigator as { standalone?: boolean }).standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches;
+  return ios && standalone;
+}
+
 function UploadDialog({
   trackerId,
   onClose,
@@ -584,6 +597,9 @@ function UploadDialog({
   const [pending, start] = useTransition();
   // Komprimeringskø: nye valg stilles bag igangværende, aldrig ved siden af.
   const queue = useRef<Promise<void>>(Promise.resolve());
+  // Dialogen monteres først ved klik (aldrig server-renderet), så vinduet
+  // kan læses direkte i initializeren uden hydreringskonflikt.
+  const [singlePick] = useState(isStandaloneIos);
 
   // Preview-URL'er frigives, når dialogen lukkes (ref holdes ajour i en
   // effect — ikke under render).
@@ -755,7 +771,7 @@ function UploadDialog({
                 <input
                   type="file"
                   accept="image/*"
-                  multiple
+                  multiple={!singlePick}
                   onChange={(e) => {
                     onPick(e.target.files);
                     e.target.value = "";
@@ -765,8 +781,11 @@ function UploadDialog({
               </label>
             </div>
             <p className="mt-1.5 text-[11px] italic text-light">
-              Vælg gerne flere ad gangen. Datoen hentes fra billedet, når den
-              findes — ret den, hvis den er forkert.
+              {singlePick
+                ? "I appen vælges ét billede ad gangen — tryk Bibliotek igen for flere. "
+                : "Vælg gerne flere ad gangen. "}
+              Datoen hentes fra billedet, når den findes — ret den, hvis den
+              er forkert.
             </p>
           </div>
 
