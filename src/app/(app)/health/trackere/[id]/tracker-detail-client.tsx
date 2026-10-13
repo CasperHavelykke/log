@@ -582,6 +582,10 @@ function UploadDialog({
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Diagnose: hvad vælgeren faktisk afleverede — vises altid efter et
+  // valg, også når det var nul filer (iOS kan lukke vælgeren uden at
+  // aflevere noget, fx hvis et iCloud-billede ikke kunne hentes).
+  const [lastPick, setLastPick] = useState<string | null>(null);
   // Komprimeringskø: nye valg stilles bag igangværende, aldrig ved siden af.
   const queue = useRef<Promise<void>>(Promise.resolve());
 
@@ -604,6 +608,15 @@ function UploadDialog({
   }
 
   function onPick(list: FileList | null) {
+    const n = list?.length ?? 0;
+    setLastPick(
+      n === 0
+        ? "vælgeren afleverede ingen filer"
+        : `${n} ${n === 1 ? "fil" : "filer"} modtaget — ` +
+            [...list!]
+              .map((f) => `${f.type || "ukendt type"}, ${formatFileSize(f.size)}`)
+              .join("; "),
+    );
     if (!list || list.length === 0) return;
     setError(null);
     const files = [...list].filter((f) => f.type.startsWith("image/"));
@@ -768,6 +781,9 @@ function UploadDialog({
               Vælg gerne flere ad gangen. Datoen hentes fra billedet, når den
               findes — ret den, hvis den er forkert.
             </p>
+            {lastPick && (
+              <p className="mt-1 text-[11px] text-light">Vælger: {lastPick}</p>
+            )}
           </div>
 
           {items.length > 0 && (
