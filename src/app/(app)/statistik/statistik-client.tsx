@@ -865,7 +865,9 @@ function MetricCalendar({
     const ex = new Set<string>();
     const sc = new Map<string, number>();
     for (const row of data) {
-      if (row.exercise === 1) ex.add(row.date);
+      // Alle intensiteter (1 = let, 2 = mellem, 3 = hård) er træningsdage —
+      // "=== 1" viste kun ikonet på lette dage.
+      if (typeof row.exercise === "number") ex.add(row.date);
       if (typeof row.sleepScore === "number") sc.set(row.date, row.sleepScore);
     }
     return { exerciseDates: ex, sleepScores: sc };
@@ -1342,7 +1344,7 @@ function StackedView({
               <LineChart
                 data={data}
                 syncId="statistik"
-                margin={{ top: 4, right: 12, left: -10, bottom: 0 }}
+                margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
               >
                 <CartesianGrid
                   stroke="var(--border-light)"
@@ -1360,7 +1362,7 @@ function StackedView({
                 <YAxis
                   stroke="var(--light)"
                   fontSize={10}
-                  width={36}
+                  width="auto"
                   domain={m.domain ?? ["auto", "auto"]}
                   tickFormatter={(v: number) => fmt(v, m.decimals)}
                 />
@@ -1470,7 +1472,7 @@ function OverlayView({
                 yAxisId={m.key}
                 stroke={OVERLAY_COLORS[i]}
                 fontSize={10}
-                width={40}
+                width="auto"
                 orientation={i % 2 === 0 ? "left" : "right"}
                 domain={m.domain ?? ["auto", "auto"]}
                 tickFormatter={(v: number) => fmt(v, m.decimals)}

@@ -342,7 +342,7 @@ function NumberInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, focused]);
   return (
-    <div className="relative w-full sm:w-[110px]">
+    <div className="relative w-[110px] shrink-0">
       <input
         type="text"
         inputMode="decimal"
