@@ -9,6 +9,19 @@ import {
   type CustomParamSummary,
 } from "@/lib/custom-parameters";
 import { HEALTH_PRESETS, type ParameterPreset } from "@/lib/parameter-presets";
+import {
+  CUSTOM_SECTIONS,
+  SECTION_LABELS,
+  type CustomSection,
+} from "@/lib/custom-parameter-sections";
+
+// Typeskift der kan gøres uden datatab (se updateCustomParameter).
+const COMPATIBLE_KINDS: Record<string, string[]> = {
+  scale_5: ["bool_scale_5"],
+  bool_scale_5: ["scale_5"],
+  scale_10: ["bool_scale_10"],
+  bool_scale_10: ["scale_10"],
+};
 
 const KIND_LABELS: Record<string, string> = {
   boolean: "Ja/nej",
@@ -76,6 +89,16 @@ export function CustomParametersCard({
               }
               onDeleted={() =>
                 setParams((prev) => prev.filter((x) => x.id !== p.id))
+              }
+              onSectionChanged={(section) =>
+                setParams((prev) =>
+                  prev.map((x) => (x.id === p.id ? { ...x, section } : x)),
+                )
+              }
+              onKindChanged={(kind) =>
+                setParams((prev) =>
+                  prev.map((x) => (x.id === p.id ? { ...x, kind } : x)),
+                )
               }
             />
           ))}
@@ -154,6 +177,7 @@ function PresetSection({
           kind: res.parameter.kind as never,
           unit: res.parameter.unit,
           archived: false,
+          section: null,
           sortOrder: res.parameter.sortOrder,
         });
       }
@@ -202,12 +226,37 @@ function ParameterRow({
   parameter,
   onArchived,
   onDeleted,
+  onSectionChanged,
+  onKindChanged,
 }: {
   parameter: CustomParamSummary;
   onArchived: (archived: boolean) => void;
   onDeleted: () => void;
+  onSectionChanged: (section: CustomSection | null) => void;
+  onKindChanged: (kind: CustomParamSummary["kind"]) => void;
 }) {
   const [pending, start] = useTransition();
+  const [kindError, setKindError] = useState<string | null>(null);
+  const kindOptions = COMPATIBLE_KINDS[parameter.kind] ?? [];
+  function changeKind(v: string) {
+    if (v === parameter.kind) return;
+    setKindError(null);
+    start(async () => {
+      const res = await updateCustomParameter({
+        id: parameter.id,
+        kind: v as CustomParamSummary["kind"],
+      });
+      if (res.ok) onKindChanged(v as CustomParamSummary["kind"]);
+      else setKindError(res.error);
+    });
+  }
+  function changeSection(v: string) {
+    const section = v === "" ? null : (v as CustomSection);
+    start(async () => {
+      const res = await updateCustomParameter({ id: parameter.id, section });
+      if (res.ok) onSectionChanged(section);
+    });
+  }
   function toggleArchive() {
     start(async () => {
       const res = await updateCustomParameter({
@@ -244,10 +293,47 @@ function ParameterRow({
             </span>
           )}
         </div>
-        <div className="text-[11px] text-light">
-          {KIND_LABELS[parameter.kind] ?? parameter.kind}
-        </div>
+        {kindOptions.length > 0 ? (
+          // Kompatible skift (skala ↔ ja/nej + skala) kan gøres her;
+          // gamle værdier følger med.
+          <select
+            value={parameter.kind}
+            onChange={(e) => changeKind(e.target.value)}
+            disabled={pending}
+            title="Skift type — gamle værdier bevares"
+            aria-label="Type"
+            className="mt-0.5 !w-auto !rounded-[6px] !border-hair !bg-bg !py-0.5 !text-[11px] !text-light"
+          >
+            {[parameter.kind, ...kindOptions].map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABELS[k] ?? k}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="text-[11px] text-light">
+            {KIND_LABELS[parameter.kind] ?? parameter.kind}
+          </div>
+        )}
+        {kindError && (
+          <div className="text-[11px] text-danger">{kindError}</div>
+        )}
       </div>
+      <select
+        value={parameter.section ?? ""}
+        onChange={(e) => changeSection(e.target.value)}
+        disabled={pending}
+        title="Vises under"
+        aria-label="Vises under"
+        className="!w-auto !rounded-[8px] !border-hair !bg-bg !py-1 !text-[11px]"
+      >
+        <option value="">Mine parametre</option>
+        {CUSTOM_SECTIONS.map((sec) => (
+          <option key={sec} value={sec}>
+            {SECTION_LABELS[sec]}
+          </option>
+        ))}
+      </select>
       <button
         type="button"
         onClick={toggleArchive}
@@ -284,6 +370,7 @@ function CreateForm({
   const [name, setName] = useState("");
   const [kind, setKind] = useState<string>("scale_5");
   const [unit, setUnit] = useState("");
+  const [section, setSection] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -300,6 +387,7 @@ function CreateForm({
         name: name.trim(),
         kind: kind as never,
         unit: showUnit ? unit.trim() || null : null,
+        section: section === "" ? null : (section as CustomSection),
       });
       if (!res.ok) {
         setError(res.error);
@@ -311,6 +399,7 @@ function CreateForm({
         kind: res.parameter.kind as never,
         unit: res.parameter.unit,
         archived: false,
+        section: section === "" ? null : (section as CustomSection),
         sortOrder: res.parameter.sortOrder,
       });
     });
@@ -360,6 +449,28 @@ function CreateForm({
         </select>
         <p className="mt-1 text-[11px] text-dim">
           {KIND_DESCRIPTIONS[kind]}
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.5px] text-light">
+          Vises under
+        </label>
+        <select
+          value={section}
+          onChange={(e) => setSection(e.target.value)}
+          className="!rounded-[8px] !border-hair !bg-bg"
+        >
+          <option value="">Mine parametre (egen sektion)</option>
+          {CUSTOM_SECTIONS.map((sec) => (
+            <option key={sec} value={sec}>
+              {SECTION_LABELS[sec]}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-dim">
+          Står efter sektionens faste felter på I dag og Helbred — og i samme
+          kategori på Statistik.
         </p>
       </div>
 

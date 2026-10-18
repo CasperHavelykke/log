@@ -1,15 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/session";
+import {
+  CUSTOM_SECTIONS,
+  isCustomSection,
+  type CustomSection,
+} from "@/lib/custom-parameter-sections";
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
   kind: z.enum(schema.CUSTOM_PARAMETER_KINDS),
   unit: z.string().max(40).nullable().optional(),
+  section: z.enum(CUSTOM_SECTIONS).nullable().optional(),
 });
 
 export type CustomParamSummary = {
@@ -17,6 +23,8 @@ export type CustomParamSummary = {
   name: string;
   kind: schema.CustomParameterKind;
   unit: string | null;
+  // Fast sektion den vises under; null = "Mine parametre".
+  section: CustomSection | null;
   archived: boolean;
   sortOrder: number;
 };
@@ -45,6 +53,7 @@ export async function listCustomParameters(
     name: r.name,
     kind: r.kind as schema.CustomParameterKind,
     unit: r.unit,
+    section: isCustomSection(r.section) ? r.section : null,
     archived: r.archived,
     sortOrder: r.sortOrder,
   }));
@@ -68,6 +77,7 @@ export async function createCustomParameter(
       name: parsed.data.name.trim(),
       kind: parsed.data.kind,
       unit: parsed.data.unit?.trim() || null,
+      section: parsed.data.section ?? null,
     })
     .returning();
   revalidatePath("/settings");
@@ -77,10 +87,24 @@ export async function createCustomParameter(
   return { ok: true as const, parameter: inserted[0] };
 }
 
+// Typeskift uden datatab: skala-tallet bor i samme felt (value_int) for
+// "skala" og "ja/nej + skala". Andre skift ville kræve fortolkning af
+// gamle værdier og afvises.
+const COMPATIBLE_KINDS: Partial<
+  Record<schema.CustomParameterKind, schema.CustomParameterKind[]>
+> = {
+  scale_5: ["bool_scale_5"],
+  bool_scale_5: ["scale_5"],
+  scale_10: ["bool_scale_10"],
+  bool_scale_10: ["scale_10"],
+};
+
 const updateSchema = z.object({
   id: z.number().int(),
   name: z.string().min(1).max(120).optional(),
+  kind: z.enum(schema.CUSTOM_PARAMETER_KINDS).optional(),
   unit: z.string().max(40).nullable().optional(),
+  section: z.enum(CUSTOM_SECTIONS).nullable().optional(),
   archived: z.boolean().optional(),
 });
 
@@ -97,8 +121,45 @@ export async function updateCustomParameter(
   }
   const { id, ...changes } = parsed.data;
   const fields: Record<string, unknown> = {};
+  if (changes.kind !== undefined) {
+    const rows = await db
+      .select({ kind: schema.customParameters.kind })
+      .from(schema.customParameters)
+      .where(
+        and(
+          eq(schema.customParameters.id, id),
+          eq(schema.customParameters.userId, user.id),
+        ),
+      )
+      .limit(1);
+    const current = rows[0]?.kind as schema.CustomParameterKind | undefined;
+    if (!current) return { ok: false as const, error: "Parameteren findes ikke" };
+    if (changes.kind !== current) {
+      if (!COMPATIBLE_KINDS[current]?.includes(changes.kind)) {
+        return {
+          ok: false as const,
+          error: "Typen kan kun skiftes mellem skala og ja/nej + skala",
+        };
+      }
+      // Skala → ja/nej + skala: dage med et tal skal også have "ja", ellers
+      // viser statistikken dem ikke (den plotter kun skalaen når ja er sat).
+      if (changes.kind.startsWith("bool_")) {
+        await db
+          .update(schema.customParameterValues)
+          .set({ valueBool: true })
+          .where(
+            and(
+              eq(schema.customParameterValues.parameterId, id),
+              isNotNull(schema.customParameterValues.valueInt),
+            ),
+          );
+      }
+      fields.kind = changes.kind;
+    }
+  }
   if (changes.name !== undefined) fields.name = changes.name.trim();
   if (changes.unit !== undefined) fields.unit = changes.unit?.trim() || null;
+  if (changes.section !== undefined) fields.section = changes.section;
   if (changes.archived !== undefined) fields.archived = changes.archived;
   if (Object.keys(fields).length === 0) return { ok: true as const };
 

@@ -29,6 +29,7 @@ import {
   type TrackerRef,
 } from "@/components/tracker-photo-section";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
+import { groupBySection } from "@/lib/custom-parameter-sections";
 import type {
   CustomParamSummary,
   CustomValueRow,
@@ -1472,6 +1473,11 @@ function HealthBody({
             />
           </FieldRow>
         )}
+        <CustomParametersSection
+          parameters={groupBySection(customParameters).sleep}
+          date={date}
+          initialValues={customValues}
+        />
       </FieldSection>
 
       <FieldSection icon={<Smile className="size-3.5" />} title="Stemning">
@@ -1487,6 +1493,11 @@ function HealthBody({
             onChange={(v) => setDay({ ...day, energy: v })}
           />
         </FieldRow>
+        <CustomParametersSection
+          parameters={groupBySection(customParameters).mood}
+          date={date}
+          initialValues={customValues}
+        />
       </FieldSection>
 
       <FieldSection icon={<ScaleIcon className="size-3.5" />} title="Krop">
@@ -1532,6 +1543,11 @@ function HealthBody({
             />
           </GridField>
         </div>
+        <CustomParametersSection
+          parameters={groupBySection(customParameters).body}
+          date={date}
+          initialValues={customValues}
+        />
       </FieldSection>
 
       <FieldSection
@@ -1685,6 +1701,11 @@ function HealthBody({
             onClose={() => setNutritionPlanEdit(null)}
           />
         )}
+        <CustomParametersSection
+          parameters={groupBySection(customParameters).nutrition}
+          date={date}
+          initialValues={customValues}
+        />
       </FieldSection>
 
       <FieldSection icon={<Activity className="size-3.5" />} title="Aktivitet">
@@ -1730,15 +1751,20 @@ function HealthBody({
             <StartCounterTrigger />
           </div>
         )}
+        <CustomParametersSection
+          parameters={groupBySection(customParameters).activity}
+          date={date}
+          initialValues={customValues}
+        />
       </FieldSection>
 
-      {customParameters.length > 0 && (
+      {groupBySection(customParameters).none.length > 0 && (
         <FieldSection
           icon={<Sparkles className="size-3.5" />}
           title="Mine parametre"
         >
           <CustomParametersSection
-            parameters={customParameters}
+            parameters={groupBySection(customParameters).none}
             date={date}
             initialValues={customValues}
           />

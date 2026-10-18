@@ -106,6 +106,16 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "other", label: "Andet" },
 ];
 
+// Egne parametre med valgt sektion (indstillinger) står i den tilsvarende
+// kategori, efter de faste metrics; uden valg under "Egne målinger".
+const SECTION_CATEGORY: Record<string, Category> = {
+  sleep: "sleep",
+  mood: "health",
+  body: "body",
+  nutrition: "nutrition",
+  activity: "health",
+};
+
 const CUSTOM_COLORS = [
   "#22d3ee",
   "#a78bfa",
@@ -268,6 +278,7 @@ export function StatistikClient({
     label: string;
     unit: string;
     kind: string;
+    section: string | null;
   }[];
   exerciseMetrics: {
     metricKey: string;
@@ -305,7 +316,7 @@ export function StatistikClient({
       key: c.metricKey as MetricKey,
       label: c.label,
       short: c.label.length > 16 ? c.label.slice(0, 14) + "…" : c.label,
-      category: "custom",
+      category: SECTION_CATEGORY[c.section ?? ""] ?? "custom",
       unit: c.unit,
       color: CUSTOM_COLORS[i % CUSTOM_COLORS.length],
       domain,

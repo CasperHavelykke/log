@@ -1,0 +1,1 @@
+ALTER TABLE `custom_parameters` ADD `section` text;

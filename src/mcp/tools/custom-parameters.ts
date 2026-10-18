@@ -13,7 +13,7 @@ export function registerCustomParameterTools(server: McpServer) {
     {
       title: "List brugerens egne parametre",
       description:
-        "Returnerer alle brugerdefinerede parametre brugeren har oprettet til Helbreds-loggen, inkl. type (boolean / scale_5 / scale_10 / bool_scale_5 / bool_scale_10 / number / text) og enhed (for number-typen).",
+        "Returnerer alle brugerdefinerede parametre brugeren har oprettet til Helbreds-loggen, inkl. type (boolean / scale_5 / scale_10 / bool_scale_5 / bool_scale_10 / number / text), enhed (for number-typen) og section: hvilken fast sektion den vises under på I dag/Helbred ('sleep' | 'mood' | 'body' | 'nutrition' | 'activity'; null = 'Mine parametre').",
       inputSchema: {
         includeArchived: z.boolean().default(false),
       },
@@ -42,6 +42,7 @@ export function registerCustomParameterTools(server: McpServer) {
           name: p.name,
           kind: p.kind,
           unit: p.unit,
+          section: p.section,
           archived: p.archived,
         })),
       });

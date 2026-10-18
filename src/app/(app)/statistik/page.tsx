@@ -204,6 +204,7 @@ export default async function StatistikPage() {
     label: string;
     unit: string;
     kind: schema.CustomParameterKind;
+    section: string | null;
   }[] = [];
   const customParamById = new Map(customParameters.map((p) => [p.id, p]));
   for (const p of customParameters) {
@@ -213,6 +214,7 @@ export default async function StatistikPage() {
       label: p.unit ? `${p.name} (${p.unit})` : p.name,
       unit: p.unit ? ` ${p.unit}` : "",
       kind: p.kind,
+      section: p.section,
     });
   }
   for (const v of customValuesRows) {

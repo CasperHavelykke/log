@@ -26,6 +26,7 @@ import { importGarminSleepCsv, deleteSleepEntry } from "./actions";
 import Link from "next/link";
 import { createTracker } from "./trackere/actions";
 import { CustomParametersSection } from "@/components/custom-parameters-section";
+import { groupBySection } from "@/lib/custom-parameter-sections";
 import {
   listCustomValuesForDate,
   type CustomParamSummary,
@@ -903,6 +904,13 @@ function DayEditorPanel({
             <SleepImport onImported={onImported} compact />
           </div>
         )}
+        {customValuesReady && (
+          <CustomParametersSection
+            date={date}
+            parameters={groupBySection(customParameters).sleep}
+            initialValues={customValues}
+          />
+        )}
       </Section>
 
       <Section icon={<Smile className="size-3.5" />} title="Stemning">
@@ -912,6 +920,13 @@ function DayEditorPanel({
         <Field label="Energi">
           <Scale1to5 value={energy} onChange={setEnergy} />
         </Field>
+        {customValuesReady && (
+          <CustomParametersSection
+            date={date}
+            parameters={groupBySection(customParameters).mood}
+            initialValues={customValues}
+          />
+        )}
       </Section>
 
       <Section icon={<Scale className="size-3.5" />} title="Krop">
@@ -935,6 +950,13 @@ function DayEditorPanel({
             />
           </GridField>
         </div>
+        {customValuesReady && (
+          <CustomParametersSection
+            date={date}
+            parameters={groupBySection(customParameters).body}
+            initialValues={customValues}
+          />
+        )}
       </Section>
 
       <Section
@@ -987,6 +1009,13 @@ function DayEditorPanel({
           Fibre er kulhydrater, men står separat som på varedeklarationen —
           kulhydrat-tallet er ekskl. fibre.
         </p>
+        {customValuesReady && (
+          <CustomParametersSection
+            date={date}
+            parameters={groupBySection(customParameters).nutrition}
+            initialValues={customValues}
+          />
+        )}
       </Section>
 
       <Section icon={<Activity className="size-3.5" />} title="Aktivitet">
@@ -1015,16 +1044,23 @@ function DayEditorPanel({
             placeholder="0"
           />
         </Field>
+        {customValuesReady && (
+          <CustomParametersSection
+            date={date}
+            parameters={groupBySection(customParameters).activity}
+            initialValues={customValues}
+          />
+        )}
       </Section>
 
-      {customParameters.length > 0 && customValuesReady && (
+      {groupBySection(customParameters).none.length > 0 && customValuesReady && (
         <Section
           icon={<Sparkles className="size-3.5" />}
           title="Mine parametre"
         >
           <CustomParametersSection
             date={date}
-            parameters={customParameters}
+            parameters={groupBySection(customParameters).none}
             initialValues={customValues}
           />
         </Section>

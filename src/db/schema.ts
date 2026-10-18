@@ -474,6 +474,11 @@ export const customParameters = sqliteTable(
     // 'boolean' | 'scale_5' | 'scale_10' | 'bool_scale_5' | 'bool_scale_10' | 'number' | 'text'
     kind: text("kind").notNull(),
     unit: text("unit"),
+    // Vises under en fast sektion ('sleep' | 'mood' | 'body' | 'nutrition'
+    // | 'activity', se src/lib/custom-parameter-sections.ts) — faste felter
+    // først, egne bagefter. null = "Mine parametre" som hidtil. Styrer også
+    // kategorien på /statistik.
+    section: text("section"),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at")
