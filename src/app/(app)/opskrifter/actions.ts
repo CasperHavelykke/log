@@ -20,7 +20,17 @@ const recipeFieldsSchema = z.object({
   steps: z.string().max(20_000).default(""),
   notes: z.string().max(10_000).default(""),
   servings: z.coerce.number().int().min(1).max(100).nullable(),
-  sourceUrl: z.string().max(1000).nullable(),
+  // Kilde: link OG/ELLER fritekst. Linket skal være en rigtig URL — det var
+  // her AI'en lagde "Instagram — …" og gav et dødt link.
+  sourceUrl: z
+    .string()
+    .max(1000)
+    .nullable()
+    .refine(
+      (v) => v === null || v.trim() === "" || /^https?:\/\/\S+$/i.test(v.trim()),
+      "Kilde-link skal starte med http:// eller https://",
+    ),
+  sourceName: z.string().max(200).nullable(),
   carbsG: z.coerce.number().int().min(0).max(2000).nullable(),
   proteinG: z.coerce.number().int().min(0).max(2000).nullable(),
   fatG: z.coerce.number().int().min(0).max(2000).nullable(),
@@ -67,6 +77,7 @@ export async function createRecipe(input: RecipeInput) {
       notes: parsed.data.notes.trim() || null,
       servings: parsed.data.servings,
       sourceUrl: parsed.data.sourceUrl?.trim() || null,
+      sourceName: parsed.data.sourceName?.trim() || null,
       carbsG: parsed.data.carbsG,
       proteinG: parsed.data.proteinG,
       fatG: parsed.data.fatG,
@@ -100,6 +111,7 @@ export async function updateRecipe(id: number, input: RecipeInput) {
       notes: parsed.data.notes.trim() || null,
       servings: parsed.data.servings,
       sourceUrl: parsed.data.sourceUrl?.trim() || null,
+      sourceName: parsed.data.sourceName?.trim() || null,
       carbsG: parsed.data.carbsG,
       proteinG: parsed.data.proteinG,
       fatG: parsed.data.fatG,

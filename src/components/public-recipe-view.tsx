@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, ExternalLink, Users } from "lucide-react";
 import { scaleLine } from "@/lib/recipe-scale";
 
 export type PublicRecipe = {
@@ -12,6 +12,7 @@ export type PublicRecipe = {
   notes: string | null;
   servings: number | null;
   sourceUrl: string | null;
+  sourceName: string | null;
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
@@ -125,8 +126,14 @@ export function PublicRecipeView({
               className="inline-flex items-center gap-1 text-accent hover:underline"
             >
               <ExternalLink className="size-3" />
-              Kilde
+              {recipe.sourceName ?? "Kilde"}
             </a>
+          )}
+          {!recipe.sourceUrl && recipe.sourceName && (
+            <span className="inline-flex items-center gap-1 text-light">
+              <BookOpen className="size-3" />
+              {recipe.sourceName}
+            </span>
           )}
         </div>
       </header>

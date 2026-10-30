@@ -30,6 +30,7 @@ function shapeRecipeFull(row: typeof schema.recipes.$inferSelect) {
     steps: row.steps,
     notes: row.notes,
     sourceUrl: row.sourceUrl,
+    sourceName: row.sourceName,
     carbsG: row.carbsG,
     proteinG: row.proteinG,
     fatG: row.fatG,
@@ -80,7 +81,26 @@ const recipeInputShape = {
     .describe(
       "Antal portioner ingredienser-mængderne svarer til. Sæt den altid når den kendes — uden den kan UI ikke skalere portioner.",
     ),
-  sourceUrl: z.string().max(1000).nullable().default(null),
+  sourceUrl: z
+    .string()
+    .max(1000)
+    .nullable()
+    .default(null)
+    .describe(
+      "LINK til originalen — en fuld URL der starter med http:// eller https://. Aldrig fritekst her; en kilde uden link (fx 'Instagram — Simone Vendelbo' eller 'Mors kogebog') hører i sourceName.",
+    )
+    .refine((v) => v === null || /^https?:\/\/\S+$/i.test(v.trim()), {
+      message:
+        "sourceUrl skal være en fuld URL (http:// eller https://). Fritekst-kilder hører i sourceName.",
+    }),
+  sourceName: z
+    .string()
+    .max(200)
+    .nullable()
+    .default(null)
+    .describe(
+      "Kildens navn som fritekst, fx 'Instagram — Simone Vendelbo'. Vises som tekst på linket når sourceUrl findes, ellers som reference uden link. Brug den når brugeren nævner hvor opskriften er fra uden at give en URL.",
+    ),
   carbsG: z
     .number()
     .int()
@@ -183,6 +203,7 @@ export function registerRecipeTools(server: McpServer) {
           notes: input.notes.trim() || null,
           servings: input.servings,
           sourceUrl: input.sourceUrl?.trim() || null,
+          sourceName: input.sourceName?.trim() || null,
           carbsG: input.carbsG,
           proteinG: input.proteinG,
           fatG: input.fatG,
@@ -223,7 +244,17 @@ export function registerRecipeTools(server: McpServer) {
           ),
         notes: z.string().max(10_000).optional(),
         servings: z.number().int().min(1).max(100).nullable().optional(),
-        sourceUrl: z.string().max(1000).nullable().optional(),
+        sourceUrl: z
+          .string()
+          .max(1000)
+          .nullable()
+          .optional()
+          .describe("Fuld URL (http/https). Fritekst-kilder hører i sourceName.")
+          .refine((v) => v == null || /^https?:\/\/\S+$/i.test(v.trim()), {
+            message:
+              "sourceUrl skal være en fuld URL (http:// eller https://). Fritekst-kilder hører i sourceName.",
+          }),
+        sourceName: z.string().max(200).nullable().optional(),
         carbsG: z.number().int().min(0).max(2000).nullable().optional(),
         proteinG: z.number().int().min(0).max(2000).nullable().optional(),
         fatG: z.number().int().min(0).max(2000).nullable().optional(),
@@ -254,6 +285,10 @@ export function registerRecipeTools(server: McpServer) {
             patch.sourceUrl !== undefined
               ? patch.sourceUrl?.trim() || null
               : recipe.sourceUrl,
+          sourceName:
+            patch.sourceName !== undefined
+              ? patch.sourceName?.trim() || null
+              : recipe.sourceName,
           carbsG: patch.carbsG !== undefined ? patch.carbsG : recipe.carbsG,
           proteinG:
             patch.proteinG !== undefined ? patch.proteinG : recipe.proteinG,

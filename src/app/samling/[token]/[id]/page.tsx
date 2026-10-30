@@ -62,6 +62,7 @@ export default async function SharedCollectionRecipePage({
         notes: recipe.notes,
         servings: recipe.servings,
         sourceUrl: recipe.sourceUrl,
+        sourceName: recipe.sourceName,
         carbsG: recipe.carbsG,
         proteinG: recipe.proteinG,
         fatG: recipe.fatG,

@@ -223,6 +223,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
         notes: "",
         servings: null,
         sourceUrl: null,
+        sourceName: null,
         carbsG: null,
         proteinG: null,
         fatG: null,

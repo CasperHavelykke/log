@@ -650,7 +650,11 @@ export const recipes = sqliteTable(
     // almindelige afsnit, IKKE nummererede trin.
     notes: text("notes"),
     servings: integer("servings"),
+    // Kilde: sourceUrl er et LINK (http/https) til originalen; sourceName
+    // er fritekst ("Instagram — Simone Vendelbo"), alene eller som label på
+    // linket. AI puttede tekst i url-feltet — derfor to felter.
     sourceUrl: text("source_url"),
+    sourceName: text("source_name"),
     // Makroer PER PORTION — kun reference, ingen automatisk logning.
     // fiberG er separat fra carbsG (EU-deklaration: kulhydrat ekskl. fibre).
     carbsG: integer("carbs_g"),

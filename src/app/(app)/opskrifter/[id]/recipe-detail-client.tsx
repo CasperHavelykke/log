@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  BookOpen,
   Camera,
   Check,
   ChefHat,
@@ -37,6 +38,7 @@ type RecipeData = {
   notes: string;
   servings: number | null;
   sourceUrl: string | null;
+  sourceName: string | null;
   carbsG: number | null;
   proteinG: number | null;
   fatG: number | null;
@@ -105,6 +107,7 @@ export function RecipeDetailClient({
         notes: draft.notes,
         servings: draft.servings,
         sourceUrl: draft.sourceUrl,
+        sourceName: draft.sourceName,
         carbsG: draft.carbsG,
         proteinG: draft.proteinG,
         fatG: draft.fatG,
@@ -286,6 +289,8 @@ export function RecipeDetailClient({
             )
           )}
           {!editing && kcal !== null && <span>{kcal} kcal/portion</span>}
+          {/* Kilde: link (med navn som tekst, hvis det findes) eller bare
+              navnet som reference uden link. */}
           {!editing && recipe.sourceUrl && (
             <a
               href={recipe.sourceUrl}
@@ -294,20 +299,37 @@ export function RecipeDetailClient({
               className="inline-flex items-center gap-1 text-accent hover:underline"
             >
               <ExternalLink className="size-3" />
-              Kilde
+              {recipe.sourceName ?? "Kilde"}
             </a>
+          )}
+          {!editing && !recipe.sourceUrl && recipe.sourceName && (
+            <span className="inline-flex items-center gap-1 text-light">
+              <BookOpen className="size-3" />
+              {recipe.sourceName}
+            </span>
           )}
         </div>
         {editing && (
-          <input
-            type="url"
-            value={draft.sourceUrl ?? ""}
-            onChange={(e) =>
-              setDraft({ ...draft, sourceUrl: e.target.value || null })
-            }
-            placeholder="Link til original-opskrift (valgfrit)"
-            className="mt-2 !rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
-          />
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <input
+              type="text"
+              value={draft.sourceName ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, sourceName: e.target.value || null })
+              }
+              placeholder="Kilde, fx 'Instagram — Simone Vendelbo' (valgfrit)"
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+            />
+            <input
+              type="url"
+              value={draft.sourceUrl ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, sourceUrl: e.target.value || null })
+              }
+              placeholder="Link til originalen, https://… (valgfrit)"
+              className="!rounded-[8px] !border-hair !bg-bg-subtle !text-[13px]"
+            />
+          </div>
         )}
       </header>
 
