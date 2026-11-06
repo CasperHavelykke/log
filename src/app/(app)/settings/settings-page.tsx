@@ -34,6 +34,7 @@ import {
   IDLE_BLUR_KEY,
   readIdleBlurMinutes,
 } from "@/components/idle-blur";
+import { ProfileImageField } from "./profile-image-field";
 
 type OAuthClientRow = {
   id: number;
@@ -71,6 +72,7 @@ export function SettingsPage({
   initialCounterModeEnabled,
   initialRoisinModeEnabled,
   initialTheme,
+  initialHasProfileImage,
 }: {
   username: string;
   email: string;
@@ -85,6 +87,7 @@ export function SettingsPage({
   initialCounterModeEnabled: boolean;
   initialRoisinModeEnabled: boolean;
   initialTheme: Theme;
+  initialHasProfileImage: boolean;
 }) {
   return (
     <div className="mx-auto max-w-[680px] px-4 py-8">
@@ -118,7 +121,11 @@ export function SettingsPage({
           initialCounterModeEnabled={initialCounterModeEnabled}
           initialRoisinModeEnabled={initialRoisinModeEnabled}
         />
-        <JobSearchCard initial={initialActivePeriod} pastPeriods={initialPastPeriods} />
+        <JobSearchCard
+          initial={initialActivePeriod}
+          pastPeriods={initialPastPeriods}
+          hasProfileImage={initialHasProfileImage}
+        />
         <CustomParametersCard initial={initialCustomParameters} />
         <OAuthClientsCard initial={initialClients} />
         <ExportCard />
@@ -481,9 +488,11 @@ function FeatureToggle({
 function JobSearchCard({
   initial,
   pastPeriods,
+  hasProfileImage,
 }: {
   initial: ActivePeriodRow | null;
   pastPeriods: PastPeriodRow[];
+  hasProfileImage: boolean;
 }) {
   const [active, setActive] = useState(initial);
   const [showStart, setShowStart] = useState(false);
@@ -623,6 +632,10 @@ function JobSearchCard({
           <Briefcase className="size-4" />
           Start jobsøgningsperiode
         </button>
+      )}
+
+      {(active || hasProfileImage) && (
+        <ProfileImageField initialHasImage={hasProfileImage} />
       )}
 
       {pastPeriods.length > 0 && (

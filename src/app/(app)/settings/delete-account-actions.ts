@@ -96,6 +96,11 @@ export async function deleteAccount(input: {
     ),
   );
 
+  // Profilbilledet hænger på selve brugeren, ikke på en række ovenfor.
+  if (user.profileImagePathname) {
+    await deleteBlob(user.profileImagePathname).catch(() => undefined);
+  }
+
   // Cascading FKs handle all related rows (day_entries, projects, time_entries,
   // job_applications, application_events, sleep_entries, fasts, supplements,
   // supplement_intakes, week_goals, custom_parameters, custom_parameter_values,

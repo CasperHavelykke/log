@@ -1,6 +1,6 @@
 import "server-only";
 
-import { mkdir, writeFile, unlink, stat } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -88,6 +88,16 @@ export async function deleteBlob(pathname: string): Promise<void> {
     await unlink(blobAbsolutePath(pathname));
   } catch {
     // Allerede væk — ok
+  }
+}
+
+// Læser en hel fil ind i hukommelsen. null hvis den mangler.
+// Kun til små filer som profilbilledet. Store filer skal streames.
+export async function readBlob(pathname: string): Promise<Buffer | null> {
+  try {
+    return await readFile(blobAbsolutePath(pathname));
+  } catch {
+    return null;
   }
 }
 

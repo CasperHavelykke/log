@@ -4,10 +4,19 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db, schema } from "../../db";
 import { getActiveUser } from "../active-user";
 import { errorContent, jsonContent } from "../format";
-import { DOCUMENT_PREFIX, MAX_DOCUMENT_BYTES, uploadBlob } from "../../lib/blob";
+import {
+  DOCUMENT_PREFIX,
+  MAX_DOCUMENT_BYTES,
+  readBlob,
+  uploadBlob,
+} from "../../lib/blob";
 import { extractText } from "../../lib/text-extract";
 
 const PREVIEW_CHARS = 400;
+
+// AI'en skriver denne tekst i HTML'en. Serveren bytter den ud med brugerens
+// profilbillede, så AI'en aldrig selv skal sende base64.
+const PROFILE_PLACEHOLDER = "{{profilbillede}}";
 
 function preview(text: string | null): string | null {
   if (!text) return null;
@@ -171,7 +180,7 @@ export function registerDocumentTools(server: McpServer) {
     {
       title: "Opret dokument",
       description:
-        "Opretter et tekstbaseret dokument (HTML, Markdown eller ren tekst) og gemmer det som fil. Brug den til at gemme et jobopslag eller et udkast til en ansøgning — sæt jobApplicationId for at hænge det på ansøgningen. Kan IKKE lave PDF eller Word; send aldrig base64. Returnerer dokumentets id.",
+        "Opretter et tekstbaseret dokument (HTML, Markdown eller ren tekst) og gemmer det som fil. Brug den til at gemme et jobopslag, et CV eller et udkast til en ansøgning — sæt jobApplicationId for at hænge det på ansøgningen. Billede i et HTML-CV: skriv <img src=\"{{profilbillede}}\">, så indsætter serveren brugerens eget profilbillede. Send aldrig selv base64. Kan IKKE lave PDF eller Word. Returnerer dokumentets id.",
       inputSchema: {
         kind: z
           .enum(schema.DOCUMENT_KINDS)
@@ -188,7 +197,9 @@ export function registerDocumentTools(server: McpServer) {
         content: z
           .string()
           .min(1)
-          .describe("Filens fulde indhold som tekst. Ikke base64."),
+          .describe(
+            "Filens fulde indhold som tekst. Ikke base64. I HTML kan {{profilbillede}} bruges som src på et <img>.",
+          ),
         jobApplicationId: z
           .number()
           .int()
@@ -199,7 +210,25 @@ export function registerDocumentTools(server: McpServer) {
     },
     async ({ kind, title, filename, mimeType, content, jobApplicationId }) => {
       const user = await getActiveUser();
-      const buf = Buffer.from(content, "utf-8");
+      let finalContent = content;
+      if (content.includes(PROFILE_PLACEHOLDER)) {
+        if (mimeType !== "text/html") {
+          return errorContent("{{profilbillede}} virker kun i HTML-filer.");
+        }
+        const image = user.profileImagePathname
+          ? await readBlob(user.profileImagePathname)
+          : null;
+        if (!image) {
+          return errorContent(
+            "Brugeren har ikke uploadet et profilbillede. Bed dem gøre det under Indstillinger → Jobsøgning, eller lav dokumentet uden billede.",
+          );
+        }
+        const dataUri = `data:image/jpeg;base64,${image.toString("base64")}`;
+        finalContent = content.replaceAll(PROFILE_PLACEHOLDER, dataUri);
+      }
+
+      const buf = Buffer.from(finalContent, "utf-8");
+
       if (buf.length > MAX_DOCUMENT_BYTES) {
         return errorContent("For stor — maks 10 MB.");
       }

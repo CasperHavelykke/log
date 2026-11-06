@@ -45,6 +45,9 @@ export const users = sqliteTable("users", {
   // Hemmeligt token til offentlig deling af hele opskriftssamlingen
   // (/samling/{token}). null = deling slået fra.
   recipesShareToken: text("recipes_share_token"),
+  // Fast profilbillede til CV'er. MCP-værktøjet create_document bytter
+  // pladsholderen {{profilbillede}} ud med denne fil. null = intet billede.
+  profileImagePathname: text("profile_image_pathname"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),

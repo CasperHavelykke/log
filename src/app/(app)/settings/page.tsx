@@ -87,6 +87,7 @@ export default async function Settings() {
       initialCounterModeEnabled={counterModeEnabled}
       initialRoisinModeEnabled={roisinModeEnabled}
       initialTheme={themePreference}
+      initialHasProfileImage={user.profileImagePathname !== null}
     />
   );
 }

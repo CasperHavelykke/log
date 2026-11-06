@@ -351,6 +351,13 @@
       "when": 1793362033110,
       "tag": "0049_recipe_source_name",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1793965631005,
+      "tag": "0050_user_profile_image",
+      "breakpoints": true
     }
   ]
 }
