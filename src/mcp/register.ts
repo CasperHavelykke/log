@@ -15,11 +15,12 @@ import { registerRecipeTools } from "./tools/recipes";
 import { registerWorkoutTools } from "./tools/workouts";
 import { registerPlanTools } from "./tools/plan";
 import { registerGoalTools } from "./tools/goals";
+import { registerNutritionWeekTools } from "./tools/nutrition-weeks";
 
 export const MCP_SERVER_INFO = {
   name: "dagbog",
   // Bump ved skema-ændringer i tools — connector-caches skal forbi.
-  version: "0.18.0",
+  version: "0.19.0",
 } as const;
 
 export function registerAllTools(server: McpServer): void {
@@ -39,4 +40,5 @@ export function registerAllTools(server: McpServer): void {
   registerWorkoutTools(server);
   registerPlanTools(server);
   registerGoalTools(server);
+  registerNutritionWeekTools(server);
 }
