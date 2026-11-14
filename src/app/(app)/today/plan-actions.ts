@@ -47,6 +47,8 @@ const planItemSchema = z
     fatMaxG: z.number().int().min(0).max(1000).nullable().default(null),
     fiberTargetG: z.number().int().min(0).max(200).nullable().default(null),
     fiberMaxG: z.number().int().min(0).max(200).nullable().default(null),
+    saturatedFatTargetG: z.number().int().min(0).max(500).nullable().default(null),
+    saturatedFatMaxG: z.number().int().min(0).max(500).nullable().default(null),
   })
   .superRefine((v, ctx) => {
     const pairs: [number | null, number | null][] = [
@@ -55,6 +57,7 @@ const planItemSchema = z
       [v.proteinTargetG, v.proteinMaxG],
       [v.fatTargetG, v.fatMaxG],
       [v.fiberTargetG, v.fiberMaxG],
+      [v.saturatedFatTargetG, v.saturatedFatMaxG],
     ];
     if (pairs.some(([min, max]) => min !== null && max !== null && max < min)) {
       ctx.addIssue({
@@ -135,6 +138,8 @@ export async function upsertPlanItem(input: PlanItemInput) {
     fatMaxG: d.kind === "nutrition" ? d.fatMaxG : null,
     fiberTargetG: d.kind === "nutrition" ? d.fiberTargetG : null,
     fiberMaxG: d.kind === "nutrition" ? d.fiberMaxG : null,
+    saturatedFatTargetG: d.kind === "nutrition" ? d.saturatedFatTargetG : null,
+    saturatedFatMaxG: d.kind === "nutrition" ? d.saturatedFatMaxG : null,
     updatedAt: now,
   };
 

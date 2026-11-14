@@ -128,6 +128,7 @@ type DayState = {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
   workNotes: string;
   healthNotes: string;
   dayNotes: string;
@@ -244,6 +245,7 @@ function toDayInput(day: DayState, sleepHoursX10: number | null) {
     proteinG: day.proteinG,
     fatG: day.fatG,
     fiberG: day.fiberG,
+    saturatedFatG: day.saturatedFatG,
     workNotes: day.workNotes || null,
     healthNotes: day.healthNotes || null,
     dayNotes: day.dayNotes || null,
@@ -270,6 +272,7 @@ const DAY_INPUT_KEYS = [
   "proteinG",
   "fatG",
   "fiberG",
+  "saturatedFatG",
   "workNotes",
   "healthNotes",
   "dayNotes",
@@ -1588,22 +1591,6 @@ function HealthBody({
               placeholder="0"
             />
           </GridField>
-          <GridField label="Protein">
-            <CompactNumberInput
-              fluid
-              value={day.proteinG === null ? "" : String(day.proteinG)}
-              onChange={(v) => {
-                const t = v.trim();
-                if (t === "") return setDay({ ...day, proteinG: null });
-                const n = Number(t);
-                if (Number.isFinite(n) && n >= 0 && n <= 1000) {
-                  setDay({ ...day, proteinG: Math.floor(n) });
-                }
-              }}
-              unit="g"
-              placeholder="0"
-            />
-          </GridField>
           <GridField label="Fedt">
             <CompactNumberInput
               fluid
@@ -1614,6 +1601,38 @@ function HealthBody({
                 const n = Number(t);
                 if (Number.isFinite(n) && n >= 0 && n <= 1000) {
                   setDay({ ...day, fatG: Math.floor(n) });
+                }
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="+ heraf mættet">
+            <CompactNumberInput
+              fluid
+              value={day.saturatedFatG === null ? "" : String(day.saturatedFatG)}
+              onChange={(v) => {
+                const t = v.trim();
+                if (t === "") return setDay({ ...day, saturatedFatG: null });
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 500) {
+                  setDay({ ...day, saturatedFatG: Math.floor(n) });
+                }
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="Protein">
+            <CompactNumberInput
+              fluid
+              value={day.proteinG === null ? "" : String(day.proteinG)}
+              onChange={(v) => {
+                const t = v.trim();
+                if (t === "") return setDay({ ...day, proteinG: null });
+                const n = Number(t);
+                if (Number.isFinite(n) && n >= 0 && n <= 1000) {
+                  setDay({ ...day, proteinG: Math.floor(n) });
                 }
               }}
               unit="g"

@@ -45,6 +45,7 @@ export default async function RecipeDetailPage({
         proteinG: recipe.proteinG,
         fatG: recipe.fatG,
         fiberG: recipe.fiberG,
+        saturatedFatG: recipe.saturatedFatG,
         hasImage: recipe.imagePathname !== null,
         shareToken: recipe.shareToken,
         createdAt: recipe.createdAt,

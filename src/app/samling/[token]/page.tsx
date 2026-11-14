@@ -50,6 +50,7 @@ export default async function SharedCollectionPage({
         proteinG: r.proteinG,
         fatG: r.fatG,
         fiberG: r.fiberG,
+        saturatedFatG: r.saturatedFatG,
         hasImage: r.imagePathname !== null,
       }))}
     />

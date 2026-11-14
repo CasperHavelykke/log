@@ -68,6 +68,8 @@ function shapeItem(
     fatMaxG: row.fatMaxG,
     fiberTargetG: row.fiberTargetG,
     fiberMaxG: row.fiberMaxG,
+    saturatedFatTargetG: row.saturatedFatTargetG,
+    saturatedFatMaxG: row.saturatedFatMaxG,
     paused: row.paused,
   };
 }
@@ -282,6 +284,11 @@ export function registerPlanTools(server: McpServer) {
                     min: i.fiberTargetG,
                     max: i.fiberMaxG,
                   },
+                  {
+                    actual: entry?.saturatedFatG ?? null,
+                    min: i.saturatedFatTargetG,
+                    max: i.saturatedFatMaxG,
+                  },
                 ])
               ) {
                 status = "done";
@@ -401,6 +408,8 @@ export function registerPlanTools(server: McpServer) {
         fatMaxG: z.number().int().min(0).max(1000).nullable().default(null),
         fiberTargetG: z.number().int().min(0).max(200).nullable().default(null),
         fiberMaxG: z.number().int().min(0).max(200).nullable().default(null),
+        saturatedFatTargetG: z.number().int().min(0).max(500).nullable().default(null),
+        saturatedFatMaxG: z.number().int().min(0).max(500).nullable().default(null),
         paused: z.boolean().default(false),
       },
     },
@@ -434,6 +443,7 @@ export function registerPlanTools(server: McpServer) {
         [input.proteinTargetG, input.proteinMaxG],
         [input.fatTargetG, input.fatMaxG],
         [input.fiberTargetG, input.fiberMaxG],
+        [input.saturatedFatTargetG, input.saturatedFatMaxG],
       ];
       if (
         rangePairs.some(
@@ -481,6 +491,8 @@ export function registerPlanTools(server: McpServer) {
         fatMaxG: input.kind === "nutrition" ? input.fatMaxG : null,
         fiberTargetG: input.kind === "nutrition" ? input.fiberTargetG : null,
         fiberMaxG: input.kind === "nutrition" ? input.fiberMaxG : null,
+        saturatedFatTargetG: input.kind === "nutrition" ? input.saturatedFatTargetG : null,
+        saturatedFatMaxG: input.kind === "nutrition" ? input.saturatedFatMaxG : null,
         paused: input.paused,
         updatedAt: now,
       };

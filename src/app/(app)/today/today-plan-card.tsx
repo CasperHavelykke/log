@@ -62,6 +62,7 @@ export type TodayPlanEntry = {
     protein: NutritionRange;
     fat: NutritionRange;
     fiber: NutritionRange;
+    saturatedFat: NutritionRange;
   } | null;
   actuals: {
     kcal: number | null;
@@ -69,6 +70,7 @@ export type TodayPlanEntry = {
     protein: number | null;
     fat: number | null;
     fiber: number | null;
+    saturatedFat: number | null;
   } | null;
 };
 
@@ -98,6 +100,7 @@ function NutritionBars({
     { key: "carbs", label: "Kulhydrat" },
     { key: "fat", label: "Fedt" },
     { key: "fiber", label: "Fibre" },
+    { key: "saturatedFat", label: "Heraf mættet" },
   ];
   const rows = fields.flatMap(({ key, label }) => {
     const { min, max } = targets[key];

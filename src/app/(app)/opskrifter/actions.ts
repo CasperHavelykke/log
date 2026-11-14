@@ -35,6 +35,7 @@ const recipeFieldsSchema = z.object({
   proteinG: z.coerce.number().int().min(0).max(2000).nullable(),
   fatG: z.coerce.number().int().min(0).max(2000).nullable(),
   fiberG: z.coerce.number().int().min(0).max(200).nullable(),
+  saturatedFatG: z.coerce.number().int().min(0).max(500).nullable(),
 });
 
 export type RecipeInput = z.infer<typeof recipeFieldsSchema>;
@@ -82,6 +83,7 @@ export async function createRecipe(input: RecipeInput) {
       proteinG: parsed.data.proteinG,
       fatG: parsed.data.fatG,
       fiberG: parsed.data.fiberG,
+      saturatedFatG: parsed.data.saturatedFatG,
       createdAt: now,
       updatedAt: now,
     })
@@ -116,6 +118,7 @@ export async function updateRecipe(id: number, input: RecipeInput) {
       proteinG: parsed.data.proteinG,
       fatG: parsed.data.fatG,
       fiberG: parsed.data.fiberG,
+      saturatedFatG: parsed.data.saturatedFatG,
       updatedAt: new Date().toISOString(),
     })
     .where(eq(schema.recipes.id, id));

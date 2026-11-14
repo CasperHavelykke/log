@@ -13,6 +13,7 @@ type PublicRecipeRow = {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
   hasImage: boolean;
 };
 
@@ -21,6 +22,7 @@ function kcalPerServing(r: {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
 }): number | null {
   if (r.carbsG === null || r.proteinG === null || r.fatG === null) return null;
   return r.carbsG * 4 + r.proteinG * 4 + r.fatG * 9 + (r.fiberG ?? 0) * 2;

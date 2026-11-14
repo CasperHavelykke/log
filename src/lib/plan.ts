@@ -40,6 +40,8 @@ export type PlanItemData = {
   fatMaxG: number | null;
   fiberTargetG: number | null;
   fiberMaxG: number | null;
+  saturatedFatTargetG: number | null;
+  saturatedFatMaxG: number | null;
   paused: boolean;
 };
 
@@ -70,6 +72,8 @@ export function toPlanItemData(row: PlanItem): PlanItemData {
     fatMaxG: row.fatMaxG,
     fiberTargetG: row.fiberTargetG,
     fiberMaxG: row.fiberMaxG,
+    saturatedFatTargetG: row.saturatedFatTargetG,
+    saturatedFatMaxG: row.saturatedFatMaxG,
     paused: row.paused,
   };
 }

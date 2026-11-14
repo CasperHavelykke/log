@@ -31,6 +31,7 @@ export type DataPoint = {
   carbs?: number;
   protein?: number;
   fat?: number;
+  saturatedFat?: number;
   kcal?: number;
   sleepHours?: number;
   sleepHoursManual?: number;
@@ -65,6 +66,7 @@ type MetricKey =
   | "protein"
   | "fat"
   | "fiber"
+  | "saturatedFat"
   | "kcal";
 
 type Category =
@@ -161,6 +163,7 @@ const METRICS: Metric[] = [
   { key: "fiber", label: "+ Fibre", short: "Fibre", category: "nutrition", unit: " g", color: "#4ade80", decimals: 0 },
   { key: "protein", label: "Protein", short: "Protein", category: "nutrition", unit: " g", color: "#ec4899", decimals: 0 },
   { key: "fat", label: "Fedt", short: "Fedt", category: "nutrition", unit: " g", color: "#a78bfa", decimals: 0 },
+  { key: "saturatedFat", label: "+ heraf mættet", short: "Mættet", category: "nutrition", unit: " g", color: "#f472b6", decimals: 0 },
   { key: "kcal", label: "Kalorier", short: "Kcal", category: "nutrition", unit: " kcal", color: "#f97316", decimals: 0 },
 ];
 

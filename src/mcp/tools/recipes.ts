@@ -35,6 +35,7 @@ function shapeRecipeFull(row: typeof schema.recipes.$inferSelect) {
     proteinG: row.proteinG,
     fatG: row.fatG,
     fiberG: row.fiberG,
+    saturatedFatG: row.saturatedFatG,
     createdAt: row.createdAt,
   };
 }
@@ -121,6 +122,14 @@ const recipeInputShape = {
     .describe(
       "Kostfibre i gram PER PORTION. SEPARAT fra carbsG — EU-varedeklarationer angiver kulhydrat EKSKL. fibre. Fibre tæller 2 kcal/g i kcal/portion.",
     ),
+  saturatedFatG: z
+    .number()
+    .int()
+    .min(0)
+    .max(500)
+    .nullable()
+    .default(null)
+    .describe("Mættet fedt i gram PER PORTION. Del af fatG, tæller ikke ekstra i kcal."),
 };
 
 export function registerRecipeTools(server: McpServer) {
@@ -208,6 +217,7 @@ export function registerRecipeTools(server: McpServer) {
           proteinG: input.proteinG,
           fatG: input.fatG,
           fiberG: input.fiberG,
+          saturatedFatG: input.saturatedFatG,
           createdAt: now,
           updatedAt: now,
         })
@@ -259,6 +269,7 @@ export function registerRecipeTools(server: McpServer) {
         proteinG: z.number().int().min(0).max(2000).nullable().optional(),
         fatG: z.number().int().min(0).max(2000).nullable().optional(),
         fiberG: z.number().int().min(0).max(200).nullable().optional(),
+        saturatedFatG: z.number().int().min(0).max(500).nullable().optional(),
       },
     },
     async ({ id, ...patch }) => {
@@ -294,6 +305,7 @@ export function registerRecipeTools(server: McpServer) {
             patch.proteinG !== undefined ? patch.proteinG : recipe.proteinG,
           fatG: patch.fatG !== undefined ? patch.fatG : recipe.fatG,
           fiberG: patch.fiberG !== undefined ? patch.fiberG : recipe.fiberG,
+          saturatedFatG: patch.saturatedFatG !== undefined ? patch.saturatedFatG : recipe.saturatedFatG,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(schema.recipes.id, id));

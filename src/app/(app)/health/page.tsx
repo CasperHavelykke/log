@@ -62,6 +62,7 @@ export default async function Health() {
         proteinG: e.proteinG ?? null,
         fatG: e.fatG ?? null,
         fiberG: e.fiberG ?? null,
+        saturatedFatG: e.saturatedFatG ?? null,
         healthNotes: e.healthNotes ?? "",
         workNotes: e.workNotes ?? "",
         dayNotes: e.dayNotes ?? "",

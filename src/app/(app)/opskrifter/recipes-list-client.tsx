@@ -16,6 +16,7 @@ type RecipeRow = {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
   hasImage: boolean;
   updatedAt: string;
 };
@@ -25,6 +26,7 @@ function kcalPerServing(r: {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
 }): number | null {
   if (r.carbsG === null || r.proteinG === null || r.fatG === null) return null;
   return r.carbsG * 4 + r.proteinG * 4 + r.fatG * 9 + (r.fiberG ?? 0) * 2;
@@ -228,6 +230,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
         proteinG: null,
         fatG: null,
         fiberG: null,
+        saturatedFatG: null,
       });
       if (!res.ok) {
         setError(res.error);

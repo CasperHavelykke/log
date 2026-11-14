@@ -33,6 +33,7 @@ const dayEntrySchema = z.object({
   proteinG: z.coerce.number().int().min(0).max(1000).nullable().optional(),
   fatG: z.coerce.number().int().min(0).max(1000).nullable().optional(),
   fiberG: z.coerce.number().int().min(0).max(200).nullable().optional(),
+  saturatedFatG: z.coerce.number().int().min(0).max(500).nullable().optional(),
   workNotes: z.string().max(10_000).nullable().optional(),
   healthNotes: z.string().max(10_000).nullable().optional(),
   dayNotes: z.string().max(10_000).nullable().optional(),
@@ -91,6 +92,7 @@ export async function saveDayEntry(input: DayEntryInput): Promise<SaveResult> {
   if (data.proteinG !== undefined) fields.proteinG = data.proteinG;
   if (data.fatG !== undefined) fields.fatG = data.fatG;
   if (data.fiberG !== undefined) fields.fiberG = data.fiberG;
+  if (data.saturatedFatG !== undefined) fields.saturatedFatG = data.saturatedFatG;
   if (data.workNotes !== undefined) fields.workNotes = nullIfEmpty(data.workNotes);
   if (data.healthNotes !== undefined)
     fields.healthNotes = nullIfEmpty(data.healthNotes);
@@ -162,6 +164,7 @@ export async function getDaySnapshot(date: string) {
       proteinG: entry?.proteinG ?? null,
       fatG: entry?.fatG ?? null,
       fiberG: entry?.fiberG ?? null,
+      saturatedFatG: entry?.saturatedFatG ?? null,
       workNotes: entry?.workNotes ?? "",
       healthNotes: entry?.healthNotes ?? "",
       dayNotes: entry?.dayNotes ?? "",

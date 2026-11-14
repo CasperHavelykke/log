@@ -43,6 +43,7 @@ type RecipeData = {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
   hasImage: boolean;
   shareToken: string | null;
   createdAt: string;
@@ -112,6 +113,7 @@ export function RecipeDetailClient({
         proteinG: draft.proteinG,
         fatG: draft.fatG,
         fiberG: draft.fiberG,
+        saturatedFatG: draft.saturatedFatG,
       });
       if (!res.ok) {
         setError(res.error);
@@ -479,14 +481,19 @@ export function RecipeDetailClient({
                 onChange={(n) => setDraft({ ...draft, fiberG: n })}
               />
               <MacroField
-                label="Protein"
-                value={draft.proteinG}
-                onChange={(n) => setDraft({ ...draft, proteinG: n })}
-              />
-              <MacroField
                 label="Fedt"
                 value={draft.fatG}
                 onChange={(n) => setDraft({ ...draft, fatG: n })}
+              />
+              <MacroField
+                label="+ heraf mættet"
+                value={draft.saturatedFatG}
+                onChange={(n) => setDraft({ ...draft, saturatedFatG: n })}
+              />
+              <MacroField
+                label="Protein"
+                value={draft.proteinG}
+                onChange={(n) => setDraft({ ...draft, proteinG: n })}
               />
             </div>
             <p className="mt-2 text-[11px] italic text-dim">
@@ -500,8 +507,11 @@ export function RecipeDetailClient({
             {recipe.fiberG !== null && (
               <MacroPill label="+ Fibre" value={recipe.fiberG} />
             )}
-            <MacroPill label="Protein" value={recipe.proteinG!} />
             <MacroPill label="Fedt" value={recipe.fatG!} />
+            {recipe.saturatedFatG !== null && (
+              <MacroPill label="+ heraf mættet" value={recipe.saturatedFatG} />
+            )}
+            <MacroPill label="Protein" value={recipe.proteinG!} />
             <span className="inline-flex items-center rounded-full bg-[var(--accent-bg)] px-2.5 py-1 text-[12px] font-medium text-accent">
               {kcal} kcal
             </span>

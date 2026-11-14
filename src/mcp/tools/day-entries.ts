@@ -32,6 +32,7 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     proteinG: row.proteinG,
     fatG: row.fatG,
     fiberG: row.fiberG,
+    saturatedFatG: row.saturatedFatG,
     kcal:
       row.carbsG !== null && row.proteinG !== null && row.fatG !== null
         ? row.carbsG * 4 +
@@ -305,6 +306,16 @@ export function registerDayEntryTools(server: McpServer) {
           .describe(
             "Kostfibre i gram for hele dagen. SEPARAT fra carbsG — EU-varedeklarationer angiver kulhydrat EKSKL. fibre. Fibre tæller 2 kcal/g i kalorie-beregningen.",
           ),
+          saturatedFatG: z
+          .number()
+          .int()
+          .min(0)
+          .max(500)
+          .nullable()
+          .optional()
+          .describe(
+            "Mættet fedt i gram for hele dagen. Er en DEL af fatG, ikke et tillæg — tæller ikke ekstra i kcal. Relevant for kolesterol: brugere med forhøjet kolesterol holder øje med et dagligt loft.",
+          ),
         weightKg: z
           .number()
           .min(0)
@@ -387,6 +398,10 @@ export function registerDayEntryTools(server: McpServer) {
           args.nextStep === undefined ? (existing?.nextStep ?? null) : args.nextStep,
         carbsG:
           args.carbsG === undefined ? (existing?.carbsG ?? null) : args.carbsG,
+        saturatedFatG:
+          args.saturatedFatG === undefined
+            ? (existing?.saturatedFatG ?? null)
+            : args.saturatedFatG,
         proteinG:
           args.proteinG === undefined ? (existing?.proteinG ?? null) : args.proteinG,
         fatG: args.fatG === undefined ? (existing?.fatG ?? null) : args.fatG,

@@ -90,6 +90,7 @@ export default async function StatistikPage() {
     if (d.proteinG != null) row.protein = d.proteinG;
     if (d.fatG != null) row.fat = d.fatG;
     if (d.fiberG != null) row.fiber = d.fiberG;
+    if (d.saturatedFatG != null) row.saturatedFat = d.saturatedFatG;
     // Træning med intensitet: 1 = ja/let, 2 = mellem, 3 = hård. Gamle dage
     // uden intensitet tæller som let, så skalaen forbliver simpel.
     if (d.didExercise) {

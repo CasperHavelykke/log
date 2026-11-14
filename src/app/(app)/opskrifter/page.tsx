@@ -25,6 +25,7 @@ export default async function RecipesPage() {
         proteinG: r.proteinG,
         fatG: r.fatG,
         fiberG: r.fiberG,
+        saturatedFatG: r.saturatedFatG,
         hasImage: r.imagePathname !== null,
         updatedAt: r.updatedAt,
       }))}

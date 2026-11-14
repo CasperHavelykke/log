@@ -17,6 +17,7 @@ export type PublicRecipe = {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
 };
 
 // Læse-kun offentlig visning af en opskrift (delelink). Ingen auth, ingen

@@ -456,6 +456,8 @@ export const dayEntries = sqliteTable(
     // Kostfibre i gram. Separat fra carbsG: EU-deklarationer angiver
     // kulhydrat EKSKL. fibre; fibre bidrager ~2 kcal/g (se lib/kcal.ts).
     fiberG: integer("fiber_g"),
+    // Mættet fedt er en DEL af fatG, ikke et tillæg. Tæller ikke i kcal.
+    saturatedFatG: integer("saturated_fat_g"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
@@ -664,6 +666,7 @@ export const recipes = sqliteTable(
     proteinG: integer("protein_g"),
     fatG: integer("fat_g"),
     fiberG: integer("fiber_g"),
+    saturatedFatG: integer("saturated_fat_g"),
     // Valgfrit billede — fil ligger under data/recipes/, kun sti+mime i DB.
     imagePathname: text("image_pathname"),
     imageMime: text("image_mime"),
@@ -823,6 +826,8 @@ export const planItems = sqliteTable(
     fatMaxG: integer("fat_max_g"),
     fiberTargetG: integer("fiber_target_g"),
     fiberMaxG: integer("fiber_max_g"),
+    saturatedFatTargetG: integer("saturated_fat_target_g"),
+    saturatedFatMaxG: integer("saturated_fat_max_g"),
     paused: integer("paused", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at")

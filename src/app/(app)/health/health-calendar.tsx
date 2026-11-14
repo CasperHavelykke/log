@@ -74,6 +74,7 @@ type Entry = {
   proteinG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  saturatedFatG: number | null;
   healthNotes: string;
   workNotes: string;
   dayNotes: string;
@@ -579,6 +580,7 @@ function entryInput(e: Omit<Entry, "date"> | undefined) {
     proteinG: e?.proteinG ?? null,
     fatG: e?.fatG ?? null,
     fiberG: e?.fiberG ?? null,
+    saturatedFatG: e?.saturatedFatG ?? null,
     healthNotes: (e?.healthNotes ?? "").trim() || null,
   };
 }
@@ -598,6 +600,7 @@ const HEALTH_INPUT_KEYS = [
   "proteinG",
   "fatG",
   "fiberG",
+  "saturatedFatG",
   "healthNotes",
 ] as const;
 
@@ -648,6 +651,7 @@ function DayEditorPanel({
   );
   const [fatG, setFatG] = useState<number | null>(entry?.fatG ?? null);
   const [fiberG, setFiberG] = useState<number | null>(entry?.fiberG ?? null);
+  const [saturatedFatG, setSaturatedFatG] = useState<number | null>(entry?.saturatedFatG ?? null);
   const [sleepInput, setSleepInput] = useState(
     fmtHours(entry?.sleepHoursX10 ?? null),
   );
@@ -696,6 +700,7 @@ function DayEditorPanel({
       proteinG,
       fatG,
       fiberG,
+      saturatedFatG,
       healthNotes: healthNotes.trim() || null,
     };
   }
@@ -753,6 +758,7 @@ function DayEditorPanel({
             proteinG,
             fatG,
             fiberG,
+            saturatedFatG,
             healthNotes,
             workNotes: entry?.workNotes ?? "",
             dayNotes: entry?.dayNotes ?? "",
@@ -769,8 +775,8 @@ function DayEditorPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mood, energy, sleepInput, sleepQuality, alcoholUnits, didExercise,
-    exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, fiberG,
-    healthNotes,
+    exerciseIntensity, weightInput, waistInput, carbsG, proteinG, fatG, fiberG, 
+    saturatedFatG, healthNotes,
   ]);
 
   // Genopfrisk ved tilbagevenden til fanen: felter brugeren IKKE selv har
@@ -821,6 +827,7 @@ function DayEditorPanel({
               case "proteinG": setProteinG(s.proteinG); break;
               case "fatG": setFatG(s.fatG); break;
               case "fiberG": setFiberG(s.fiberG); break;
+              case "saturatedFatG": setSaturatedFatG(s.saturatedFatG); break;
               case "healthNotes": setHealthNotes(s.healthNotes); break;
             }
           }
@@ -986,20 +993,32 @@ function DayEditorPanel({
               placeholder="0"
             />
           </GridField>
-          <GridField label="Protein">
-            <NumberInput
-              fluid
-              value={proteinG === null ? "" : String(proteinG)}
-              onChange={(v) => setProteinG(parseInt0to1000(v))}
-              unit="g"
-              placeholder="0"
-            />
-          </GridField>
           <GridField label="Fedt">
             <NumberInput
               fluid
               value={fatG === null ? "" : String(fatG)}
               onChange={(v) => setFatG(parseInt0to1000(v))}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="+ heraf mættet">
+            <NumberInput
+              fluid
+              value={saturatedFatG === null ? "" : String(saturatedFatG)}
+              onChange={(v) => {
+                const n = parseInt0to1000(v);
+                setSaturatedFatG(n === null ? null : Math.min(500, n));
+              }}
+              unit="g"
+              placeholder="0"
+            />
+          </GridField>
+          <GridField label="Protein">
+            <NumberInput
+              fluid
+              value={proteinG === null ? "" : String(proteinG)}
+              onChange={(v) => setProteinG(parseInt0to1000(v))}
               unit="g"
               placeholder="0"
             />

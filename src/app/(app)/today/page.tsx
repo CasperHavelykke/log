@@ -324,6 +324,7 @@ export default async function Today() {
               protein: { min: i.proteinTargetG, max: i.proteinMaxG },
               fat: { min: i.fatTargetG, max: i.fatMaxG },
               fiber: { min: i.fiberTargetG, max: i.fiberMaxG },
+              saturatedFat: { min: i.saturatedFatTargetG, max: i.saturatedFatMaxG },
             }
           : null;
       const nutritionActuals: TodayPlanEntry["actuals"] =
@@ -334,6 +335,7 @@ export default async function Today() {
               protein: entry?.proteinG ?? null,
               fat: entry?.fatG ?? null,
               fiber: entry?.fiberG ?? null,
+              saturatedFat: entry?.saturatedFatG ?? null,
             }
           : null;
 
@@ -376,7 +378,7 @@ export default async function Today() {
           // dagen er ligegyldigt (nogle faster og slutter dagen tidligt).
           nutritionPlanDone(
             (
-              ["kcal", "carbs", "protein", "fat", "fiber"] as const
+              ["kcal", "carbs", "protein", "fat", "fiber", "saturatedFat"] as const
             ).map((k) => ({
               actual: nutritionActuals[k],
               min: nutritionTargets[k].min,
@@ -535,6 +537,7 @@ export default async function Today() {
         proteinG: entry?.proteinG ?? null,
         fatG: entry?.fatG ?? null,
         fiberG: entry?.fiberG ?? null,
+        saturatedFatG: entry?.saturatedFatG ?? null,
         workNotes: entry?.workNotes ?? "",
         healthNotes: entry?.healthNotes ?? "",
         dayNotes: entry?.dayNotes ?? "",

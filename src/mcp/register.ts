@@ -20,7 +20,7 @@ import { registerNutritionWeekTools } from "./tools/nutrition-weeks";
 export const MCP_SERVER_INFO = {
   name: "dagbog",
   // Bump ved skema-ændringer i tools — connector-caches skal forbi.
-  version: "0.19.0",
+  version: "0.20.0",
 } as const;
 
 export function registerAllTools(server: McpServer): void {

@@ -110,6 +110,10 @@ export function PlanDialog({
       min: existing?.fiberTargetG ?? null,
       max: existing?.fiberMaxG ?? null,
     },
+    saturatedFat: {
+      min: existing?.saturatedFatTargetG ?? null,
+      max: existing?.saturatedFatMaxG ?? null,
+    },
   }));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -191,6 +195,8 @@ export function PlanDialog({
       fatMaxG: targets.fat.max,
       fiberTargetG: targets.fiber.min,
       fiberMaxG: targets.fiber.max,
+      saturatedFatTargetG: targets.saturatedFat.min,
+      saturatedFatMaxG: targets.saturatedFat.max,
     };
     start(async () => {
       const res = await upsertPlanItem(input);
@@ -535,8 +541,9 @@ export function PlanDialog({
               <RangeInput field="kcal" label="Kcal" cap={10_000} targets={targets} setTargets={setTargets} />
               <RangeInput field="carbs" label="Kulhydrat (g)" cap={2000} targets={targets} setTargets={setTargets} />
               <RangeInput field="fiber" label="+ Fibre (g)" cap={200} targets={targets} setTargets={setTargets} />
-              <RangeInput field="protein" label="Protein (g)" cap={1000} targets={targets} setTargets={setTargets} />
               <RangeInput field="fat" label="Fedt (g)" cap={1000} targets={targets} setTargets={setTargets} />
+              <RangeInput field="saturatedFat" label="+ heraf mættet (g)" cap={500} targets={targets} setTargets={setTargets} />
+              <RangeInput field="protein" label="Protein (g)" cap={1000} targets={targets} setTargets={setTargets} />
             </div>
             <p className="mt-2 text-[11px] italic text-light">
               Kun &apos;mindst&apos; = gulv, kun &apos;højst&apos; = loft,
@@ -613,7 +620,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-type NutritionField = "kcal" | "carbs" | "protein" | "fat" | "fiber";
+type NutritionField = "kcal" | "carbs" | "protein" | "fat" | "fiber" | "saturatedFat";
 type NutritionTargets = Record<
   NutritionField,
   { min: number | null; max: number | null }
