@@ -217,7 +217,7 @@ function IntakeBar({
       aria-label={
         value === null
           ? "Ikke logget"
-          : `${fmtInt(value)}${unit ? " " + unit : ""}${over ? ", over loftet" : ""}`
+          : `${fmtInt(value)}${unit ? " " + unit : ""}${over ? ", over loftet" : hasZone ? "" : ", intet mål"}`
       }
     >
       {hasZone && (
@@ -233,7 +233,9 @@ function IntakeBar({
         <div
           className="absolute inset-y-0 left-0 rounded-r-[10px]"
           style={{
-            width: `max(${pct(fillEnd)}%, ${MIN_FILL_PX[size]}px)`,
+            // Uden mål er der intet at måle mod: hele bjælken grå, så
+            // tallet står tydeligt, og "intet mål" ude til højre.
+            width: hasZone ? `max(${pct(fillEnd)}%, ${MIN_FILL_PX[size]}px)` : "100%",
             // Gennemsigtig grå, så zonen bagved stadig kan ses. Det gule
             // (over loftet) er en del af samme element, så kanten er én
             // form uden hak — et lag i gradienten, ikke en ekstra boks.
@@ -256,6 +258,13 @@ function IntakeBar({
           </span>
         )}
       </div>
+      {value !== null && !hasZone && (
+        <span
+          className={`absolute right-3 top-1/2 -translate-y-1/2 text-bg opacity-80 ${size === "lg" ? "text-[13px]" : "text-[11px]"}`}
+        >
+          intet mål
+        </span>
+      )}
       {over && (
         <TriangleAlert
           className={`absolute right-2 top-1/2 -translate-y-1/2 text-warning ${size === "lg" ? "size-6" : "size-5"}`}

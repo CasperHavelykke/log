@@ -1,16 +1,22 @@
 import "server-only";
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 
-export const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 90;
+// Adgangsnøgler: 30 dage. Var 90 før refresh tokens fandtes (S8 i
+// sikkerhedsreviewet); nu fornyer klienten selv, så kortere er gratis.
+export const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
+// Refresh tokens: et år, glidende — hvert bytte udsteder et nyt med fuld
+// levetid, så en forbindelse der bruges holder i princippet for evigt.
+// Ubrugt i et år = login igen.
+export const REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 365;
 export const AUTH_CODE_TTL_SECONDS = 60 * 10;
 export const TOKEN_TYPE = "Bearer";
 export const SCOPE = "mcp";
 export const SUPPORTED_RESPONSE_TYPES = ["code"] as const;
-export const SUPPORTED_GRANT_TYPES = ["authorization_code"] as const;
+export const SUPPORTED_GRANT_TYPES = ["authorization_code", "refresh_token"] as const;
 // KUN S256: 'plain' giver ingen beskyttelse hvis challengen lækker, og
 // MCP-specifikationen kræver S256. PKCE er obligatorisk (håndhævet i
 // authorize-siden/-action og token-endpointet).
@@ -123,6 +129,45 @@ export async function issueAccessToken(params: {
     expiresAt,
   });
   return { token, expiresIn: ACCESS_TOKEN_TTL_SECONDS };
+}
+
+// Udsteder adgangsnøgle + refresh token sammen — begge grants (code og
+// refresh) svarer med et par, så klienten altid har et friskt refresh token.
+export async function issueTokenPair(params: {
+  clientId: number;
+  userId: number;
+  scope: string | null;
+}): Promise<{ accessToken: string; expiresIn: number; refreshToken: string }> {
+  const { token: accessToken, expiresIn } = await issueAccessToken(params);
+  const refreshToken = randomToken(32);
+  await db.insert(schema.oauthRefreshTokens).values({
+    tokenHash: sha256(refreshToken),
+    clientId: params.clientId,
+    userId: params.userId,
+    scope: params.scope,
+    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000),
+  });
+  return { accessToken, expiresIn, refreshToken };
+}
+
+// Engangsforbrug af et refresh token (rotation): DELETE..RETURNING, så to
+// samtidige bytter aldrig begge lykkes. Udløbne rækker ryddes samtidig.
+export async function consumeRefreshToken(token: string): Promise<{
+  clientId: number;
+  userId: number;
+  scope: string | null;
+} | null> {
+  await db
+    .delete(schema.oauthRefreshTokens)
+    .where(lt(schema.oauthRefreshTokens.expiresAt, new Date()));
+  const rows = await db
+    .delete(schema.oauthRefreshTokens)
+    .where(eq(schema.oauthRefreshTokens.tokenHash, sha256(token)))
+    .returning();
+  const row = rows[0];
+  if (!row) return null;
+  if (row.expiresAt.getTime() < Date.now()) return null;
+  return { clientId: row.clientId, userId: row.userId, scope: row.scope };
 }
 
 export async function issueAuthCode(params: {

@@ -150,6 +150,25 @@ export const oauthAccessTokens = sqliteTable("oauth_access_tokens", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+// Refresh tokens: langtidsnøgle som AI-klienten selv bytter til en ny
+// adgangsnøgle i baggrunden, så brugeren aldrig skal igennem login igen.
+// Roteres ved hvert brug (gammel slettes, ny udstedes) — et lækket token
+// kan derfor kun bruges én gang, og ægte klient opdager det ved næste bytte.
+export const oauthRefreshTokens = sqliteTable("oauth_refresh_tokens", {
+  tokenHash: text("token_hash").primaryKey(),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  scope: text("scope"),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+});
+
 export const projects = sqliteTable("projects", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")
@@ -994,6 +1013,8 @@ export type OAuthAuthCode = typeof oauthAuthCodes.$inferSelect;
 export type NewOAuthAuthCode = typeof oauthAuthCodes.$inferInsert;
 export type OAuthAccessToken = typeof oauthAccessTokens.$inferSelect;
 export type NewOAuthAccessToken = typeof oauthAccessTokens.$inferInsert;
+export type OAuthRefreshToken = typeof oauthRefreshTokens.$inferSelect;
+export type NewOAuthRefreshToken = typeof oauthRefreshTokens.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type TimeEntry = typeof timeEntries.$inferSelect;

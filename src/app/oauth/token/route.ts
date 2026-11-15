@@ -2,8 +2,9 @@ import {
   SCOPE,
   TOKEN_TYPE,
   consumeAuthCode,
+  consumeRefreshToken,
   findClientByClientId,
-  issueAccessToken,
+  issueTokenPair,
   verifyClientSecret,
   verifyPkce,
 } from "@/lib/oauth";
@@ -103,20 +104,10 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const grantType = body.get("grant_type");
-  if (grantType !== "authorization_code") {
+  if (grantType !== "authorization_code" && grantType !== "refresh_token") {
     return errorResponse(
       "unsupported_grant_type",
       `grant_type='${grantType}' understøttes ikke`,
-    );
-  }
-
-  const code = body.get("code");
-  const redirectUri = body.get("redirect_uri");
-  const codeVerifier = body.get("code_verifier");
-  if (!code || !redirectUri) {
-    return errorResponse(
-      "invalid_request",
-      "code og redirect_uri er påkrævet",
     );
   }
 
@@ -146,6 +137,46 @@ export async function POST(req: Request): Promise<Response> {
       "invalid_client",
       "Ugyldig client_id eller client_secret",
       401,
+    );
+  }
+
+  // --- refresh_token: byt et refresh token til et nyt par (rotation) ---
+  if (grantType === "refresh_token") {
+    const refreshToken = body.get("refresh_token");
+    if (!refreshToken) {
+      return errorResponse("invalid_request", "refresh_token er påkrævet");
+    }
+    const grant = await consumeRefreshToken(refreshToken);
+    if (!grant) {
+      return errorResponse(
+        "invalid_grant",
+        "Refresh token er ugyldigt, brugt eller udløbet",
+      );
+    }
+    if (grant.clientId !== client.id) {
+      return errorResponse(
+        "invalid_grant",
+        "Refresh token blev ikke udstedt til denne client",
+      );
+    }
+    return tokenResponse(
+      await issueTokenPair({
+        clientId: client.id,
+        userId: grant.userId,
+        scope: grant.scope,
+      }),
+      grant.scope,
+    );
+  }
+
+  // --- authorization_code ---
+  const code = body.get("code");
+  const redirectUri = body.get("redirect_uri");
+  const codeVerifier = body.get("code_verifier");
+  if (!code || !redirectUri) {
+    return errorResponse(
+      "invalid_request",
+      "code og redirect_uri er påkrævet",
     );
   }
 
@@ -189,18 +220,27 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const { token, expiresIn } = await issueAccessToken({
-    clientId: client.id,
-    userId: authCode.userId,
-    scope: authCode.scope,
-  });
+  return tokenResponse(
+    await issueTokenPair({
+      clientId: client.id,
+      userId: authCode.userId,
+      scope: authCode.scope,
+    }),
+    authCode.scope,
+  );
+}
 
+function tokenResponse(
+  pair: { accessToken: string; expiresIn: number; refreshToken: string },
+  scope: string | null,
+): Response {
   return new Response(
     JSON.stringify({
-      access_token: token,
+      access_token: pair.accessToken,
       token_type: TOKEN_TYPE,
-      expires_in: expiresIn,
-      scope: authCode.scope ?? SCOPE,
+      expires_in: pair.expiresIn,
+      refresh_token: pair.refreshToken,
+      scope: scope ?? SCOPE,
     }),
     {
       status: 200,
