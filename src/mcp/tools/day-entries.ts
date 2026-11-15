@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, schema } from "../../db";
 import { getActiveUser } from "../active-user";
 import { errorContent, jsonContent } from "../format";
+import { dayKcal } from "../../lib/kcal";
 import { effectiveSleepHoursX10, effectiveSleepQuality } from "../../lib/sleep";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
@@ -33,13 +34,9 @@ function shapeEntry(row: typeof schema.dayEntries.$inferSelect) {
     fatG: row.fatG,
     fiberG: row.fiberG,
     saturatedFatG: row.saturatedFatG,
-    kcal:
-      row.carbsG !== null && row.proteinG !== null && row.fatG !== null
-        ? row.carbsG * 4 +
-          row.proteinG * 4 +
-          row.fatG * 9 +
-          (row.fiberG ?? 0) * 2
-        : null,
+    // Samme beregning som appen: makroer + fibre + 100 kcal pr. genstand.
+    kcal: dayKcal(row).totalKcal,
+    drinkKcal: dayKcal(row).drinkKcal,
     updatedAt: row.updatedAt,
   };
 }
@@ -218,7 +215,9 @@ export function registerDayEntryTools(server: McpServer) {
           .max(50)
           .nullable()
           .optional()
-          .describe("Antal genstande indtaget. 0 eller null = ingen."),
+          .describe(
+            "Antal genstande indtaget. 0 eller null = ingen. Hver genstand tæller AUTOMATISK 100 kcal i dagens kalorietotal (feltet kcal i svaret) — læg aldrig alkoholens kalorier oveni makroerne, og sig ikke at de ikke tælles med.",
+          ),
         sleepHours: z
           .number()
           .min(0)
