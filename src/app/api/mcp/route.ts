@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { MCP_SERVER_INFO, registerAllTools } from "@/mcp/register";
+import {
+  MCP_SERVER_INFO,
+  registerAllTools,
+  registerCholesterolTools,
+} from "@/mcp/register";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { baseUrl, validateAccessToken } from "@/lib/oauth";
 import { runWithUser } from "@/mcp/active-user";
 
@@ -40,9 +46,17 @@ async function handle(req: Request): Promise<Response> {
   const auth = await authenticate(req);
   if (!auth) return unauthorized(req, "invalid_token");
 
+  const prefRows = await db
+    .select({ cholesterol: schema.users.cholesterolModeEnabled })
+    .from(schema.users)
+    .where(eq(schema.users.id, auth.userId))
+    .limit(1);
+  const cholesterolMode = prefRows[0]?.cholesterol ?? false;
+
   return runWithUser(auth.userId, async () => {
     const server = new McpServer(MCP_SERVER_INFO);
-    registerAllTools(server);
+    if (cholesterolMode) registerCholesterolTools(server);
+    else registerAllTools(server);
 
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,

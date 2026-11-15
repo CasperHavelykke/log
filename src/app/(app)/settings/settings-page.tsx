@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AlertTriangle, Beer, Bird, Briefcase, Check, Clock, Dumbbell, EyeOff, LogOut, Monitor, Moon, Plus, Sun, Target, Trash2 } from "lucide-react";
+import { AlertTriangle, Beer, Bird, Briefcase, Check, Clock, Dumbbell, EyeOff, HeartPulse, LogOut, Monitor, Moon, Plus, Sun, Target, Trash2 } from "lucide-react";
 import { logoutAction } from "@/app/login/actions";
 import {
   createOAuthClient,
@@ -17,6 +17,7 @@ import type { Theme } from "@/lib/theme";
 import { setTheme } from "./theme-actions";
 import { formatDanishDate } from "@/lib/date";
 import {
+  setCholesterolModeEnabled,
   setCounterModeEnabled,
   setFasteEnabled,
   setRoisinModeEnabled,
@@ -71,6 +72,7 @@ export function SettingsPage({
   initialGoalsEnabled,
   initialCounterModeEnabled,
   initialRoisinModeEnabled,
+  initialCholesterolModeEnabled,
   initialTheme,
   initialHasProfileImage,
 }: {
@@ -86,6 +88,7 @@ export function SettingsPage({
   initialGoalsEnabled: boolean;
   initialCounterModeEnabled: boolean;
   initialRoisinModeEnabled: boolean;
+  initialCholesterolModeEnabled: boolean;
   initialTheme: Theme;
   initialHasProfileImage: boolean;
 }) {
@@ -120,6 +123,7 @@ export function SettingsPage({
           initialGoalsEnabled={initialGoalsEnabled}
           initialCounterModeEnabled={initialCounterModeEnabled}
           initialRoisinModeEnabled={initialRoisinModeEnabled}
+          initialCholesterolModeEnabled={initialCholesterolModeEnabled}
         />
         <JobSearchCard
           initial={initialActivePeriod}
@@ -246,6 +250,7 @@ function FeaturesCard({
   initialGoalsEnabled,
   initialCounterModeEnabled,
   initialRoisinModeEnabled,
+  initialCholesterolModeEnabled,
 }: {
   initialFasteEnabled: boolean;
   initialGarminSleepEnabled: boolean;
@@ -253,6 +258,7 @@ function FeaturesCard({
   initialGoalsEnabled: boolean;
   initialCounterModeEnabled: boolean;
   initialRoisinModeEnabled: boolean;
+  initialCholesterolModeEnabled: boolean;
 }) {
   const [fasteEnabled, setFastEnabledState] = useState(initialFasteEnabled);
   const [garminEnabled, setGarminEnabledState] = useState(
@@ -264,6 +270,9 @@ function FeaturesCard({
   const [goalsEnabled, setGoalsEnabledState] = useState(initialGoalsEnabled);
   const [counterModeEnabled, setCounterModeEnabledState] = useState(
     initialCounterModeEnabled,
+  );
+  const [cholesterolModeEnabled, setCholesterolModeEnabledState] = useState(
+    initialCholesterolModeEnabled,
   );
   const [roisinModeEnabled, setRoisinModeEnabledState] = useState(
     initialRoisinModeEnabled,
@@ -291,6 +300,14 @@ function FeaturesCard({
     setCounterModeEnabledState(next);
     start(async () => {
       await setCounterModeEnabled(next);
+    });
+  }
+
+  function toggleCholesterolMode() {
+    const next = !cholesterolModeEnabled;
+    setCholesterolModeEnabledState(next);
+    start(async () => {
+      await setCholesterolModeEnabled(next);
     });
   }
 
@@ -359,6 +376,13 @@ function FeaturesCard({
           description="Appen åbner direkte i genstandstælleren (også mellem sessioner) — til dig der kun vil bruge tælleren. Resten af appen nås stadig via 'Til appen'-knappen."
           enabled={counterModeEnabled}
           onToggle={toggleCounterMode}
+        />
+        <FeatureToggle
+          icon={<HeartPulse className="size-4" />}
+          title="Kolesterol-tilstand"
+          description="Appen viser kun dagens indtag (kalorier, makroer, mættet fedt, genstande, vægt) og historik. Al logning sker gennem din AI. Resten af appen nås via tandhjulet."
+          enabled={cholesterolModeEnabled}
+          onToggle={toggleCholesterolMode}
         />
         {counterModeEnabled && (
           <FeatureToggle

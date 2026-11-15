@@ -365,6 +365,13 @@
       "when": 1794670352900,
       "tag": "0051_saturated_fat",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "6",
+      "when": 1794736768883,
+      "tag": "0052_cholesterol_mode",
+      "breakpoints": true
     }
   ]
 }

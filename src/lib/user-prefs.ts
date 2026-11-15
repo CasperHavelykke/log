@@ -67,6 +67,16 @@ export async function setCounterModeEnabled(enabled: boolean) {
   return { ok: true as const };
 }
 
+export async function setCholesterolModeEnabled(enabled: boolean) {
+  const user = await requireUser();
+  await db
+    .update(schema.users)
+    .set({ cholesterolModeEnabled: enabled })
+    .where(eq(schema.users.id, user.id));
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
 export async function setRoisinModeEnabled(enabled: boolean) {
   const user = await requireUser();
   await db

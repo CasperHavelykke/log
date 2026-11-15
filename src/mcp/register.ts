@@ -23,6 +23,16 @@ export const MCP_SERVER_INFO = {
   version: "0.20.0",
 } as const;
 
+// Kolesterol-tilstand: kun de værktøjer der giver mening for en bruger
+// der udelukkende logger indtag og vægt via AI. Serveren bygges pr. kald,
+// så listen kan afhænge af brugeren — det sparer AI'en for 60 værktøjer,
+// den aldrig får brug for.
+export function registerCholesterolTools(server: McpServer): void {
+  registerDayEntryTools(server);
+  registerNutritionWeekTools(server);
+  registerPlanTools(server);
+}
+
 export function registerAllTools(server: McpServer): void {
   registerDayEntryTools(server);
   registerWeekGoalTools(server);

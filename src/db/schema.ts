@@ -42,6 +42,12 @@ export const users = sqliteTable("users", {
   roisinModeEnabled: integer("roisin_mode_enabled", { mode: "boolean" })
     .notNull()
     .default(false),
+  // Kolesterol-tilstand: hele appen erstattes af en ren visning af dagens
+  // indtag (kcal, makroer, mættet fedt, genstande, vægt) + historik. Al
+  // logning sker via AI/MCP — tiltænkt brugere der ikke selv taster.
+  cholesterolModeEnabled: integer("cholesterol_mode_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   // Hemmeligt token til offentlig deling af hele opskriftssamlingen
   // (/samling/{token}). null = deling slået fra.
   recipesShareToken: text("recipes_share_token"),

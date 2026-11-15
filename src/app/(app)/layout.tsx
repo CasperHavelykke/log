@@ -6,12 +6,16 @@ import { isDemoMode } from "@/lib/demo";
 import { requireUser } from "@/lib/session";
 import { listJobSearchPeriods } from "./jobs/period-actions";
 import { getActiveSession } from "./drink-counter/actions";
+import { CholesterolShell } from "./kolesterol/cholesterol-shell";
+import { CholesterolReturnBanner } from "./kolesterol/return-banner";
+import { loadCholesterolData } from "./kolesterol/data";
 import {
   CounterWrapper,
   FloatingCounterBanner,
 } from "./drink-counter/counter-wrapper";
 
 const ESCAPE_COOKIE = "drink-counter-escape";
+const CHOLESTEROL_ESCAPE_COOKIE = "kolesterol-escape";
 
 export default async function AppLayout({
   children,
@@ -36,6 +40,21 @@ export default async function AppLayout({
           roisin={user.roisinModeEnabled ?? false}
         />
       );
+    }
+  }
+
+  // Kolesterol-tilstand: ren visning af dagens indtag + historik i stedet
+  // for appen. Al logning sker via AI/MCP. Tandhjulet sætter escape-cookien
+  // og giver den normale app (til opsætning af connector m.m.).
+  const cholesterolMode = user.cholesterolModeEnabled ?? false;
+  let cholesterolEscaped = false;
+  if (cholesterolMode) {
+    const cookieStore = await cookies();
+    cholesterolEscaped =
+      cookieStore.get(CHOLESTEROL_ESCAPE_COOKIE)?.value === "1";
+    if (!cholesterolEscaped) {
+      const data = await loadCholesterolData(user.id);
+      return <CholesterolShell data={data} />;
     }
   }
 
@@ -80,6 +99,7 @@ export default async function AppLayout({
         jobsPlacement={jobsPlacement}
         trainingEnabled={user.trainingEnabled ?? false}
       />
+      {cholesterolMode && cholesterolEscaped && <CholesterolReturnBanner />}
       {(drinkSession || counterMode) && (
         <FloatingCounterBanner
           totalUnitsX10={drinkSession?.totalUnitsX10 ?? null}

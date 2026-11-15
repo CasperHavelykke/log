@@ -20,6 +20,7 @@ export default async function Settings() {
   const goalsEnabled = user.goalsEnabled ?? false;
   const counterModeEnabled = user.counterModeEnabled ?? false;
   const roisinModeEnabled = user.roisinModeEnabled ?? false;
+  const cholesterolModeEnabled = user.cholesterolModeEnabled ?? false;
   const themePreference = await getThemePreference();
   const [clients, customParameters, activePeriod, allPeriods, allApps] =
     await Promise.all([
@@ -86,6 +87,7 @@ export default async function Settings() {
       initialGoalsEnabled={goalsEnabled}
       initialCounterModeEnabled={counterModeEnabled}
       initialRoisinModeEnabled={roisinModeEnabled}
+      initialCholesterolModeEnabled={cholesterolModeEnabled}
       initialTheme={themePreference}
       initialHasProfileImage={user.profileImagePathname !== null}
     />
